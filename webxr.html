@@ -185,12 +185,11 @@
             ✅ 实时二维码检测<br>
             ✅ 手柄/手势交互<br>
             <br>
-            <strong>⚠️ 必需设置：</strong><br>
+            <strong>⚠️ 重要设置（必需）：</strong><br>
             1. 在Quest浏览器输入 <code>chrome://flags</code><br>
             2. 搜索并开启：<br>
             &nbsp;&nbsp;&nbsp;"<strong>Experimental Web Platform Features</strong>"<br>
-            3. <strong>重启浏览器</strong><br>
-            4. 授予摄像头权限
+            3. <strong>重启浏览器</strong>
         </small></p>
     </div>
     
@@ -387,22 +386,19 @@
                     this.updateStatus('启动WebXR...');
                     this.updateDebugInfo('请求WebXR AR会话...');
                     
-                    // 请求WebXR AR会话 - 强制启用摄像头访问
-                    this.updateDebugInfo('🔄 尝试启动带摄像头访问的WebXR...');
+                    // 请求WebXR AR会话 - 添加摄像头访问特性
                     xrSession = await navigator.xr.requestSession('immersive-ar', {
-                        requiredFeatures: ['camera-access'], // 强制要求摄像头访问
-                        optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking']
+                        requiredFeatures: ['camera-access'], // 核心：请求摄像头访问
+                        optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking', 'image-tracking']
                     });
                     
                     // 设置渲染器 - 确保兼容性
                     await renderer.xr.setSession(xrSession);
-                    this.updateDebugInfo('✅ WebXR会话已设置');
                     
                     // 创建WebGL绑定用于摄像头访问
                     const gl = renderer.getContext();
                     this.xrWebGLBinding = new XRWebGLBinding(xrSession, gl);
                     this.updateDebugInfo('✅ XRWebGLBinding已创建');
-                    this.updateDebugInfo('🎥 Raw Camera Access已启用');
                     
                     // 等待会话完全初始化
                     await new Promise(resolve => {
@@ -438,7 +434,6 @@
                     this.qrDetector.startWebXRDetection((qrData) => {
                         this.handleQRDetection(qrData);
                     }, gl, this.xrWebGLBinding);
-                    this.updateDebugInfo('📸 摄像头二维码检测已启动');
                     
                     // 更新UI
                     this.showWebXRUI();
@@ -446,6 +441,7 @@
                     isWebXRActive = true;
                     this.updateStatus('WebXR运行中');
                     this.updateDebugInfo('✅ WebXR AR会话已启动');
+                    this.updateDebugInfo('');
                     this.updateDebugInfo('📸 Raw Camera Access已启用');
                     this.updateDebugInfo('🎮 快速测试：按手柄触发器');
                     this.updateDebugInfo('📱 摄像头二维码检测：实时监听中');
@@ -457,19 +453,20 @@
                     
                 } catch (error) {
                     console.error('WebXR启动失败:', error);
-                    this.updateDebugInfo('❌ WebXR启动失败');
-                    this.updateDebugInfo('错误详情: ' + error.message);
-                    this.updateDebugInfo('错误名称: ' + error.name);
                     
-                    // 显示详细错误信息以便调试
-                    let errorMessage = `WebXR启动失败:\n\n${error.message}\n\n可能的解决方案：\n`;
-                    errorMessage += '1. 确保在Quest浏览器启用实验特性\n';
-                    errorMessage += '2. 在chrome://flags启用"Experimental Web Platform Features"\n';
-                    errorMessage += '3. 重启浏览器后重试\n';
-                    errorMessage += '4. 检查是否授予了摄像头权限';
+                    let errorMessage = 'WebXR启动失败: ';
+                    if (error.message.includes('camera-access')) {
+                        errorMessage += '摄像头访问被拒绝\n请确保：\n1. 在chrome://flags启用"Experimental Web Platform Features"\n2. 重启Quest浏览器\n3. 授予摄像头权限';
+                    } else if (error.message.includes('requestReferenceSpace')) {
+                        errorMessage += '参考空间不支持\n请检查Quest设备设置';
+                    } else if (error.message.includes('requestSession')) {
+                        errorMessage += '无法创建AR会话\n请确保设备支持并已开启AR模式';
+                    } else {
+                        errorMessage += error.message;
+                    }
                     
                     this.showError(errorMessage);
-                    this.updateDebugInfo('完整错误堆栈: ' + error.stack);
+                    this.updateDebugInfo('详细错误: ' + error.stack);
                 }
             }
             
@@ -556,7 +553,7 @@
                         activeModel = model;
                         
                         // 添加动效
-                        this.addDynamicEffects(model);
+                        //this.addDynamicEffects(model);
                         
                         // 切换音频
                         await this.audioManager.switchAudio(config.audio);
@@ -921,25 +918,8 @@
                 console.log('开始WebXR Raw Camera Access检测');
             }
             
-            startBasicDetection(callback) {
-                // 基础检测方式（回退方案）
-                this.onDetectionCallback = callback;
-                this.isDetecting = true;
-                this.detectionAttempts = 0;
-                
-                if (window.app) {
-                    window.app.updateDebugInfo('🔄 启动基础检测模式...');
-                    window.app.updateDebugInfo('⚠️ Raw Camera Access不可用');
-                    window.app.updateDebugInfo('💡 主要使用手柄交互');
-                }
-                
-                console.log('开始基础WebXR检测模式');
-            }
-            
             detectInXRFrame(frame, referenceSpace) {
-                if (!this.isDetecting || !this.onDetectionCallback || !this.xrBinding) {
-                    return; // 确保有所有必需的组件
-                }
+                if (!this.isDetecting || !this.onDetectionCallback || !this.xrBinding) return;
                 
                 const now = Date.now();
                 if (now - this.lastDetectionTime < 200) return; // 限制检测频率

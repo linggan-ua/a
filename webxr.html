@@ -158,9 +158,9 @@
         }
         
         .detection-overlay::before {
-            content: '将二维码放在框内';
+            content: '将二维码放在框内\A或按手柄触发器测试';
             position: absolute;
-            top: -40px;
+            top: -50px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(0,0,0,0.9);
@@ -168,7 +168,8 @@
             padding: 8px 15px;
             border-radius: 5px;
             font-size: 14px;
-            white-space: nowrap;
+            white-space: pre;
+            text-align: center;
         }
     </style>
 </head>
@@ -194,7 +195,12 @@
         <div><span class="status-indicator status-ready"></span>状态: <span id="status">准备就绪</span></div>
         <div>检测到: <span id="qrResult">无</span></div>
         <div>当前乐器: <span id="currentInstrument">无</span></div>
-        <div id="instructionText">请将岭南乐器码置于视野中心</div>
+        <div id="instructionText">
+            <strong>🎮 使用方法：</strong><br>
+            1. 按手柄触发器循环测试乐器<br>
+            2. 或尝试将二维码置于视野中心<br>
+            <small>⚠️ 注意：Quest目前限制摄像头访问</small>
+        </div>
     </div>
     
     <div id="controls">
@@ -374,9 +380,9 @@
                     this.updateStatus('启动WebXR...');
                     this.updateDebugInfo('请求WebXR AR会话...');
                     
-                    // 请求WebXR AR会话 - 修复Quest 3兼容性
+                    // 请求WebXR AR会话 - 添加图像追踪特性
                     xrSession = await navigator.xr.requestSession('immersive-ar', {
-                        optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking']
+                        optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking', 'image-tracking']
                     });
                     
                     // 设置渲染器 - 确保兼容性
@@ -412,7 +418,7 @@
                     // 设置控制器
                     this.setupControllers();
                     
-                    // 启动二维码检测
+                    // 启动二维码检测（有限功能）
                     this.qrDetector.startWebXRDetection((qrData) => {
                         this.handleQRDetection(qrData);
                     });
@@ -422,7 +428,13 @@
                     
                     isWebXRActive = true;
                     this.updateStatus('WebXR运行中');
-                    this.updateDebugInfo('WebXR AR会话已启动');
+                    this.updateDebugInfo('✅ WebXR AR会话已启动');
+                    this.updateDebugInfo('');
+                    this.updateDebugInfo('🎮 快速测试：按手柄触发器');
+                    this.updateDebugInfo('📱 二维码检测：功能有限');
+                    this.updateDebugInfo('   (Quest浏览器限制摄像头访问)');
+                    this.updateDebugInfo('');
+                    this.updateDebugInfo('💡 建议：主要使用手柄进行交互');
                     
                     console.log('WebXR启动成功');
                     
@@ -464,12 +476,27 @@
                     controller.add(line);
                 }
                 
-                this.updateDebugInfo('控制器已设置');
+                this.updateDebugInfo('控制器已设置 - 按下触发器测试模型');
+                
+                // 添加测试计数器
+                this.testModelIndex = 0;
             }
             
             onControllerSelect(event) {
+                // 测试功能：循环切换乐器模型
+                const testInstruments = ['pattern1', 'pattern2'];
+                const currentTest = testInstruments[this.testModelIndex % testInstruments.length];
+                
+                this.updateDebugInfo(`🎮 手柄触发 - 测试加载 ${currentTest}`);
+                console.log('手柄触发，测试加载:', currentTest);
+                
+                // 触发模型切换
+                this.handleQRDetection(currentTest);
+                
+                this.testModelIndex++;
+                
+                // 如果有活跃模型，也可以旋转它
                 if (activeModel) {
-                    // 旋转当前模型
                     activeModel.rotation.y += Math.PI / 4;
                     this.updateDebugInfo('模型已旋转');
                 }
@@ -518,7 +545,9 @@
                         this.updateAudioInfo(config.name + ' 音乐');
                         this.enableAudioButton();
                         
-                        this.updateDebugInfo(`${config.name} 加载成功`);
+                        this.updateDebugInfo(`✅ ${config.name} 加载成功`);
+                        this.updateDebugInfo('🎮 按手柄触发器旋转模型');
+                        this.updateDebugInfo('🎵 点击播放按钮测试音乐');
                     }
                     
                 } catch (error) {
@@ -556,6 +585,7 @@
                         },
                         (error) => {
                             console.error('GLTF加载失败:', error);
+                            this.updateDebugInfo('⚠️ GLTF加载失败，使用备用模型');
                             resolve(this.createFallbackModel(modelPath));
                         }
                     );
@@ -563,6 +593,9 @@
             }
             
             createFallbackModel(modelPath) {
+                console.log('创建备用几何模型:', modelPath);
+                this.updateDebugInfo('📦 使用程序生成的备用模型');
+                
                 const group = new THREE.Group();
                 
                 if (modelPath.includes('model1')) {
@@ -830,7 +863,7 @@
             }
         }
         
-        // 二维码检测器
+        // 二维码检测器 - 更新为WebXR兼容版本
         class QRDetector {
             constructor() {
                 this.canvas = document.getElementById('qrCanvas');
@@ -838,40 +871,112 @@
                 this.isDetecting = false;
                 this.onDetectionCallback = null;
                 this.lastDetectionTime = 0;
-                this.detectionCooldown = 2000; // 2秒冷却时间
+                this.detectionCooldown = 2000;
+                this.detectionAttempts = 0;
+                this.maxAttempts = 100; // 限制尝试次数防止性能问题
             }
             
             startWebXRDetection(callback) {
                 this.onDetectionCallback = callback;
                 this.isDetecting = true;
+                this.detectionAttempts = 0;
+                
+                // 更新调试信息
+                if (window.app) {
+                    window.app.updateDebugInfo('开始WebXR二维码检测...');
+                    window.app.updateDebugInfo('⚠️ 注意：Quest当前不支持原始摄像头访问');
+                    window.app.updateDebugInfo('请尝试以下替代方案：');
+                    window.app.updateDebugInfo('1. 使用较大的二维码（至少5cm x 5cm）');
+                    window.app.updateDebugInfo('2. 确保二维码清晰可见');
+                    window.app.updateDebugInfo('3. 尝试不同的光照条件');
+                }
+                
                 console.log('开始WebXR二维码检测');
             }
             
             detectInWebXR(canvas) {
                 if (!this.isDetecting || !this.onDetectionCallback) return;
+                if (this.detectionAttempts >= this.maxAttempts) {
+                    if (this.detectionAttempts === this.maxAttempts) {
+                        console.log('已达到最大检测尝试次数，减少检测频率');
+                        if (window.app) {
+                            window.app.updateDebugInfo('已达到最大检测尝试次数，减少检测频率');
+                        }
+                    }
+                    this.detectionAttempts++;
+                    return; // 减少检测频率
+                }
                 
                 // 防抖处理
                 const now = Date.now();
-                if (now - this.lastDetectionTime < 100) return; // 限制检测频率
+                if (now - this.lastDetectionTime < 200) return; // 降低检测频率到每200ms
+                
+                this.detectionAttempts++;
                 
                 try {
-                    // 调整检测canvas大小
-                    this.canvas.width = canvas.width;
-                    this.canvas.height = canvas.height;
+                    // 调试：定期报告检测状态
+                    if (this.detectionAttempts % 50 === 0) {
+                        console.log(`二维码检测尝试 ${this.detectionAttempts}`);
+                        if (window.app) {
+                            window.app.updateDebugInfo(`二维码检测尝试 ${this.detectionAttempts}/100`);
+                        }
+                    }
                     
-                    // 将WebXR渲染内容复制到检测canvas
-                    this.context.drawImage(canvas, 0, 0);
+                    // 尝试从WebXR渲染内容中检测
+                    this.canvas.width = canvas.width || 512;
+                    this.canvas.height = canvas.height || 512;
                     
-                    // 获取图像数据
+                    // 清空canvas
+                    this.context.fillStyle = '#000000';
+                    this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                    
+                    // 尝试绘制当前渲染内容
+                    try {
+                        this.context.drawImage(canvas, 0, 0, this.canvas.width, this.canvas.height);
+                    } catch (drawError) {
+                        // 预期的错误 - WebXR的canvas可能无法直接读取
+                        if (this.detectionAttempts === 1) {
+                            console.log('无法直接读取WebXR画布内容（预期行为）');
+                            if (window.app) {
+                                window.app.updateDebugInfo('无法直接读取WebXR画布内容');
+                                window.app.updateDebugInfo('这是Quest的预期限制');
+                            }
+                        }
+                        return;
+                    }
+                    
+                    // 获取图像数据进行检测
                     const imageData = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                    
+                    // 检查是否有实际的图像内容
+                    let hasContent = false;
+                    for (let i = 0; i < imageData.data.length; i += 4) {
+                        if (imageData.data[i] !== 0 || imageData.data[i+1] !== 0 || imageData.data[i+2] !== 0) {
+                            hasContent = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!hasContent) {
+                        if (this.detectionAttempts <= 5) {
+                            console.log('画布内容为空');
+                            if (window.app) {
+                                window.app.updateDebugInfo('画布内容为空 - 无法检测二维码');
+                            }
+                        }
+                        return;
+                    }
                     
                     // 使用jsQR检测二维码
                     const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                        inversionAttempts: 'dontInvert'
+                        inversionAttempts: 'attemptBoth' // 尝试反色检测
                     });
                     
                     if (code && (now - this.lastDetectionTime > this.detectionCooldown)) {
                         console.log('WebXR中检测到二维码:', code.data);
+                        if (window.app) {
+                            window.app.updateDebugInfo('🎉 成功检测到二维码: ' + code.data);
+                        }
                         this.onDetectionCallback(code.data);
                         this.lastDetectionTime = now;
                         
@@ -879,18 +984,30 @@
                         this.isDetecting = false;
                         setTimeout(() => {
                             this.isDetecting = true;
+                            this.detectionAttempts = 0; // 重置计数
                         }, this.detectionCooldown);
                     }
                     
                 } catch (error) {
-                    console.error('WebXR二维码检测错误:', error);
+                    if (this.detectionAttempts <= 3) {
+                        console.error('WebXR二维码检测错误:', error);
+                        if (window.app) {
+                            window.app.updateDebugInfo('检测错误: ' + error.message);
+                        }
+                    }
                 }
+                
+                this.lastDetectionTime = now;
             }
             
             stopDetection() {
                 this.isDetecting = false;
                 this.onDetectionCallback = null;
+                this.detectionAttempts = 0;
                 console.log('二维码检测已停止');
+                if (window.app) {
+                    window.app.updateDebugInfo('二维码检测已停止');
+                }
             }
         }
         

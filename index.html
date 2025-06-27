@@ -10,6 +10,10 @@
     <script src="./js/DRACOLoader.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.min.js"></script>
     
+    <!-- AR.js库 -->
+    <script src="https://cdn.jsdelivr.net/gh/aframevr/aframe@1c2407b26c61958baa93967b5412487cd94b290b/dist/aframe-master.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    
     <style>
         body {
             margin: 0;
@@ -54,6 +58,17 @@
             padding: 15px 30px;
             font-size: 16px;
             background: #fd7e14;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        
+        #realAR {
+            padding: 15px 30px;
+            font-size: 16px;
+            background: #e91e63;
             color: white;
             border: none;
             border-radius: 8px;
@@ -154,6 +169,55 @@
             font-size: 14px;
         }
         
+        /* AR.js场景样式 */
+        #arScene {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        .ar-controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            border-radius: 8px;
+            color: white;
+        }
+        
+        .ar-controls button {
+            padding: 8px 15px;
+            margin: 5px;
+            background: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .ar-controls button:disabled {
+            background: grey;
+            cursor: not-allowed;
+        }
+        
+        .ar-info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            border-radius: 8px;
+            color: white;
+            max-width: 300px;
+        }
+        
         .download-info {
             position: absolute;
             top: 10px;
@@ -179,10 +243,16 @@
         <p>请选择体验模式：</p>
         <button id="startWebXR">启动WebXR模式</button>
         <br>
+        <button id="realAR">传统AR模式（完整追踪）</button>
+        <br>
         <button id="cameraAR">摄像头AR模式</button>
         <br>
         <button id="fallbackAR">测试模式</button>
-        <p><small>WebXR模式需要VR头显支持<br>摄像头AR模式需要摄像头权限</small></p>
+        <p><small>
+            WebXR模式需要VR头显支持<br>
+            传统AR模式使用AR.js精确追踪<br>
+            摄像头AR模式需要摄像头权限
+        </small></p>
     </div>
     
     <div id="info">
@@ -205,6 +275,65 @@
     <canvas id="qrCanvas"></canvas>
     <video id="cameraVideo" autoplay muted playsinline></video>
     <div class="camera-overlay" id="cameraOverlay"></div>
+    
+    <!-- 真正的AR.js场景 - 完全还原用户原始代码 -->
+    <div id="arScene">
+        <!-- AR.js控制面板 -->
+        <div class="ar-controls">
+            <button id="arPlayButton" disabled>播放</button>
+            <button id="stopARButton">退出AR</button>
+        </div>
+        
+        <!-- AR.js信息显示 -->
+        <div class="ar-info" id="arInfo">
+            请用摄像头对准"岭南乐器码"
+        </div>
+        
+        <!-- A-Frame AR场景 - 使用用户原始配置 -->
+        <a-scene 
+            arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false" 
+            embedded 
+            vr-mode-ui="enabled: false"
+            id="aframeScene">
+            
+            <!-- 乐器1标记 -->
+            <a-marker 
+                id="marker1" 
+                preset="custom" 
+                ar-marker-tracker
+                url="pattern1.patt">
+                <a-entity 
+                    gltf-model="model1.gltf" 
+                    id="model1" 
+                    dynamic-rotation="x:0; y:0; z:0" 
+                    position="0 0 0" 
+                    scale="0.02 0.02 0.02"
+                    dynamic-material
+                    dynamic-light="intensity: 1">
+                </a-entity>
+            </a-marker>
+            
+            <!-- 乐器2标记 -->
+            <a-marker 
+                id="marker2" 
+                preset="custom" 
+                ar-marker-tracker
+                url="pattern2.patt">
+                <a-entity 
+                    gltf-model="model2.gltf" 
+                    id="model2" 
+                    dynamic-rotation="x:0; y:0; z:0" 
+                    position="0 0 0" 
+                    scale="0.03 0.03 0.03"
+                    dynamic-material
+                    dynamic-light="intensity: 1">
+                </a-entity>
+            </a-marker>
+            
+            <!-- 摄像头 -->
+            <a-entity camera></a-entity>
+        </a-scene>
+    </div>
 
     <script>
         // 显示下载链接的函数
@@ -261,8 +390,14 @@
                 this.currentInstrument = null;
                 this.isWebXRMode = false;
                 this.isCameraARMode = false;
+                this.isRealARMode = false;
                 this.modelLoader = null;
                 this.mouseControls = null;
+                
+                // AR.js相关
+                this.arAudioCache = new Map();
+                this.arCurrentAudio = null;
+                this.arIsPlaying = false;
                 
                 // 乐器配置
                 this.instrumentConfigs = {
@@ -273,6 +408,259 @@
                         scale: [0.02, 0.02, 0.02],
                         name: '乐器1'
                     },
+            
+            async startRealAR() {
+                try {
+                    console.log('启动传统AR模式（完整追踪）...');
+                    this.updateDebugInfo('初始化AR.js组件...');
+                    
+                    // 注册用户原始的A-Frame组件
+                    this.registerARComponents();
+                    
+                    // 预加载AR音频
+                    await this.preloadARAssets();
+                    
+                    // 显示AR场景
+                    document.getElementById('arScene').style.display = 'block';
+                    document.getElementById('startContainer').style.display = 'none';
+                    
+                    // 设置AR控制按钮
+                    this.setupARControls();
+                    
+                    this.isRealARMode = true;
+                    this.updateDebugInfo('传统AR模式启动成功 - 使用pattern文件追踪');
+                    
+                    console.log('传统AR模式启动完成');
+                    
+                } catch (error) {
+                    console.error('传统AR启动失败:', error);
+                    this.updateDebugInfo('AR启动失败: ' + error.message);
+                    alert('AR启动失败，请尝试其他模式');
+                }
+            },
+            
+            registerARComponents() {
+                // 还原用户原始的动态旋转组件
+                AFRAME.registerComponent('dynamic-rotation', {
+                    schema: {
+                        x: { type: 'number', default: 0 },
+                        y: { type: 'number', default: 0 },
+                        z: { type: 'number', default: 0 }
+                    },
+                    init: function () {
+                        const el = this.el;
+                        const data = this.data;
+                        el.addEventListener('model-loaded', function () {
+                            const mesh = el.getObject3D('mesh');
+                            if (!mesh) return;
+                            mesh.rotation.set(
+                                THREE.Math.degToRad(data.x),
+                                THREE.Math.degToRad(data.y),
+                                THREE.Math.degToRad(data.z)
+                            );
+                        });
+                    }
+                });
+                
+                // 还原用户原始的AR标记追踪组件
+                AFRAME.registerComponent('ar-marker-tracker', {
+                    init: function () {
+                        const el = this.el;
+                        const markerId = el.getAttribute('id');
+                        let currentAudio = null;
+                        let audioPath = '';
+                        let infoPath = '';
+                        let infoText = '';
+                        let isVisible = false;
+                        
+                        // 根据markerId设置音频和信息路径
+                        if (markerId === 'marker1') {
+                            audioPath = 'audio1.mp3';
+                            infoPath = 'info1.txt';
+                        } else if (markerId === 'marker2') {
+                            audioPath = 'audio2.mp3';
+                            infoPath = 'info2.txt';
+                        }
+                        
+                        // 获取音频
+                        if (window.app && window.app.arAudioCache.has(audioPath)) {
+                            currentAudio = window.app.arAudioCache.get(audioPath);
+                        }
+                        
+                        // 加载信息文本
+                        fetch(infoPath)
+                            .then(response => response.ok ? response.text() : '')
+                            .then(text => {
+                                infoText = text;
+                            })
+                            .catch(error => {
+                                console.error('Error loading info text:', error);
+                            });
+                        
+                        // 监听标记可见性变化
+                        this.tick = AFRAME.utils.throttleTick(function () {
+                            const newVisible = el.object3D.visible;
+                            if (newVisible !== isVisible) {
+                                isVisible = newVisible;
+                                
+                                if (isVisible) {
+                                    // 标记出现
+                                    console.log('标记出现:', markerId);
+                                    
+                                    // 切换当前音频
+                                    if (window.app) {
+                                        if (window.app.arCurrentAudio && window.app.arCurrentAudio !== currentAudio) {
+                                            window.app.arCurrentAudio.pause();
+                                            window.app.arIsPlaying = false;
+                                        }
+                                        
+                                        window.app.arCurrentAudio = currentAudio;
+                                        window.app.updateARInfo(infoText || '检测到乐器标记');
+                                        window.app.enableARPlayButton();
+                                    }
+                                } else {
+                                    // 标记消失
+                                    console.log('标记消失:', markerId);
+                                }
+                            }
+                        }, 100);
+                    }
+                });
+                
+                // 还原用户原始的动态材质组件
+                AFRAME.registerComponent('dynamic-material', {
+                    init: function () {
+                        const el = this.el;
+                        let colorIndex = 0;
+                        const colors = ['#FF5733', '#33FF57', '#3357FF'];
+                        
+                        setInterval(function () {
+                            colorIndex = (colorIndex + 1) % colors.length;
+                            el.setAttribute('material', 'color', colors[colorIndex]);
+                        }, 3000);
+                    }
+                });
+                
+                // 还原用户原始的动态光照组件
+                AFRAME.registerComponent('dynamic-light', {
+                    schema: {
+                        intensity: { type: 'number', default: 1 }
+                    },
+                    init: function () {
+                        const light = this.el.getOrCreateObject3D('light', THREE.PointLight);
+                        light.intensity = this.data.intensity;
+                        
+                        // 动态调整光照强度
+                        setInterval(() => {
+                            light.intensity = 0.5 + Math.sin(Date.now() * 0.001) * 0.5;
+                        }, 100);
+                    },
+                    update: function () {
+                        const light = this.el.getObject3D('light');
+                        if (light) {
+                            light.intensity = this.data.intensity;
+                        }
+                    }
+                });
+                
+                console.log('AR.js组件注册完成');
+            },
+            
+            preloadARAssets() {
+                console.log('预加载AR音频资源...');
+                const audioFiles = ['audio1.mp3', 'audio2.mp3'];
+                
+                const promises = audioFiles.map(audioPath => {
+                    return new Promise((resolve) => {
+                        try {
+                            const audio = new Audio();
+                            audio.src = audioPath;
+                            audio.preload = 'auto';
+                            
+                            const onLoad = () => {
+                                this.arAudioCache.set(audioPath, audio);
+                                console.log('AR音频预加载成功:', audioPath);
+                                resolve();
+                            };
+                            
+                            const onError = () => {
+                                console.error('AR音频预加载失败:', audioPath);
+                                resolve(); // 继续处理其他音频
+                            };
+                            
+                            audio.oncanplaythrough = onLoad;
+                            audio.onerror = onError;
+                            audio.load();
+                            
+                        } catch (error) {
+                            console.error('AR音频处理错误:', audioPath, error);
+                            resolve();
+                        }
+                    });
+                });
+                
+                return Promise.all(promises);
+            },
+            
+            setupARControls() {
+                const arPlayButton = document.getElementById('arPlayButton');
+                const stopARButton = document.getElementById('stopARButton');
+                
+                arPlayButton.addEventListener('click', () => {
+                    this.toggleARAudio();
+                });
+                
+                stopARButton.addEventListener('click', () => {
+                    this.stopRealAR();
+                });
+            },
+            
+            toggleARAudio() {
+                if (!this.arCurrentAudio) {
+                    console.log('没有可播放的AR音频');
+                    return;
+                }
+                
+                if (this.arIsPlaying) {
+                    this.arCurrentAudio.pause();
+                    this.arIsPlaying = false;
+                    document.getElementById('arPlayButton').textContent = '播放';
+                } else {
+                    this.arCurrentAudio.play().then(() => {
+                        this.arIsPlaying = true;
+                        document.getElementById('arPlayButton').textContent = '暂停';
+                    }).catch((error) => {
+                        console.error('AR音频播放失败:', error);
+                    });
+                }
+            },
+            
+            enableARPlayButton() {
+                const button = document.getElementById('arPlayButton');
+                button.disabled = false;
+                button.style.backgroundColor = '#007BFF';
+                button.textContent = this.arIsPlaying ? '暂停' : '播放';
+            },
+            
+            updateARInfo(text) {
+                document.getElementById('arInfo').textContent = text;
+            },
+            
+            stopRealAR() {
+                // 停止AR模式
+                document.getElementById('arScene').style.display = 'none';
+                document.getElementById('startContainer').style.display = 'block';
+                
+                // 停止音频
+                if (this.arCurrentAudio) {
+                    this.arCurrentAudio.pause();
+                    this.arCurrentAudio.currentTime = 0;
+                    this.arIsPlaying = false;
+                }
+                
+                this.isRealARMode = false;
+                console.log('传统AR模式已停止');
+            },
                     'pattern2': {
                         model: 'model2.gltf', 
                         audio: 'audio2.mp3',
@@ -292,33 +680,31 @@
                 this.init();
             }
             
-            async init() {
-                try {
-                    console.log('初始化UI...');
-                    this.setupUI();
-                    
-                    console.log('初始化Three.js...');
-                    this.setupThreeJS();
-                    
-                    console.log('检查本地文件...');
-                    this.checkLocalFiles();
-                    
-                    console.log('初始化GLTFLoader...');
-                    this.initializeLoader();
-                    
-                    console.log('预加载音频...');
-                    await this.audioManager.preloadAudio(this.instrumentConfigs);
-                    
-                    console.log('初始化二维码检测器...');
-                    this.qrDetector.init();
-                    
-                    console.log('WebXRARInstrument初始化完成');
-                    this.updateDebugInfo('初始化完成');
-                    
-                } catch (error) {
-                    console.error('初始化失败:', error);
-                    this.updateDebugInfo('初始化失败: ' + error.message);
-                }
+            init() {
+                console.log('初始化UI...');
+                this.setupUI();
+                
+                console.log('检查本地文件...');
+                this.checkLocalFiles();
+                
+                console.log('初始化Three.js...');
+                this.setupThreeJS();
+                
+                console.log('初始化GLTFLoader...');
+                this.initializeLoader();
+                
+                console.log('预加载音频...');
+                this.audioManager.preloadAudio(this.instrumentConfigs).then(() => {
+                    console.log('音频预加载完成');
+                }).catch(error => {
+                    console.error('音频预加载失败:', error);
+                });
+                
+                console.log('初始化二维码检测器...');
+                this.qrDetector.init();
+                
+                console.log('WebXRARInstrument初始化完成');
+                this.updateDebugInfo('初始化完成');
             }
             
             checkLocalFiles() {
@@ -379,6 +765,7 @@
             
             setupUI() {
                 const startWebXR = document.getElementById('startWebXR');
+                const realAR = document.getElementById('realAR');
                 const cameraAR = document.getElementById('cameraAR');
                 const fallbackAR = document.getElementById('fallbackAR');
                 const playButton = document.getElementById('playButton');
@@ -387,6 +774,12 @@
                     console.log('启动WebXR按钮被点击');
                     this.updateDebugInfo('尝试启动WebXR...');
                     this.startWebXR();
+                });
+                
+                realAR.addEventListener('click', () => {
+                    console.log('传统AR按钮被点击');
+                    this.updateDebugInfo('启动传统AR模式...');
+                    this.startRealAR();
                 });
                 
                 cameraAR.addEventListener('click', () => {
@@ -504,20 +897,17 @@
                 this.updateStatus('测试模式运行中 - 可拖动旋转模型');
             }
             
-            async startCameraAR() {
-                try {
-                    console.log('启动摄像头AR模式...');
-                    this.updateDebugInfo('请求摄像头权限...');
-                    
-                    // 请求摄像头权限
-                    const stream = await navigator.mediaDevices.getUserMedia({
-                        video: {
-                            width: { ideal: 1280 },
-                            height: { ideal: 720 },
-                            facingMode: 'environment' // 后置摄像头
-                        }
-                    });
-                    
+            startCameraAR() {
+                console.log('启动摄像头AR模式...');
+                this.updateDebugInfo('请求摄像头权限...');
+                
+                navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        facingMode: 'environment'
+                    }
+                }).then(stream => {
                     // 设置视频流
                     const video = document.getElementById('cameraVideo');
                     video.srcObject = stream;
@@ -535,18 +925,18 @@
                     this.addStopCameraButton();
                     
                     // 开始二维码检测
-                    await this.qrDetector.startCameraDetection((qrData) => {
+                    this.qrDetector.startCameraDetection((qrData) => {
                         this.handleQRDetection(qrData);
                     });
                     
                     this.updateStatus('摄像头AR运行中 - 扫描二维码');
                     this.updateDebugInfo('摄像头AR模式启动成功');
                     
-                } catch (error) {
+                }).catch(error => {
                     console.error('摄像头AR启动失败:', error);
                     this.updateDebugInfo('摄像头权限被拒绝或设备不支持');
                     alert('无法访问摄像头，请检查权限设置或尝试测试模式');
-                }
+                });
             }
             
             addStopCameraButton() {
@@ -692,7 +1082,7 @@
                 }
             }
             
-            async handleQRDetection(qrData) {
+            handleQRDetection(qrData) {
                 console.log('处理二维码:', qrData);
                 
                 const config = this.instrumentConfigs[qrData];
@@ -703,25 +1093,26 @@
                 
                 this.updateQRResult(qrData);
                 this.updateCurrentInstrument(config.name);
-                await this.switchInstrument(qrData, config);
+                this.switchInstrument(qrData, config);
             }
             
-            async switchInstrument(instrumentId, config) {
-                try {
-                    if (this.activeModel) {
-                        this.scene.remove(this.activeModel);
-                        this.activeModel = null;
-                    }
-                    
-                    const model = await this.loadModel(config.model);
+            switchInstrument(instrumentId, config) {
+                console.log('切换乐器:', config.name);
+                
+                if (this.activeModel) {
+                    this.scene.remove(this.activeModel);
+                    this.activeModel = null;
+                }
+                
+                this.loadModel(config.model).then(model => {
                     if (model) {
                         // 根据模式调整位置
                         if (this.isWebXRMode) {
-                            model.position.set(0, 0, -2); // WebXR模式：在用户前方
+                            model.position.set(0, 0, -2);
                         } else if (this.isCameraARMode) {
-                            model.position.set(0, 0, -1); // 摄像头AR模式：稍近一些
+                            model.position.set(0, 0, -1);
                         } else {
-                            model.position.set(0, 0, 0);  // 测试模式：中央
+                            model.position.set(0, 0, 0);
                         }
                         
                         model.scale.set(...config.scale);
@@ -734,27 +1125,29 @@
                         }
                         
                         this.addDynamicMaterial(model);
-                        await this.audioManager.switchAudio(config.audio);
-                        this.updateAudioInfo(config.name);
-                        this.enableAudioButton();
+                        
+                        // 音频处理
+                        this.audioManager.switchAudio(config.audio).then(() => {
+                            this.updateAudioInfo(config.name);
+                            this.enableAudioButton();
+                        });
                         
                         console.log('乐器加载成功:', config.name);
                         this.updateDebugInfo(`${config.name} 已加载到场景`);
                     }
-                    
-                } catch (error) {
+                }).catch(error => {
                     console.error('切换乐器失败:', error);
                     this.updateStatus('模型加载失败: ' + error.message);
-                }
+                });
             }
             
-            async loadModel(modelPath) {
+            loadModel(modelPath) {
                 if (this.loadedModels.has(modelPath)) {
-                    return this.loadedModels.get(modelPath).clone();
+                    return Promise.resolve(this.loadedModels.get(modelPath).clone());
                 }
                 
                 if (!this.modelLoader) {
-                    throw new Error('GLTFLoader尚未初始化');
+                    return Promise.reject(new Error('GLTFLoader尚未初始化'));
                 }
                 
                 return new Promise((resolve, reject) => {
@@ -978,22 +1371,25 @@
                 this.canvas.height = 480;
             }
             
-            async startCameraDetection(callback) {
+            startCameraDetection(callback) {
                 this.onDetectionCallback = callback;
                 this.video = document.getElementById('cameraVideo');
                 this.isDetecting = true;
                 
                 // 等待视频准备就绪
-                await new Promise((resolve) => {
+                const waitForVideo = () => {
                     if (this.video.readyState >= 2) {
-                        resolve();
+                        console.log('开始二维码检测...');
+                        this.detectLoop();
                     } else {
-                        this.video.addEventListener('loadeddata', resolve, { once: true });
+                        this.video.addEventListener('loadeddata', () => {
+                            console.log('开始二维码检测...');
+                            this.detectLoop();
+                        }, { once: true });
                     }
-                });
+                };
                 
-                console.log('开始二维码检测...');
-                this.detectLoop();
+                waitForVideo();
             }
             
             detectLoop() {
@@ -1054,9 +1450,11 @@
             console.log('WebXR可用:', !!navigator.xr);
             console.log('GLTFLoader可用:', typeof THREE.GLTFLoader !== 'undefined');
             console.log('DRACOLoader可用:', typeof THREE.DRACOLoader !== 'undefined');
+            console.log('A-Frame可用:', typeof AFRAME !== 'undefined');
             
             try {
                 app = new WebXRARInstrument();
+                window.app = app; // 设置全局引用供A-Frame组件使用
             } catch (error) {
                 console.error('应用初始化失败:', error);
                 document.getElementById('startContainer').innerHTML = 

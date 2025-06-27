@@ -181,7 +181,12 @@
             ✅ 支持Meta Quest 3/3S<br>
             ✅ 彩色摄像头透视<br>
             ✅ 二维码自动检测<br>
-            ✅ 手柄/手势交互
+            ✅ 手柄/手势交互<br>
+            <br>
+            <strong>⚠️ 首次使用请确保：</strong><br>
+            1. 在Quest浏览器输入 chrome://flags<br>
+            2. 开启 "WebXR incubations"<br>
+            3. 重启浏览器
         </small></p>
     </div>
     
@@ -252,15 +257,25 @@
                 
                 // 检查WebXR支持
                 if (!navigator.xr) {
-                    this.showError('此设备不支持WebXR');
+                    this.showError('此设备不支持WebXR API');
                     return;
                 }
                 
                 // 检查AR支持
                 const arSupported = await navigator.xr.isSessionSupported('immersive-ar');
                 if (!arSupported) {
-                    this.showError('此设备不支持WebXR AR模式');
+                    this.showError('此设备不支持WebXR AR模式\n请确保：\n1. 使用Quest 3/3S或兼容设备\n2. 浏览器已开启WebXR实验特性');
                     return;
+                }
+                
+                // 检查可选特性支持
+                try {
+                    const localFloorSupported = await navigator.xr.isSessionSupported('immersive-ar', {
+                        optionalFeatures: ['local-floor']
+                    });
+                    this.updateDebugInfo(`local-floor支持: ${localFloorSupported ? '是' : '否'}`);
+                } catch (e) {
+                    this.updateDebugInfo('无法检查local-floor支持');
                 }
                 
                 // 初始化Three.js
@@ -291,10 +306,12 @@
                 camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
                 camera.position.set(0, 1.6, 3);
                 
-                // 创建渲染器
+                // 创建渲染器 - Quest优化设置
                 renderer = new THREE.WebGLRenderer({
                     antialias: true,
-                    alpha: true // 关键：启用透明背景用于AR透视
+                    alpha: true, // 关键：启用透明背景用于AR透视
+                    powerPreference: 'high-performance', // Quest性能优化
+                    stencil: false // Quest性能优化
                 });
                 renderer.setSize(window.innerWidth, window.innerHeight);
                 renderer.shadowMap.enabled = true;
@@ -357,17 +374,40 @@
                     this.updateStatus('启动WebXR...');
                     this.updateDebugInfo('请求WebXR AR会话...');
                     
-                    // 请求WebXR AR会话
+                    // 请求WebXR AR会话 - 修复Quest 3兼容性
                     xrSession = await navigator.xr.requestSession('immersive-ar', {
-                        requiredFeatures: ['local'],
-                        optionalFeatures: ['bounded-floor', 'hand-tracking']
+                        optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking']
                     });
                     
-                    // 设置渲染器
+                    // 设置渲染器 - 确保兼容性
                     await renderer.xr.setSession(xrSession);
                     
-                    // 获取参考空间
-                    xrReferenceSpace = await xrSession.requestReferenceSpace('local');
+                    // 等待会话完全初始化
+                    await new Promise(resolve => {
+                        xrSession.addEventListener('end', () => {
+                            this.onSessionEnd();
+                        });
+                        // 给会话一些时间来完全初始化
+                        setTimeout(resolve, 100);
+                    });
+                    
+                    // 获取参考空间 - 尝试多种类型以确保兼容性
+                    try {
+                        xrReferenceSpace = await xrSession.requestReferenceSpace('local-floor');
+                        this.updateDebugInfo('使用local-floor参考空间');
+                    } catch (e) {
+                        try {
+                            xrReferenceSpace = await xrSession.requestReferenceSpace('local');
+                            this.updateDebugInfo('降级到local参考空间');
+                        } catch (e2) {
+                            try {
+                                xrReferenceSpace = await xrSession.requestReferenceSpace('viewer');
+                                this.updateDebugInfo('降级到viewer参考空间');
+                            } catch (e3) {
+                                throw new Error('无法获取任何支持的参考空间类型');
+                            }
+                        }
+                    }
                     
                     // 设置控制器
                     this.setupControllers();
@@ -388,7 +428,18 @@
                     
                 } catch (error) {
                     console.error('WebXR启动失败:', error);
-                    this.showError('WebXR启动失败: ' + error.message);
+                    
+                    let errorMessage = 'WebXR启动失败: ';
+                    if (error.message.includes('requestReferenceSpace')) {
+                        errorMessage += '参考空间不支持\n请检查Quest设备设置';
+                    } else if (error.message.includes('requestSession')) {
+                        errorMessage += '无法创建AR会话\n请确保设备支持并已开启AR模式';
+                    } else {
+                        errorMessage += error.message;
+                    }
+                    
+                    this.showError(errorMessage);
+                    this.updateDebugInfo('详细错误: ' + error.stack);
                 }
             }
             
@@ -587,6 +638,27 @@
                 if (this.audioManager) {
                     this.audioManager.togglePlayback();
                 }
+            }
+            
+            onSessionEnd() {
+                xrSession = null;
+                xrReferenceSpace = null;
+                isWebXRActive = false;
+                
+                // 停止二维码检测
+                this.qrDetector.stopDetection();
+                
+                // 重置UI
+                this.showStartUI();
+                
+                // 清理场景
+                if (activeModel) {
+                    scene.remove(activeModel);
+                    activeModel = null;
+                }
+                
+                this.updateStatus('WebXR会话已结束');
+                this.updateDebugInfo('WebXR会话已结束');
             }
             
             exitWebXR() {

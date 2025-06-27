@@ -181,13 +181,15 @@
         <p><small>
             ✅ 支持Meta Quest 3/3S<br>
             ✅ 彩色摄像头透视<br>
-            ✅ 二维码自动检测<br>
+            ✅ <strong>Raw Camera Access API</strong><br>
+            ✅ 实时二维码检测<br>
             ✅ 手柄/手势交互<br>
             <br>
-            <strong>⚠️ 首次使用请确保：</strong><br>
-            1. 在Quest浏览器输入 chrome://flags<br>
-            2. 开启 "WebXR incubations"<br>
-            3. 重启浏览器
+            <strong>⚠️ 重要设置（必需）：</strong><br>
+            1. 在Quest浏览器输入 <code>chrome://flags</code><br>
+            2. 搜索并开启：<br>
+            &nbsp;&nbsp;&nbsp;"<strong>Experimental Web Platform Features</strong>"<br>
+            3. <strong>重启浏览器</strong>
         </small></p>
     </div>
     
@@ -225,6 +227,7 @@
         let xrSession = null;
         let xrReferenceSpace = null;
         let isWebXRActive = false;
+        let currentXRFrame = null; // 添加当前帧引用
         
         // 乐器配置
         const instrumentConfigs = {
@@ -338,7 +341,10 @@
                 scene.add(directionalLight);
                 
                 // 启动渲染循环
-                renderer.setAnimationLoop(this.render.bind(this));
+                renderer.setAnimationLoop((timestamp, frame) => {
+                    currentXRFrame = frame; // 保存当前XR帧
+                    this.render();
+                });
                 
                 console.log('Three.js设置完成');
             }
@@ -380,13 +386,19 @@
                     this.updateStatus('启动WebXR...');
                     this.updateDebugInfo('请求WebXR AR会话...');
                     
-                    // 请求WebXR AR会话 - 添加图像追踪特性
+                    // 请求WebXR AR会话 - 添加摄像头访问特性
                     xrSession = await navigator.xr.requestSession('immersive-ar', {
+                        requiredFeatures: ['camera-access'], // 核心：请求摄像头访问
                         optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking', 'image-tracking']
                     });
                     
                     // 设置渲染器 - 确保兼容性
                     await renderer.xr.setSession(xrSession);
+                    
+                    // 创建WebGL绑定用于摄像头访问
+                    const gl = renderer.getContext();
+                    this.xrWebGLBinding = new XRWebGLBinding(xrSession, gl);
+                    this.updateDebugInfo('✅ XRWebGLBinding已创建');
                     
                     // 等待会话完全初始化
                     await new Promise(resolve => {
@@ -418,10 +430,10 @@
                     // 设置控制器
                     this.setupControllers();
                     
-                    // 启动二维码检测（有限功能）
+                    // 启动二维码检测（Raw Camera Access）
                     this.qrDetector.startWebXRDetection((qrData) => {
                         this.handleQRDetection(qrData);
-                    });
+                    }, gl, this.xrWebGLBinding);
                     
                     // 更新UI
                     this.showWebXRUI();
@@ -430,19 +442,22 @@
                     this.updateStatus('WebXR运行中');
                     this.updateDebugInfo('✅ WebXR AR会话已启动');
                     this.updateDebugInfo('');
+                    this.updateDebugInfo('📸 Raw Camera Access已启用');
                     this.updateDebugInfo('🎮 快速测试：按手柄触发器');
-                    this.updateDebugInfo('📱 二维码检测：功能有限');
-                    this.updateDebugInfo('   (Quest浏览器限制摄像头访问)');
+                    this.updateDebugInfo('📱 摄像头二维码检测：实时监听中');
                     this.updateDebugInfo('');
-                    this.updateDebugInfo('💡 建议：主要使用手柄进行交互');
+                    this.updateDebugInfo('💡 将二维码置于摄像头视野中');
+                    this.updateDebugInfo('   或使用手柄进行交互');
                     
-                    console.log('WebXR启动成功');
+                    console.log('WebXR + Raw Camera Access启动成功');
                     
                 } catch (error) {
                     console.error('WebXR启动失败:', error);
                     
                     let errorMessage = 'WebXR启动失败: ';
-                    if (error.message.includes('requestReferenceSpace')) {
+                    if (error.message.includes('camera-access')) {
+                        errorMessage += '摄像头访问被拒绝\n请确保：\n1. 在chrome://flags启用"Experimental Web Platform Features"\n2. 重启Quest浏览器\n3. 授予摄像头权限';
+                    } else if (error.message.includes('requestReferenceSpace')) {
                         errorMessage += '参考空间不支持\n请检查Quest设备设置';
                     } else if (error.message.includes('requestSession')) {
                         errorMessage += '无法创建AR会话\n请确保设备支持并已开启AR模式';
@@ -676,6 +691,8 @@
             onSessionEnd() {
                 xrSession = null;
                 xrReferenceSpace = null;
+                this.xrWebGLBinding = null;
+                currentXRFrame = null;
                 isWebXRActive = false;
                 
                 // 停止二维码检测
@@ -699,6 +716,8 @@
                     xrSession.end();
                     xrSession = null;
                     xrReferenceSpace = null;
+                    this.xrWebGLBinding = null;
+                    currentXRFrame = null;
                     isWebXRActive = false;
                     
                     // 停止二维码检测
@@ -719,9 +738,9 @@
             }
             
             render() {
-                // 在WebXR模式下进行二维码检测
-                if (isWebXRActive && this.qrDetector) {
-                    this.qrDetector.detectInWebXR(renderer.domElement);
+                // 在WebXR模式下进行摄像头二维码检测
+                if (isWebXRActive && this.qrDetector && xrReferenceSpace && currentXRFrame) {
+                    this.qrDetector.detectInXRFrame(currentXRFrame, xrReferenceSpace);
                 }
                 
                 // 模型自动旋转（如果没有被手动控制）
@@ -863,7 +882,7 @@
             }
         }
         
-        // 二维码检测器 - 更新为WebXR兼容版本
+        // 二维码检测器 - WebXR Raw Camera Access版本
         class QRDetector {
             constructor() {
                 this.canvas = document.getElementById('qrCanvas');
@@ -871,111 +890,110 @@
                 this.isDetecting = false;
                 this.onDetectionCallback = null;
                 this.lastDetectionTime = 0;
-                this.detectionCooldown = 2000;
+                this.detectionCooldown = 1000; // 1秒冷却时间
                 this.detectionAttempts = 0;
-                this.maxAttempts = 100; // 限制尝试次数防止性能问题
+                this.gl = null;
+                this.xrBinding = null;
+                this.cameraImageCanvas = null;
+                this.cameraImageContext = null;
             }
             
-            startWebXRDetection(callback) {
+            startWebXRDetection(callback, gl, xrBinding) {
                 this.onDetectionCallback = callback;
                 this.isDetecting = true;
                 this.detectionAttempts = 0;
+                this.gl = gl;
+                this.xrBinding = xrBinding;
                 
-                // 更新调试信息
+                // 创建用于摄像头图像的canvas
+                this.cameraImageCanvas = document.createElement('canvas');
+                this.cameraImageContext = this.cameraImageCanvas.getContext('2d');
+                
                 if (window.app) {
-                    window.app.updateDebugInfo('开始WebXR二维码检测...');
-                    window.app.updateDebugInfo('⚠️ 注意：Quest当前不支持原始摄像头访问');
-                    window.app.updateDebugInfo('请尝试以下替代方案：');
-                    window.app.updateDebugInfo('1. 使用较大的二维码（至少5cm x 5cm）');
-                    window.app.updateDebugInfo('2. 确保二维码清晰可见');
-                    window.app.updateDebugInfo('3. 尝试不同的光照条件');
+                    window.app.updateDebugInfo('🎥 开始Raw Camera Access检测...');
+                    window.app.updateDebugInfo('✅ 摄像头访问权限已获取');
+                    window.app.updateDebugInfo('📱 正在监听二维码...');
                 }
                 
-                console.log('开始WebXR二维码检测');
+                console.log('开始WebXR Raw Camera Access检测');
             }
             
-            detectInWebXR(canvas) {
-                if (!this.isDetecting || !this.onDetectionCallback) return;
-                if (this.detectionAttempts >= this.maxAttempts) {
-                    if (this.detectionAttempts === this.maxAttempts) {
-                        console.log('已达到最大检测尝试次数，减少检测频率');
-                        if (window.app) {
-                            window.app.updateDebugInfo('已达到最大检测尝试次数，减少检测频率');
-                        }
-                    }
-                    this.detectionAttempts++;
-                    return; // 减少检测频率
-                }
+            detectInXRFrame(frame, referenceSpace) {
+                if (!this.isDetecting || !this.onDetectionCallback || !this.xrBinding) return;
                 
-                // 防抖处理
                 const now = Date.now();
-                if (now - this.lastDetectionTime < 200) return; // 降低检测频率到每200ms
+                if (now - this.lastDetectionTime < 200) return; // 限制检测频率
                 
                 this.detectionAttempts++;
                 
                 try {
-                    // 调试：定期报告检测状态
-                    if (this.detectionAttempts % 50 === 0) {
-                        console.log(`二维码检测尝试 ${this.detectionAttempts}`);
-                        if (window.app) {
-                            window.app.updateDebugInfo(`二维码检测尝试 ${this.detectionAttempts}/100`);
-                        }
+                    // 获取viewer pose来访问views
+                    const pose = frame.getViewerPose(referenceSpace);
+                    if (!pose || !pose.views || pose.views.length === 0) {
+                        return;
                     }
                     
-                    // 尝试从WebXR渲染内容中检测
-                    this.canvas.width = canvas.width || 512;
-                    this.canvas.height = canvas.height || 512;
+                    // 取第一个view（通常是主视图）
+                    const view = pose.views[0];
                     
-                    // 清空canvas
-                    this.context.fillStyle = '#000000';
-                    this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
-                    
-                    // 尝试绘制当前渲染内容
-                    try {
-                        this.context.drawImage(canvas, 0, 0, this.canvas.width, this.canvas.height);
-                    } catch (drawError) {
-                        // 预期的错误 - WebXR的canvas可能无法直接读取
-                        if (this.detectionAttempts === 1) {
-                            console.log('无法直接读取WebXR画布内容（预期行为）');
+                    // 检查view是否有camera属性（Raw Camera Access API）
+                    if (!view.camera) {
+                        if (this.detectionAttempts % 100 === 1) {
+                            console.log('View没有camera属性，可能需要启用实验特性');
                             if (window.app) {
-                                window.app.updateDebugInfo('无法直接读取WebXR画布内容');
-                                window.app.updateDebugInfo('这是Quest的预期限制');
+                                window.app.updateDebugInfo('⚠️ 未检测到摄像头访问');
+                                window.app.updateDebugInfo('请确保已启用chrome://flags中的实验特性');
                             }
                         }
                         return;
                     }
                     
-                    // 获取图像数据进行检测
-                    const imageData = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                    // 获取摄像头图像作为WebGL纹理
+                    let cameraTexture;
+                    try {
+                        cameraTexture = this.xrBinding.getCameraImage(view.camera);
+                    } catch (cameraError) {
+                        if (this.detectionAttempts % 50 === 1) {
+                            console.log('获取摄像头图像失败:', cameraError);
+                            if (window.app) {
+                                window.app.updateDebugInfo('❌ 摄像头图像获取失败');
+                                window.app.updateDebugInfo('错误: ' + cameraError.message);
+                            }
+                        }
+                        return;
+                    }
                     
-                    // 检查是否有实际的图像内容
-                    let hasContent = false;
-                    for (let i = 0; i < imageData.data.length; i += 4) {
-                        if (imageData.data[i] !== 0 || imageData.data[i+1] !== 0 || imageData.data[i+2] !== 0) {
-                            hasContent = true;
-                            break;
+                    if (!cameraTexture) {
+                        if (this.detectionAttempts % 50 === 1) {
+                            console.log('摄像头纹理为空');
+                        }
+                        return;
+                    }
+                    
+                    // 报告成功状态
+                    if (this.detectionAttempts === 1) {
+                        console.log('✅ 成功获取到摄像头纹理！');
+                        if (window.app) {
+                            window.app.updateDebugInfo('🎉 成功获取摄像头数据！');
+                            window.app.updateDebugInfo('📸 开始二维码识别...');
                         }
                     }
                     
-                    if (!hasContent) {
-                        if (this.detectionAttempts <= 5) {
-                            console.log('画布内容为空');
-                            if (window.app) {
-                                window.app.updateDebugInfo('画布内容为空 - 无法检测二维码');
-                            }
-                        }
+                    // 将WebGL纹理转换为像素数据
+                    const imageData = this.extractPixelsFromTexture(cameraTexture, view);
+                    if (!imageData) {
                         return;
                     }
                     
                     // 使用jsQR检测二维码
                     const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                        inversionAttempts: 'attemptBoth' // 尝试反色检测
+                        inversionAttempts: 'attemptBoth'
                     });
                     
                     if (code && (now - this.lastDetectionTime > this.detectionCooldown)) {
-                        console.log('WebXR中检测到二维码:', code.data);
+                        console.log('🎯 摄像头中检测到二维码:', code.data);
                         if (window.app) {
-                            window.app.updateDebugInfo('🎉 成功检测到二维码: ' + code.data);
+                            window.app.updateDebugInfo('🎯 检测到二维码: ' + code.data);
                         }
                         this.onDetectionCallback(code.data);
                         this.lastDetectionTime = now;
@@ -984,13 +1002,19 @@
                         this.isDetecting = false;
                         setTimeout(() => {
                             this.isDetecting = true;
-                            this.detectionAttempts = 0; // 重置计数
                         }, this.detectionCooldown);
+                    }
+                    
+                    // 定期报告检测状态
+                    if (this.detectionAttempts % 100 === 0) {
+                        if (window.app) {
+                            window.app.updateDebugInfo(`📱 已检测 ${this.detectionAttempts} 帧`);
+                        }
                     }
                     
                 } catch (error) {
                     if (this.detectionAttempts <= 3) {
-                        console.error('WebXR二维码检测错误:', error);
+                        console.error('WebXR摄像头检测错误:', error);
                         if (window.app) {
                             window.app.updateDebugInfo('检测错误: ' + error.message);
                         }
@@ -1000,13 +1024,69 @@
                 this.lastDetectionTime = now;
             }
             
+            extractPixelsFromTexture(texture, view) {
+                try {
+                    // 创建帧缓冲来读取纹理数据
+                    const framebuffer = this.gl.createFramebuffer();
+                    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, framebuffer);
+                    
+                    // 将摄像头纹理绑定到帧缓冲
+                    this.gl.framebufferTexture2D(
+                        this.gl.FRAMEBUFFER, 
+                        this.gl.COLOR_ATTACHMENT0, 
+                        this.gl.TEXTURE_2D, 
+                        texture, 
+                        0
+                    );
+                    
+                    // 检查帧缓冲状态
+                    if (this.gl.checkFramebufferStatus(this.gl.FRAMEBUFFER) !== this.gl.FRAMEBUFFER_COMPLETE) {
+                        console.log('帧缓冲不完整');
+                        this.gl.deleteFramebuffer(framebuffer);
+                        return null;
+                    }
+                    
+                    // 获取纹理尺寸（可能需要根据view的尺寸调整）
+                    const width = 640;  // 尝试常见的分辨率
+                    const height = 480;
+                    
+                    // 读取像素数据
+                    const pixels = new Uint8Array(width * height * 4);
+                    this.gl.readPixels(0, 0, width, height, this.gl.RGBA, this.gl.UNSIGNED_BYTE, pixels);
+                    
+                    // 清理
+                    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
+                    this.gl.deleteFramebuffer(framebuffer);
+                    
+                    // 创建ImageData对象
+                    const imageData = new ImageData(new Uint8ClampedArray(pixels), width, height);
+                    
+                    return imageData;
+                    
+                } catch (error) {
+                    console.error('提取纹理像素失败:', error);
+                    if (window.app) {
+                        window.app.updateDebugInfo('像素提取失败: ' + error.message);
+                    }
+                    return null;
+                }
+            }
+            
             stopDetection() {
                 this.isDetecting = false;
                 this.onDetectionCallback = null;
                 this.detectionAttempts = 0;
-                console.log('二维码检测已停止');
+                this.gl = null;
+                this.xrBinding = null;
+                
+                if (this.cameraImageCanvas) {
+                    this.cameraImageCanvas = null;
+                    this.cameraImageContext = null;
+                }
+                
+                console.log('Raw Camera Access检测已停止');
                 if (window.app) {
-                    window.app.updateDebugInfo('二维码检测已停止');
+                    window.app.updateDebugInfo('摄像头检测已停止');
                 }
             }
         }

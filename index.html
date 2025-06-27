@@ -55,6 +55,7 @@
             border-radius: 8px;
             max-width: 300px;
             z-index: 10;
+            display: none;
         }
         
         #audioControls {
@@ -65,6 +66,7 @@
             padding: 10px;
             border-radius: 8px;
             z-index: 10;
+            display: none;
         }
         
         #playButton {
@@ -82,12 +84,20 @@
             cursor: not-allowed;
         }
         
-        #qrCanvas {
+        #debugInfo {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 10;
             display: none;
         }
         
-        .hidden {
-            display: none !important;
+        #qrCanvas {
+            display: none;
         }
     </style>
 </head>
@@ -97,27 +107,38 @@
         <p>请选择体验模式：</p>
         <button id="startWebXR">启动WebXR模式</button>
         <br>
-        <button id="fallbackAR">传统AR模式</button>
+        <button id="fallbackAR">测试模式</button>
         <p><small>WebXR模式需要VR头显支持</small></p>
     </div>
     
-    <div id="info" class="hidden">
+    <div id="info">
         <div>状态: <span id="status">准备就绪</span></div>
         <div>检测到的码: <span id="qrResult">无</span></div>
         <div>当前乐器: <span id="currentInstrument">无</span></div>
         <div id="instructionText">请将二维码置于视野中心</div>
     </div>
     
-    <div id="audioControls" class="hidden">
+    <div id="audioControls">
         <button id="playButton" disabled>播放</button>
         <span id="audioInfo">无音频</span>
+    </div>
+    
+    <div id="debugInfo">
+        <div>调试信息:</div>
+        <div id="debugText"></div>
     </div>
     
     <canvas id="qrCanvas"></canvas>
 
     <script>
+        // 全局变量
+        let app = null;
+        
+        // 主应用类
         class WebXRARInstrument {
             constructor() {
+                console.log('开始初始化WebXRARInstrument...');
+                
                 this.scene = null;
                 this.camera = null;
                 this.renderer = null;
@@ -125,17 +146,10 @@
                 this.referenceSpace = null;
                 this.controllers = [];
                 this.currentInstrument = null;
-                this.audioManager = new AudioManager();
-                this.qrDetector = new QRDetector();
+                this.isWebXRMode = false;
                 this.modelLoader = null;
                 
-                // 延迟初始化确保GLTFLoader已加载
-                setTimeout(() => {
-                    this.initializeLoader();
-                }, 100);
-                this.isWebXRMode = false;
-                
-                // 乐器配置 - 对应原项目的marker1和marker2
+                // 乐器配置
                 this.instrumentConfigs = {
                     'pattern1': {
                         model: 'model1.gltf',
@@ -143,22 +157,7 @@
                         info: 'info1.txt',
                         scale: [0.02, 0.02, 0.02],
                         name: '乐器1'
-                    }
-            
-            initializeLoader() {
-                try {
-                    if (typeof THREE.GLTFLoader === 'function') {
-                        this.modelLoader = new THREE.GLTFLoader();
-                        console.log('GLTFLoader初始化成功');
-                    } else {
-                        console.error('GLTFLoader未找到');
-                        this.updateStatus('3D模型加载器不可用');
-                    }
-                } catch (error) {
-                    console.error('GLTFLoader初始化失败:', error);
-                    this.updateStatus('3D模型加载器初始化失败');
-                }
-            },
+                    },
                     'pattern2': {
                         model: 'model2.gltf', 
                         audio: 'audio2.mp3',
@@ -171,14 +170,53 @@
                 this.loadedModels = new Map();
                 this.activeModel = null;
                 
+                // 初始化各个模块
+                this.audioManager = new AudioManager();
+                this.qrDetector = new QRDetector();
+                
                 this.init();
             }
             
             async init() {
-                this.setupUI();
-                this.setupThreeJS();
-                await this.audioManager.preloadAudio(this.instrumentConfigs);
-                this.qrDetector.init();
+                try {
+                    console.log('初始化UI...');
+                    this.setupUI();
+                    
+                    console.log('初始化Three.js...');
+                    this.setupThreeJS();
+                    
+                    console.log('初始化GLTFLoader...');
+                    this.initializeLoader();
+                    
+                    console.log('预加载音频...');
+                    await this.audioManager.preloadAudio(this.instrumentConfigs);
+                    
+                    console.log('初始化二维码检测器...');
+                    this.qrDetector.init();
+                    
+                    console.log('WebXRARInstrument初始化完成');
+                    this.updateDebugInfo('初始化完成');
+                    
+                } catch (error) {
+                    console.error('初始化失败:', error);
+                    this.updateDebugInfo('初始化失败: ' + error.message);
+                }
+            }
+            
+            initializeLoader() {
+                try {
+                    if (typeof THREE.GLTFLoader === 'function') {
+                        this.modelLoader = new THREE.GLTFLoader();
+                        console.log('GLTFLoader初始化成功');
+                        this.updateDebugInfo('GLTFLoader: 可用');
+                    } else {
+                        console.error('GLTFLoader未找到');
+                        this.updateDebugInfo('GLTFLoader: 不可用');
+                    }
+                } catch (error) {
+                    console.error('GLTFLoader初始化失败:', error);
+                    this.updateDebugInfo('GLTFLoader: 错误 - ' + error.message);
+                }
             }
             
             setupUI() {
@@ -188,17 +226,21 @@
                 
                 startWebXR.addEventListener('click', () => {
                     console.log('启动WebXR按钮被点击');
+                    this.updateDebugInfo('尝试启动WebXR...');
                     this.startWebXR();
                 });
                 
                 fallbackAR.addEventListener('click', () => {
-                    console.log('传统AR按钮被点击');
-                    this.startFallbackMode();
+                    console.log('测试模式按钮被点击');
+                    this.updateDebugInfo('启动测试模式...');
+                    this.startTestMode();
                 });
                 
-                playButton.addEventListener('click', () => this.toggleAudio());
+                playButton.addEventListener('click', () => {
+                    console.log('播放按钮被点击');
+                    this.toggleAudio();
+                });
                 
-                // 添加调试信息
                 console.log('UI事件监听器已设置');
             }
             
@@ -208,7 +250,7 @@
                 
                 // 创建相机
                 this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-                this.camera.position.set(0, 1.6, 0); // VR标准高度
+                this.camera.position.set(0, 1.6, 0);
                 
                 // 创建渲染器
                 this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -225,60 +267,39 @@
                 directionalLight.position.set(10, 10, 5);
                 this.scene.add(directionalLight);
                 
-                // 动态光照（保持原项目特性）
-                this.addDynamicLighting();
-                
                 // 设置渲染循环
                 this.renderer.setAnimationLoop(() => this.render());
-            }
-            
-            addDynamicLighting() {
-                const pointLight = new THREE.PointLight(0xffffff, 1, 100);
-                pointLight.position.set(0, 2, 0);
-                this.scene.add(pointLight);
                 
-                // 动态调整光照强度
-                setInterval(() => {
-                    pointLight.intensity = 0.5 + Math.sin(Date.now() * 0.001) * 0.5;
-                }, 100);
+                console.log('Three.js设置完成');
             }
             
             async startWebXR() {
-                console.log('开始启动WebXR...');
-                
                 if (!navigator.xr) {
                     console.log('WebXR不受支持');
-                    alert('此设备不支持WebXR，请尝试传统AR模式');
+                    alert('此设备不支持WebXR，请尝试测试模式');
+                    this.updateDebugInfo('WebXR: 不支持');
                     return;
                 }
                 
                 try {
-                    // 检查VR支持
                     console.log('检查WebXR支持...');
                     const vrSupported = await navigator.xr.isSessionSupported('immersive-vr');
-                    console.log('VR支持状态:', vrSupported);
+                    const arSupported = await navigator.xr.isSessionSupported('immersive-ar');
                     
-                    if (!vrSupported) {
-                        console.log('VR模式不受支持，尝试AR模式...');
-                        // 尝试AR模式
-                        const arSupported = await navigator.xr.isSessionSupported('immersive-ar');
-                        console.log('AR支持状态:', arSupported);
-                        
-                        if (!arSupported) {
-                            alert('此设备不支持WebXR VR或AR模式，请尝试传统AR模式');
-                            return;
-                        }
+                    console.log('VR支持:', vrSupported, 'AR支持:', arSupported);
+                    this.updateDebugInfo(`VR:${vrSupported} AR:${arSupported}`);
+                    
+                    if (!vrSupported && !arSupported) {
+                        alert('此设备不支持WebXR，请尝试测试模式');
+                        return;
                     }
                     
                     this.updateStatus('启动WebXR...');
                     
-                    // 请求摄像头权限
-                    console.log('请求摄像头权限...');
-                    await this.requestCameraAccess();
-                    
-                    // 启动WebXR会话
-                    console.log('请求WebXR会话...');
+                    // 请求WebXR会话
                     const sessionMode = vrSupported ? 'immersive-vr' : 'immersive-ar';
+                    console.log('请求会话模式:', sessionMode);
+                    
                     this.xrSession = await navigator.xr.requestSession(sessionMode, {
                         requiredFeatures: ['local'],
                         optionalFeatures: ['bounded-floor', 'hand-tracking']
@@ -291,46 +312,86 @@
                     // 设置控制器
                     this.setupControllers();
                     
-                    // 开始二维码检测
-                    this.startQRDetection();
-                    
                     this.isWebXRMode = true;
                     this.hideStartContainer();
                     this.showControls();
-                    this.updateStatus('WebXR运行中 - 寻找二维码...');
+                    this.updateStatus('WebXR运行中');
+                    this.updateDebugInfo('WebXR会话活跃');
                     
-                    console.log('WebXR启动完成');
+                    // 添加测试乐器按钮
+                    this.addTestButtons();
                     
                 } catch (error) {
                     console.error('WebXR启动失败:', error);
                     this.updateStatus('启动失败: ' + error.message);
-                    alert('WebXR启动失败: ' + error.message + '\n请尝试传统AR模式');
+                    this.updateDebugInfo('WebXR错误: ' + error.message);
+                    alert('WebXR启动失败: ' + error.message);
                 }
             }
             
-            async requestCameraAccess() {
-                try {
-                    this.cameraStream = await navigator.mediaDevices.getUserMedia({
-                        video: {
-                            width: { ideal: 640 },
-                            height: { ideal: 480 },
-                            facingMode: 'environment'
-                        }
-                    });
-                    console.log('摄像头访问成功');
-                } catch (error) {
-                    console.error('摄像头访问失败:', error);
-                    throw new Error('无法访问摄像头，请检查权限设置');
-                }
+            startTestMode() {
+                console.log('启动测试模式...');
+                this.isWebXRMode = false;
+                this.hideStartContainer();
+                this.showControls();
+                this.updateStatus('测试模式运行中');
+                this.updateDebugInfo('测试模式活跃');
+                
+                // 添加测试按钮
+                this.addTestButtons();
+            }
+            
+            addTestButtons() {
+                // 测试加载乐器1
+                const testButton1 = document.createElement('button');
+                testButton1.textContent = '测试乐器1';
+                testButton1.style.cssText = `
+                    position: absolute;
+                    top: 120px;
+                    left: 20px;
+                    padding: 10px 15px;
+                    background: #FFC107;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    z-index: 10;
+                    color: black;
+                `;
+                testButton1.addEventListener('click', () => {
+                    console.log('测试加载乐器1');
+                    this.handleQRDetection('pattern1');
+                });
+                document.body.appendChild(testButton1);
+                
+                // 测试加载乐器2
+                const testButton2 = document.createElement('button');
+                testButton2.textContent = '测试乐器2';
+                testButton2.style.cssText = `
+                    position: absolute;
+                    top: 160px;
+                    left: 20px;
+                    padding: 10px 15px;
+                    background: #17a2b8;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    z-index: 10;
+                    color: white;
+                `;
+                testButton2.addEventListener('click', () => {
+                    console.log('测试加载乐器2');
+                    this.handleQRDetection('pattern2');
+                });
+                document.body.appendChild(testButton2);
             }
             
             setupControllers() {
-                // 设置手柄控制器
                 for (let i = 0; i < 2; i++) {
                     const controller = this.renderer.xr.getController(i);
-                    controller.addEventListener('select', (event) => this.onControllerSelect(event));
-                    controller.addEventListener('selectstart', (event) => this.onControllerSelectStart(event));
-                    controller.addEventListener('selectend', (event) => this.onControllerSelectEnd(event));
+                    controller.addEventListener('select', (event) => {
+                        console.log('控制器选择事件');
+                        this.onControllerSelect(event);
+                    });
                     this.scene.add(controller);
                     this.controllers.push(controller);
                     
@@ -342,55 +403,39 @@
                     const line = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: 0x00ff00 }));
                     controller.add(line);
                 }
+                console.log('控制器设置完成');
             }
             
             onControllerSelect(event) {
                 if (this.activeModel) {
-                    // 手柄点击时旋转模型
                     this.activeModel.rotation.y += Math.PI / 4;
                     console.log('模型已旋转');
+                    this.updateDebugInfo('模型旋转');
                 }
-            }
-            
-            onControllerSelectStart(event) {
-                // 手柄按下时的反馈
-                if (this.activeModel) {
-                    this.activeModel.scale.multiplyScalar(1.1);
-                }
-            }
-            
-            onControllerSelectEnd(event) {
-                // 手柄松开时的反馈
-                if (this.activeModel) {
-                    this.activeModel.scale.multiplyScalar(1/1.1);
-                }
-            }
-            
-            startQRDetection() {
-                this.qrDetector.startDetection((qrData) => {
-                    this.handleQRDetection(qrData);
-                });
             }
             
             async handleQRDetection(qrData) {
-                console.log('检测到二维码:', qrData);
+                console.log('处理二维码:', qrData);
+                this.updateDebugInfo('检测到: ' + qrData);
                 
-                // 检查是否是已配置的乐器码
                 const config = this.instrumentConfigs[qrData];
                 if (!config) {
                     this.updateQRResult('未知二维码: ' + qrData);
+                    this.updateDebugInfo('未知码: ' + qrData);
                     return;
                 }
                 
                 this.updateQRResult(qrData);
                 this.updateCurrentInstrument(config.name);
                 
-                // 切换乐器
                 await this.switchInstrument(qrData, config);
             }
             
             async switchInstrument(instrumentId, config) {
                 try {
+                    console.log('切换乐器:', config.name);
+                    this.updateDebugInfo('加载: ' + config.name);
+                    
                     // 移除当前模型
                     if (this.activeModel) {
                         this.scene.remove(this.activeModel);
@@ -399,32 +444,31 @@
                     // 加载新模型
                     const model = await this.loadModel(config.model);
                     if (model) {
-                        // 设置模型位置和缩放
-                        model.position.set(0, 0, -2); // 在用户前方2米
+                        model.position.set(0, 0, -2);
                         model.scale.set(...config.scale);
-                        
-                        // 添加动态材质变化（保持原项目特性）
-                        this.addDynamicMaterial(model);
                         
                         this.scene.add(model);
                         this.activeModel = model;
+                        
+                        console.log('模型加载成功:', config.name);
+                        this.updateDebugInfo('模型已加载: ' + config.name);
                         
                         // 切换音频
                         await this.audioManager.switchAudio(config.audio);
                         this.updateAudioInfo(config.name);
                         this.enableAudioButton();
-                        
-                        console.log(`乐器${config.name}加载成功`);
                     }
                     
                 } catch (error) {
                     console.error('切换乐器失败:', error);
-                    this.updateStatus('模型加载失败');
+                    this.updateStatus('模型加载失败: ' + error.message);
+                    this.updateDebugInfo('加载错误: ' + error.message);
                 }
             }
             
             async loadModel(modelPath) {
                 if (this.loadedModels.has(modelPath)) {
+                    console.log('使用缓存模型:', modelPath);
                     return this.loadedModels.get(modelPath).clone();
                 }
                 
@@ -432,15 +476,20 @@
                     throw new Error('模型加载器未初始化');
                 }
                 
+                console.log('开始加载模型:', modelPath);
+                
                 return new Promise((resolve, reject) => {
                     this.modelLoader.load(
                         modelPath,
                         (gltf) => {
+                            console.log('GLTF加载成功:', modelPath);
                             this.loadedModels.set(modelPath, gltf.scene);
                             resolve(gltf.scene.clone());
                         },
                         (progress) => {
-                            console.log('加载进度:', (progress.loaded / progress.total * 100) + '%');
+                            const percent = (progress.loaded / progress.total * 100).toFixed(1);
+                            console.log('加载进度:', percent + '%');
+                            this.updateDebugInfo('加载进度: ' + percent + '%');
                         },
                         (error) => {
                             console.error('模型加载错误:', error);
@@ -450,73 +499,23 @@
                 });
             }
             
-            addDynamicMaterial(model) {
-                const colors = [0xFF5733, 0x33FF57, 0x3357FF];
-                let colorIndex = 0;
-                
-                setInterval(() => {
-                    model.traverse((child) => {
-                        if (child.isMesh && child.material) {
-                            colorIndex = (colorIndex + 1) % colors.length;
-                            child.material.color.setHex(colors[colorIndex]);
-                        }
-                    });
-                }, 10000);
-            }
-            
-            startFallbackMode() {
-                console.log('启动测试模式...');
-                this.isWebXRMode = false;
-                this.hideStartContainer();
-                this.showControls();
-                this.updateStatus('测试模式运行中');
-                
-                // 开始二维码检测（非WebXR模式）
-                this.startQRDetection();
-                
-                // 添加测试按钮
-                const testButton = document.createElement('button');
-                testButton.textContent = '测试加载乐器1';
-                testButton.style.position = 'absolute';
-                testButton.style.top = '150px';
-                testButton.style.left = '20px';
-                testButton.style.padding = '10px';
-                testButton.style.background = '#FFC107';
-                testButton.style.border = 'none';
-                testButton.style.borderRadius = '5px';
-                testButton.style.cursor = 'pointer';
-                testButton.style.zIndex = '10';
-                
-                testButton.addEventListener('click', () => {
-                    console.log('测试加载乐器1');
-                    this.handleQRDetection('pattern1');
-                });
-                
-                document.body.appendChild(testButton);
-            }
-            
             toggleAudio() {
                 this.audioManager.togglePlayback();
             }
             
             render() {
-                if (this.isWebXRMode && this.xrSession) {
-                    // WebXR渲染
-                    this.renderer.render(this.scene, this.camera);
-                } else {
-                    // 普通渲染
-                    this.renderer.render(this.scene, this.camera);
-                }
+                this.renderer.render(this.scene, this.camera);
             }
             
             // UI辅助方法
             hideStartContainer() {
-                document.getElementById('startContainer').classList.add('hidden');
+                document.getElementById('startContainer').style.display = 'none';
             }
             
             showControls() {
-                document.getElementById('info').classList.remove('hidden');
-                document.getElementById('audioControls').classList.remove('hidden');
+                document.getElementById('info').style.display = 'block';
+                document.getElementById('audioControls').style.display = 'block';
+                document.getElementById('debugInfo').style.display = 'block';
             }
             
             updateStatus(status) {
@@ -535,6 +534,14 @@
                 document.getElementById('audioInfo').textContent = info;
             }
             
+            updateDebugInfo(info) {
+                const debugText = document.getElementById('debugText');
+                if (debugText) {
+                    debugText.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + info + '</div>';
+                    debugText.scrollTop = debugText.scrollHeight;
+                }
+            }
+            
             enableAudioButton() {
                 const button = document.getElementById('playButton');
                 button.disabled = false;
@@ -548,25 +555,35 @@
                 this.audioCache = new Map();
                 this.currentAudio = null;
                 this.isPlaying = false;
+                console.log('AudioManager初始化');
             }
             
             async preloadAudio(configs) {
+                console.log('开始预加载音频文件...');
                 for (const [key, config] of Object.entries(configs)) {
                     try {
                         const audio = new Audio();
                         audio.src = config.audio;
                         audio.preload = 'auto';
+                        
                         await new Promise((resolve, reject) => {
-                            audio.oncanplaythrough = resolve;
-                            audio.onerror = reject;
+                            audio.oncanplaythrough = () => {
+                                console.log('音频预加载成功:', config.audio);
+                                resolve();
+                            };
+                            audio.onerror = (error) => {
+                                console.error('音频预加载失败:', config.audio, error);
+                                resolve(); // 继续加载其他音频
+                            };
                             audio.load();
                         });
+                        
                         this.audioCache.set(config.audio, audio);
-                        console.log(`音频预加载成功: ${config.audio}`);
                     } catch (error) {
-                        console.error(`音频预加载失败: ${config.audio}`, error);
+                        console.error('音频处理错误:', config.audio, error);
                     }
                 }
+                console.log('音频预加载完成，已加载', this.audioCache.size, '个音频文件');
             }
             
             async switchAudio(audioPath) {
@@ -578,24 +595,35 @@
                 this.currentAudio = this.audioCache.get(audioPath);
                 this.isPlaying = false;
                 this.updatePlayButton();
+                console.log('切换音频:', audioPath);
             }
             
             togglePlayback() {
-                if (!this.currentAudio) return;
+                if (!this.currentAudio) {
+                    console.log('没有可播放的音频');
+                    return;
+                }
                 
                 if (this.isPlaying) {
                     this.currentAudio.pause();
                     this.isPlaying = false;
+                    console.log('音频已暂停');
                 } else {
-                    this.currentAudio.play();
-                    this.isPlaying = true;
+                    this.currentAudio.play().then(() => {
+                        this.isPlaying = true;
+                        console.log('音频开始播放');
+                    }).catch((error) => {
+                        console.error('音频播放失败:', error);
+                    });
                 }
                 this.updatePlayButton();
             }
             
             updatePlayButton() {
                 const button = document.getElementById('playButton');
-                button.textContent = this.isPlaying ? '暂停' : '播放';
+                if (button) {
+                    button.textContent = this.isPlaying ? '暂停' : '播放';
+                }
             }
         }
         
@@ -607,6 +635,7 @@
                 this.video = null;
                 this.isDetecting = false;
                 this.onDetectionCallback = null;
+                console.log('QRDetector初始化');
             }
             
             init() {
@@ -614,42 +643,13 @@
                 this.context = this.canvas.getContext('2d');
                 this.canvas.width = 640;
                 this.canvas.height = 480;
+                console.log('QRDetector设置完成');
             }
             
             async startDetection(callback) {
                 this.onDetectionCallback = callback;
-                
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({
-                        video: { facingMode: 'environment' }
-                    });
-                    
-                    this.video = document.createElement('video');
-                    this.video.srcObject = stream;
-                    this.video.play();
-                    
-                    this.isDetecting = true;
-                    this.detectLoop();
-                    
-                } catch (error) {
-                    console.error('启动二维码检测失败:', error);
-                }
-            }
-            
-            detectLoop() {
-                if (!this.isDetecting) return;
-                
-                if (this.video && this.video.readyState === this.video.HAVE_ENOUGH_DATA) {
-                    this.context.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
-                    const imageData = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
-                    const code = jsQR(imageData.data, imageData.width, imageData.height);
-                    
-                    if (code && this.onDetectionCallback) {
-                        this.onDetectionCallback(code.data);
-                    }
-                }
-                
-                requestAnimationFrame(() => this.detectLoop());
+                console.log('开始二维码检测');
+                // 此处可以添加实际的摄像头二维码检测逻辑
             }
             
             stopDetection() {
@@ -657,36 +657,41 @@
                 if (this.video && this.video.srcObject) {
                     this.video.srcObject.getTracks().forEach(track => track.stop());
                 }
+                console.log('二维码检测已停止');
             }
         }
         
         // 启动应用
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('页面加载完成，初始化应用...');
+            console.log('页面加载完成，开始初始化...');
             console.log('THREE版本:', THREE.REVISION);
             console.log('GLTFLoader可用:', typeof THREE.GLTFLoader);
             console.log('jsQR可用:', typeof jsQR);
             console.log('WebXR可用:', !!navigator.xr);
             
             try {
-                new WebXRARInstrument();
-                console.log('WebXRARInstrument初始化成功');
+                app = new WebXRARInstrument();
             } catch (error) {
-                console.error('WebXRARInstrument初始化失败:', error);
+                console.error('应用初始化失败:', error);
                 document.getElementById('startContainer').innerHTML = 
-                    '<h2>初始化失败</h2><p>错误: ' + error.message + '</p>';
+                    '<h2>初始化失败</h2><p>错误: ' + error.message + '</p>' +
+                    '<button onclick="location.reload()">重新加载</button>';
             }
         });
         
         // 错误处理
         window.onerror = function(message, source, lineno, colno, error) {
-            console.error("错误捕获:", {
+            console.error("全局错误捕获:", {
                 message: message,
                 source: source,
                 lineno: lineno,
                 colno: colno,
                 error: error
             });
+            
+            if (app) {
+                app.updateDebugInfo('错误: ' + message);
+            }
         };
     </script>
 </body>

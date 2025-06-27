@@ -779,7 +779,7 @@
                 realAR.addEventListener('click', () => {
                     console.log('传统AR按钮被点击');
                     this.updateDebugInfo('启动传统AR模式...');
-                    this.startRealAR();
+                    this.startRealAR.bind(this)
                 });
                 
                 cameraAR.addEventListener('click', () => {

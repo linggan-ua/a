@@ -50,6 +50,17 @@
             margin: 10px;
         }
         
+        #cameraAR {
+            padding: 15px 30px;
+            font-size: 16px;
+            background: #fd7e14;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        
         #info {
             position: absolute;
             top: 20px;
@@ -107,6 +118,42 @@
             display: none;
         }
         
+        #cameraVideo {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1;
+        }
+        
+        .camera-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            z-index: 5;
+            display: none;
+        }
+        
+        .camera-overlay::before {
+            content: '将二维码放在框内';
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
         .download-info {
             position: absolute;
             top: 10px;
@@ -132,8 +179,10 @@
         <p>请选择体验模式：</p>
         <button id="startWebXR">启动WebXR模式</button>
         <br>
+        <button id="cameraAR">摄像头AR模式</button>
+        <br>
         <button id="fallbackAR">测试模式</button>
-        <p><small>WebXR模式需要VR头显支持</small></p>
+        <p><small>WebXR模式需要VR头显支持<br>摄像头AR模式需要摄像头权限</small></p>
     </div>
     
     <div id="info">
@@ -154,6 +203,8 @@
     </div>
     
     <canvas id="qrCanvas"></canvas>
+    <video id="cameraVideo" autoplay muted playsinline></video>
+    <div class="camera-overlay" id="cameraOverlay"></div>
 
     <script>
         // 显示下载链接的函数
@@ -209,7 +260,9 @@
                 this.controllers = [];
                 this.currentInstrument = null;
                 this.isWebXRMode = false;
+                this.isCameraARMode = false;
                 this.modelLoader = null;
+                this.mouseControls = null;
                 
                 // 乐器配置
                 this.instrumentConfigs = {
@@ -326,6 +379,7 @@
             
             setupUI() {
                 const startWebXR = document.getElementById('startWebXR');
+                const cameraAR = document.getElementById('cameraAR');
                 const fallbackAR = document.getElementById('fallbackAR');
                 const playButton = document.getElementById('playButton');
                 
@@ -333,6 +387,12 @@
                     console.log('启动WebXR按钮被点击');
                     this.updateDebugInfo('尝试启动WebXR...');
                     this.startWebXR();
+                });
+                
+                cameraAR.addEventListener('click', () => {
+                    console.log('摄像头AR按钮被点击');
+                    this.updateDebugInfo('启动摄像头AR模式...');
+                    this.startCameraAR();
                 });
                 
                 fallbackAR.addEventListener('click', () => {
@@ -436,10 +496,155 @@
             
             startTestMode() {
                 this.isWebXRMode = false;
+                this.isCameraARMode = false;
                 this.hideStartContainer();
                 this.showControls();
                 this.addTestButtons();
-                this.updateStatus('测试模式运行中');
+                this.setupMouseControls(); // 添加鼠标控制
+                this.updateStatus('测试模式运行中 - 可拖动旋转模型');
+            }
+            
+            async startCameraAR() {
+                try {
+                    console.log('启动摄像头AR模式...');
+                    this.updateDebugInfo('请求摄像头权限...');
+                    
+                    // 请求摄像头权限
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            facingMode: 'environment' // 后置摄像头
+                        }
+                    });
+                    
+                    // 设置视频流
+                    const video = document.getElementById('cameraVideo');
+                    video.srcObject = stream;
+                    video.style.display = 'block';
+                    
+                    // 显示扫描框
+                    document.getElementById('cameraOverlay').style.display = 'block';
+                    
+                    this.isWebXRMode = false;
+                    this.isCameraARMode = true;
+                    this.hideStartContainer();
+                    this.showControls();
+                    
+                    // 添加停止按钮
+                    this.addStopCameraButton();
+                    
+                    // 开始二维码检测
+                    await this.qrDetector.startCameraDetection((qrData) => {
+                        this.handleQRDetection(qrData);
+                    });
+                    
+                    this.updateStatus('摄像头AR运行中 - 扫描二维码');
+                    this.updateDebugInfo('摄像头AR模式启动成功');
+                    
+                } catch (error) {
+                    console.error('摄像头AR启动失败:', error);
+                    this.updateDebugInfo('摄像头权限被拒绝或设备不支持');
+                    alert('无法访问摄像头，请检查权限设置或尝试测试模式');
+                }
+            }
+            
+            addStopCameraButton() {
+                const stopButton = document.createElement('button');
+                stopButton.textContent = '停止摄像头';
+                stopButton.style.cssText = `
+                    position: absolute; top: 20px; right: 20px; padding: 10px 15px;
+                    background: #dc3545; border: none; border-radius: 5px;
+                    cursor: pointer; z-index: 10; color: white;
+                `;
+                stopButton.addEventListener('click', () => {
+                    this.stopCameraAR();
+                    stopButton.remove();
+                });
+                document.body.appendChild(stopButton);
+            }
+            
+            stopCameraAR() {
+                this.qrDetector.stopDetection();
+                this.isCameraARMode = false;
+                
+                // 重新显示开始界面
+                document.getElementById('startContainer').style.display = 'block';
+                document.getElementById('info').style.display = 'none';
+                document.getElementById('audioControls').style.display = 'none';
+                document.getElementById('debugInfo').style.display = 'none';
+                
+                // 移除模型
+                if (this.activeModel) {
+                    this.scene.remove(this.activeModel);
+                    this.activeModel = null;
+                }
+                
+                console.log('摄像头AR已停止');
+            }
+            
+            setupMouseControls() {
+                // 添加鼠标控制功能
+                this.mouseControls = {
+                    isMouseDown: false,
+                    previousMousePosition: { x: 0, y: 0 },
+                    currentRotation: { x: 0, y: 0 }
+                };
+                
+                const canvas = this.renderer.domElement;
+                
+                canvas.addEventListener('mousedown', (event) => {
+                    this.mouseControls.isMouseDown = true;
+                    this.mouseControls.previousMousePosition = {
+                        x: event.clientX,
+                        y: event.clientY
+                    };
+                    canvas.style.cursor = 'grabbing';
+                });
+                
+                canvas.addEventListener('mousemove', (event) => {
+                    if (!this.mouseControls.isMouseDown || !this.activeModel) return;
+                    
+                    const deltaMove = {
+                        x: event.clientX - this.mouseControls.previousMousePosition.x,
+                        y: event.clientY - this.mouseControls.previousMousePosition.y
+                    };
+                    
+                    // 旋转模型
+                    this.mouseControls.currentRotation.y += deltaMove.x * 0.01;
+                    this.mouseControls.currentRotation.x += deltaMove.y * 0.01;
+                    
+                    this.activeModel.rotation.y = this.mouseControls.currentRotation.y;
+                    this.activeModel.rotation.x = this.mouseControls.currentRotation.x;
+                    
+                    this.mouseControls.previousMousePosition = {
+                        x: event.clientX,
+                        y: event.clientY
+                    };
+                });
+                
+                canvas.addEventListener('mouseup', () => {
+                    this.mouseControls.isMouseDown = false;
+                    canvas.style.cursor = 'grab';
+                });
+                
+                canvas.addEventListener('mouseleave', () => {
+                    this.mouseControls.isMouseDown = false;
+                    canvas.style.cursor = 'default';
+                });
+                
+                // 鼠标滚轮缩放
+                canvas.addEventListener('wheel', (event) => {
+                    event.preventDefault();
+                    if (!this.activeModel) return;
+                    
+                    const scaleFactor = event.deltaY > 0 ? 0.9 : 1.1;
+                    this.activeModel.scale.multiplyScalar(scaleFactor);
+                });
+                
+                canvas.style.cursor = 'grab';
+                console.log('鼠标控制已启用：拖动旋转，滚轮缩放');
+                this.updateDebugInfo('鼠标控制已启用');
             }
             
             addTestButtons() {
@@ -510,15 +715,23 @@
                     
                     const model = await this.loadModel(config.model);
                     if (model) {
+                        // 根据模式调整位置
                         if (this.isWebXRMode) {
-                            model.position.set(0, 0, -2);
+                            model.position.set(0, 0, -2); // WebXR模式：在用户前方
+                        } else if (this.isCameraARMode) {
+                            model.position.set(0, 0, -1); // 摄像头AR模式：稍近一些
                         } else {
-                            model.position.set(0, 0, 0);
+                            model.position.set(0, 0, 0);  // 测试模式：中央
                         }
                         
                         model.scale.set(...config.scale);
                         this.scene.add(model);
                         this.activeModel = model;
+                        
+                        // 重置鼠标控制旋转
+                        if (this.mouseControls) {
+                            this.mouseControls.currentRotation = { x: 0, y: 0 };
+                        }
                         
                         this.addDynamicMaterial(model);
                         await this.audioManager.switchAudio(config.audio);
@@ -526,6 +739,7 @@
                         this.enableAudioButton();
                         
                         console.log('乐器加载成功:', config.name);
+                        this.updateDebugInfo(`${config.name} 已加载到场景`);
                     }
                     
                 } catch (error) {
@@ -634,7 +848,8 @@
                     this.testCube.rotation.y += 0.01;
                 }
                 
-                if (this.activeModel) {
+                // 只在非摄像头AR模式和非鼠标控制模式下自动旋转
+                if (this.activeModel && !this.isCameraARMode && !this.mouseControls) {
                     this.activeModel.rotation.y += 0.005;
                 }
                 
@@ -750,6 +965,10 @@
             constructor() {
                 this.canvas = null;
                 this.context = null;
+                this.video = null;
+                this.isDetecting = false;
+                this.onDetectionCallback = null;
+                this.detectionInterval = null;
             }
             
             init() {
@@ -757,6 +976,73 @@
                 this.context = this.canvas.getContext('2d');
                 this.canvas.width = 640;
                 this.canvas.height = 480;
+            }
+            
+            async startCameraDetection(callback) {
+                this.onDetectionCallback = callback;
+                this.video = document.getElementById('cameraVideo');
+                this.isDetecting = true;
+                
+                // 等待视频准备就绪
+                await new Promise((resolve) => {
+                    if (this.video.readyState >= 2) {
+                        resolve();
+                    } else {
+                        this.video.addEventListener('loadeddata', resolve, { once: true });
+                    }
+                });
+                
+                console.log('开始二维码检测...');
+                this.detectLoop();
+            }
+            
+            detectLoop() {
+                if (!this.isDetecting || !this.video) return;
+                
+                try {
+                    // 调整canvas大小匹配视频
+                    if (this.video.videoWidth > 0) {
+                        this.canvas.width = this.video.videoWidth;
+                        this.canvas.height = this.video.videoHeight;
+                    }
+                    
+                    // 将视频帧绘制到canvas
+                    this.context.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+                    
+                    // 获取图像数据
+                    const imageData = this.context.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                    
+                    // 检测二维码
+                    const code = jsQR(imageData.data, imageData.width, imageData.height);
+                    
+                    if (code && this.onDetectionCallback) {
+                        console.log('检测到二维码:', code.data);
+                        this.onDetectionCallback(code.data);
+                        
+                        // 短暂停止检测，避免重复触发
+                        this.isDetecting = false;
+                        setTimeout(() => {
+                            this.isDetecting = true;
+                        }, 2000);
+                    }
+                } catch (error) {
+                    console.error('二维码检测错误:', error);
+                }
+                
+                // 继续检测
+                if (this.isDetecting) {
+                    requestAnimationFrame(() => this.detectLoop());
+                }
+            }
+            
+            stopDetection() {
+                this.isDetecting = false;
+                if (this.video && this.video.srcObject) {
+                    this.video.srcObject.getTracks().forEach(track => track.stop());
+                    this.video.style.display = 'none';
+                }
+                document.getElementById('cameraOverlay').style.display = 'none';
+                console.log('二维码检测已停止');
             }
         }
         

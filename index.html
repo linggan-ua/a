@@ -3,66 +3,13 @@
 <head>
     <meta charset="utf-8"/>
     <title>岭南乐器WebXR增强现实视听工具</title>
+    
+    <!-- 本地Three.js文件 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="./js/GLTFLoader.js"></script>
+    <script src="./js/DRACOLoader.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.min.js"></script>
     
-    <!-- 动态加载GLTFLoader和DRACOLoader -->
-    <script>
-        // 动态加载GLTFLoader和DRACOLoader
-        (function() {
-            let loadersLoaded = 0;
-            const totalLoaders = 2;
-            
-            function checkLoadersReady() {
-                loadersLoaded++;
-                if (loadersLoaded === totalLoaders) {
-                    console.log('所有Loaders加载完成');
-                    window.gltfLoaderReady = true;
-                    if (window.app) {
-                        window.app.initializeLoader();
-                    }
-                }
-            }
-            
-            // 加载DRACOLoader
-            const dracoScript = document.createElement('script');
-            dracoScript.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js';
-            dracoScript.onload = function() {
-                console.log('DRACOLoader加载成功');
-                checkLoadersReady();
-            };
-            dracoScript.onerror = function() {
-                console.error('DRACOLoader加载失败');
-                checkLoadersReady(); // 继续，即使失败
-            };
-            document.head.appendChild(dracoScript);
-            
-            // 加载GLTFLoader
-            const gltfScript = document.createElement('script');
-            gltfScript.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js';
-            gltfScript.onload = function() {
-                console.log('GLTFLoader加载成功');
-                checkLoadersReady();
-            };
-            gltfScript.onerror = function() {
-                console.error('GLTFLoader加载失败，尝试备用方案...');
-                // 尝试其他CDN
-                const backupScript = document.createElement('script');
-                backupScript.src = 'https://threejs.org/examples/js/loaders/GLTFLoader.js';
-                backupScript.onload = function() {
-                    console.log('GLTFLoader备用源加载成功');
-                    checkLoadersReady();
-                };
-                backupScript.onerror = function() {
-                    console.error('所有GLTFLoader源都加载失败');
-                    window.gltfLoaderReady = false;
-                };
-                document.head.appendChild(backupScript);
-            };
-            document.head.appendChild(gltfScript);
-        })();
-    </script>
-
     <style>
         body {
             margin: 0;
@@ -159,9 +106,27 @@
         #qrCanvas {
             display: none;
         }
+        
+        .download-info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255,255,0,0.9);
+            color: black;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            max-width: 300px;
+        }
     </style>
 </head>
 <body>
+    <div class="download-info" id="downloadInfo">
+        <strong>文件状态检查中...</strong><br>
+        <span id="fileStatus">正在检查本地文件...</span><br>
+        <a href="#" onclick="showDownloadLinks()">查看下载说明</a>
+    </div>
+    
     <div id="startContainer">
         <h2>岭南乐器WebXR体验</h2>
         <p>请选择体验模式：</p>
@@ -191,6 +156,42 @@
     <canvas id="qrCanvas"></canvas>
 
     <script>
+        // 显示下载链接的函数
+        function showDownloadLinks() {
+            const links = `
+本地文件下载说明：
+
+请下载以下文件并放置到对应目录：
+
+1. 创建 js/ 目录，下载：
+   GLTFLoader.js → https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/js/loaders/GLTFLoader.js
+   DRACOLoader.js → https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/js/loaders/DRACOLoader.js
+
+2. 创建 js/draco/gltf/ 目录，下载：
+   draco_decoder.js → https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/js/libs/draco/gltf/draco_decoder.js
+   draco_decoder.wasm → https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/js/libs/draco/gltf/draco_decoder.wasm
+   draco_encoder.js → https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/js/libs/draco/gltf/draco_encoder.js
+   draco_wasm_wrapper.js → https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/js/libs/draco/gltf/draco_wasm_wrapper.js
+
+最终文件结构：
+/WEB-AR-MR/
+├── index.html
+├── js/
+│   ├── GLTFLoader.js
+│   ├── DRACOLoader.js
+│   └── draco/gltf/
+│       ├── draco_decoder.js
+│       ├── draco_decoder.wasm
+│       ├── draco_encoder.js
+│       └── draco_wasm_wrapper.js
+├── model1.gltf
+├── model2.gltf
+├── audio1.mp3
+└── audio2.mp3
+            `;
+            alert(links);
+        }
+        
         // 全局变量
         let app = null;
         
@@ -199,6 +200,7 @@
             constructor() {
                 console.log('开始初始化WebXRARInstrument...');
                 
+                // 基础属性
                 this.scene = null;
                 this.camera = null;
                 this.renderer = null;
@@ -209,20 +211,20 @@
                 this.isWebXRMode = false;
                 this.modelLoader = null;
                 
-                // 乐器配置 - 与传统版本保持一致
+                // 乐器配置
                 this.instrumentConfigs = {
                     'pattern1': {
                         model: 'model1.gltf',
                         audio: 'audio1.mp3',
                         info: 'info1.txt',
-                        scale: [0.02, 0.02, 0.02],  // 原始缩放
+                        scale: [0.02, 0.02, 0.02],
                         name: '乐器1'
                     },
                     'pattern2': {
                         model: 'model2.gltf', 
                         audio: 'audio2.mp3',
                         info: 'info2.txt',
-                        scale: [0.03, 0.03, 0.03],  // 原始缩放
+                        scale: [0.03, 0.03, 0.03],
                         name: '乐器2'
                     }
                 };
@@ -230,7 +232,7 @@
                 this.loadedModels = new Map();
                 this.activeModel = null;
                 
-                // 初始化各个模块
+                // 初始化模块
                 this.audioManager = new AudioManager();
                 this.qrDetector = new QRDetector();
                 
@@ -244,6 +246,9 @@
                     
                     console.log('初始化Three.js...');
                     this.setupThreeJS();
+                    
+                    console.log('检查本地文件...');
+                    this.checkLocalFiles();
                     
                     console.log('初始化GLTFLoader...');
                     this.initializeLoader();
@@ -263,42 +268,59 @@
                 }
             }
             
+            checkLocalFiles() {
+                const fileStatus = document.getElementById('fileStatus');
+                let status = [];
+                
+                if (typeof THREE.GLTFLoader !== 'undefined') {
+                    status.push('✅ GLTFLoader');
+                } else {
+                    status.push('❌ GLTFLoader');
+                }
+                
+                if (typeof THREE.DRACOLoader !== 'undefined') {
+                    status.push('✅ DRACOLoader');
+                } else {
+                    status.push('❌ DRACOLoader');
+                }
+                
+                fileStatus.innerHTML = status.join('<br>');
+                
+                if (status.some(s => s.includes('❌'))) {
+                    document.getElementById('downloadInfo').style.backgroundColor = '#ff6b6b';
+                } else {
+                    document.getElementById('downloadInfo').style.backgroundColor = '#90EE90';
+                    setTimeout(() => {
+                        document.getElementById('downloadInfo').style.display = 'none';
+                    }, 3000);
+                }
+            }
+            
             initializeLoader() {
-                if (window.gltfLoaderReady && typeof THREE.GLTFLoader === 'function') {
-                    try {
+                try {
+                    if (typeof THREE.GLTFLoader === 'function') {
                         this.modelLoader = new THREE.GLTFLoader();
                         
-                        // 设置DRACOLoader（如果模型使用了Draco压缩）
                         if (typeof THREE.DRACOLoader === 'function') {
                             const dracoLoader = new THREE.DRACOLoader();
-                            
-                            // 设置Draco解码器路径
-                            dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.4.3/');
-                            
-                            // 预加载Draco解码器
+                            dracoLoader.setDecoderPath('./js/draco/gltf/');
                             dracoLoader.preload();
-                            
-                            // 将DRACOLoader设置到GLTFLoader
                             this.modelLoader.setDRACOLoader(dracoLoader);
                             
-                            console.log('GLTFLoader和DRACOLoader初始化成功');
-                            this.updateDebugInfo('GLTFLoader + DRACOLoader: 已就绪');
+                            console.log('GLTFLoader和DRACOLoader初始化成功（本地文件）');
+                            this.updateDebugInfo('GLTFLoader + DRACOLoader: 本地就绪');
                         } else {
                             console.log('GLTFLoader初始化成功（无DRACOLoader）');
                             this.updateDebugInfo('GLTFLoader: 已就绪（无Draco支持）');
                         }
                         
-                    } catch (error) {
-                        console.error('GLTFLoader初始化失败:', error);
-                        this.updateDebugInfo('GLTFLoader: 初始化错误');
+                    } else {
+                        console.error('GLTFLoader未找到，请检查js/GLTFLoader.js文件');
+                        this.updateDebugInfo('GLTFLoader: 文件缺失');
                     }
-                } else {
-                    console.log('等待GLTFLoader加载...');
-                    this.updateDebugInfo('GLTFLoader: 加载中...');
-                    // 如果GLTFLoader还没有加载完成，稍后再试
-                    setTimeout(() => {
-                        this.initializeLoader();
-                    }, 500);
+                } catch (error) {
+                    console.error('GLTFLoader初始化失败:', error);
+                    this.updateDebugInfo('GLTFLoader: 初始化错误');
                 }
             }
             
@@ -328,15 +350,12 @@
             }
             
             setupThreeJS() {
-                // 创建场景
                 this.scene = new THREE.Scene();
-                this.scene.background = new THREE.Color(0x202020); // 深灰色背景，不是纯黑
+                this.scene.background = new THREE.Color(0x202020);
                 
-                // 创建相机
                 this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-                this.camera.position.set(0, 1.6, 3); // 稍微远一点观察
+                this.camera.position.set(0, 1.6, 3);
                 
-                // 创建渲染器
                 this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
                 this.renderer.setSize(window.innerWidth, window.innerHeight);
                 this.renderer.xr.enabled = true;
@@ -344,23 +363,18 @@
                 this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
                 document.body.appendChild(this.renderer.domElement);
                 
-                // 添加灯光
                 const ambientLight = new THREE.AmbientLight(0x404040, 0.8);
                 this.scene.add(ambientLight);
                 
                 const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
                 directionalLight.position.set(10, 10, 5);
                 directionalLight.castShadow = true;
-                directionalLight.shadow.mapSize.width = 2048;
-                directionalLight.shadow.mapSize.height = 2048;
                 this.scene.add(directionalLight);
                 
-                // 添加地面网格作为参考
                 const gridHelper = new THREE.GridHelper(10, 10, 0x444444, 0x444444);
                 gridHelper.position.y = -1;
                 this.scene.add(gridHelper);
                 
-                // 添加一个参考立方体确保场景可见
                 const testGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
                 const testMaterial = new THREE.MeshPhongMaterial({ 
                     color: 0x00ff00,
@@ -371,10 +385,8 @@
                 this.testCube.position.set(2, 0, -1);
                 this.scene.add(this.testCube);
                 
-                // 设置渲染循环
                 this.renderer.setAnimationLoop(() => this.render());
                 
-                // 窗口大小调整处理
                 window.addEventListener('resize', () => {
                     this.camera.aspect = window.innerWidth / window.innerHeight;
                     this.camera.updateProjectionMatrix();
@@ -386,127 +398,79 @@
             
             async startWebXR() {
                 if (!navigator.xr) {
-                    console.log('WebXR不受支持');
                     alert('此设备不支持WebXR，请尝试测试模式');
-                    this.updateDebugInfo('WebXR: 不支持');
                     return;
                 }
                 
                 try {
-                    console.log('检查WebXR支持...');
                     const vrSupported = await navigator.xr.isSessionSupported('immersive-vr');
                     const arSupported = await navigator.xr.isSessionSupported('immersive-ar');
-                    
-                    console.log('VR支持:', vrSupported, 'AR支持:', arSupported);
-                    this.updateDebugInfo(`VR:${vrSupported} AR:${arSupported}`);
                     
                     if (!vrSupported && !arSupported) {
                         alert('此设备不支持WebXR，请尝试测试模式');
                         return;
                     }
                     
-                    this.updateStatus('启动WebXR...');
-                    
-                    // 请求WebXR会话
                     const sessionMode = vrSupported ? 'immersive-vr' : 'immersive-ar';
-                    console.log('请求会话模式:', sessionMode);
-                    
                     this.xrSession = await navigator.xr.requestSession(sessionMode, {
                         requiredFeatures: ['local'],
                         optionalFeatures: ['bounded-floor', 'hand-tracking']
                     });
                     
-                    console.log('WebXR会话创建成功');
                     await this.renderer.xr.setSession(this.xrSession);
                     this.referenceSpace = await this.xrSession.requestReferenceSpace('local');
                     
-                    // 设置控制器
                     this.setupControllers();
-                    
                     this.isWebXRMode = true;
                     this.hideStartContainer();
                     this.showControls();
-                    this.updateStatus('WebXR运行中');
-                    this.updateDebugInfo('WebXR会话活跃');
-                    
-                    // 添加测试乐器按钮
                     this.addTestButtons();
+                    
+                    this.updateStatus('WebXR运行中');
                     
                 } catch (error) {
                     console.error('WebXR启动失败:', error);
-                    this.updateStatus('启动失败: ' + error.message);
-                    this.updateDebugInfo('WebXR错误: ' + error.message);
                     alert('WebXR启动失败: ' + error.message);
                 }
             }
             
             startTestMode() {
-                console.log('启动测试模式...');
                 this.isWebXRMode = false;
                 this.hideStartContainer();
                 this.showControls();
-                this.updateStatus('测试模式运行中');
-                this.updateDebugInfo('测试模式活跃');
-                
-                // 添加测试按钮
                 this.addTestButtons();
+                this.updateStatus('测试模式运行中');
             }
             
             addTestButtons() {
-                // 测试加载乐器1
                 const testButton1 = document.createElement('button');
                 testButton1.textContent = '测试乐器1';
                 testButton1.style.cssText = `
-                    position: absolute;
-                    top: 120px;
-                    left: 20px;
-                    padding: 10px 15px;
-                    background: #FFC107;
-                    border: none;
-                    border-radius: 5px;
-                    cursor: pointer;
-                    z-index: 10;
-                    color: black;
+                    position: absolute; top: 120px; left: 20px; padding: 10px 15px;
+                    background: #FFC107; border: none; border-radius: 5px;
+                    cursor: pointer; z-index: 10; color: black;
                 `;
-                testButton1.addEventListener('click', () => {
-                    console.log('测试加载乐器1');
-                    this.handleQRDetection('pattern1');
-                });
+                testButton1.addEventListener('click', () => this.handleQRDetection('pattern1'));
                 document.body.appendChild(testButton1);
                 
-                // 测试加载乐器2
                 const testButton2 = document.createElement('button');
                 testButton2.textContent = '测试乐器2';
                 testButton2.style.cssText = `
-                    position: absolute;
-                    top: 160px;
-                    left: 20px;
-                    padding: 10px 15px;
-                    background: #17a2b8;
-                    border: none;
-                    border-radius: 5px;
-                    cursor: pointer;
-                    z-index: 10;
-                    color: white;
+                    position: absolute; top: 160px; left: 20px; padding: 10px 15px;
+                    background: #17a2b8; border: none; border-radius: 5px;
+                    cursor: pointer; z-index: 10; color: white;
                 `;
-                testButton2.addEventListener('click', () => {
-                    console.log('测试加载乐器2');
-                    this.handleQRDetection('pattern2');
-                });
+                testButton2.addEventListener('click', () => this.handleQRDetection('pattern2'));
                 document.body.appendChild(testButton2);
             }
             
             setupControllers() {
                 for (let i = 0; i < 2; i++) {
                     const controller = this.renderer.xr.getController(i);
-                    controller.addEventListener('select', (event) => {
-                        console.log('控制器选择事件');
-                        this.onControllerSelect(event);
-                    });
+                    controller.addEventListener('select', (event) => this.onControllerSelect(event));
                     this.scene.add(controller);
                     this.controllers.push(controller);
                     
-                    // 添加控制器射线
                     const geometry = new THREE.BufferGeometry().setFromPoints([
                         new THREE.Vector3(0, 0, 0),
                         new THREE.Vector3(0, 0, -1)
@@ -514,108 +478,79 @@
                     const line = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: 0x00ff00 }));
                     controller.add(line);
                 }
-                console.log('控制器设置完成');
             }
             
             onControllerSelect(event) {
                 if (this.activeModel) {
                     this.activeModel.rotation.y += Math.PI / 4;
                     console.log('模型已旋转');
-                    this.updateDebugInfo('模型旋转');
                 }
             }
             
             async handleQRDetection(qrData) {
                 console.log('处理二维码:', qrData);
-                this.updateDebugInfo('检测到: ' + qrData);
                 
                 const config = this.instrumentConfigs[qrData];
                 if (!config) {
                     this.updateQRResult('未知二维码: ' + qrData);
-                    this.updateDebugInfo('未知码: ' + qrData);
                     return;
                 }
                 
                 this.updateQRResult(qrData);
                 this.updateCurrentInstrument(config.name);
-                
                 await this.switchInstrument(qrData, config);
             }
             
             async switchInstrument(instrumentId, config) {
                 try {
-                    console.log('切换乐器:', config.name);
-                    this.updateDebugInfo('加载: ' + config.name);
-                    
-                    // 移除当前模型
                     if (this.activeModel) {
                         this.scene.remove(this.activeModel);
                         this.activeModel = null;
                     }
                     
-                    // 加载新模型
                     const model = await this.loadModel(config.model);
                     if (model) {
-                        // 根据是否是WebXR模式调整位置
                         if (this.isWebXRMode) {
-                            model.position.set(0, 0, -2); // WebXR模式：在用户前方
+                            model.position.set(0, 0, -2);
                         } else {
-                            model.position.set(0, 0, 0);  // 测试模式：中央
+                            model.position.set(0, 0, 0);
                         }
                         
-                        // 使用原始配置的缩放值（和传统AR版本相同）
                         model.scale.set(...config.scale);
-                        
                         this.scene.add(model);
                         this.activeModel = model;
                         
-                        console.log('GLTF模型加载成功:', config.name, '位置:', model.position, '缩放:', model.scale);
-                        this.updateDebugInfo('模型已加载: ' + config.name);
-                        
-                        // 添加动态材质变化（保持原项目特性）
                         this.addDynamicMaterial(model);
-                        
-                        // 切换音频
                         await this.audioManager.switchAudio(config.audio);
                         this.updateAudioInfo(config.name);
                         this.enableAudioButton();
+                        
+                        console.log('乐器加载成功:', config.name);
                     }
                     
                 } catch (error) {
                     console.error('切换乐器失败:', error);
                     this.updateStatus('模型加载失败: ' + error.message);
-                    this.updateDebugInfo('加载错误: ' + error.message);
                 }
             }
             
             async loadModel(modelPath) {
                 if (this.loadedModels.has(modelPath)) {
-                    console.log('使用缓存模型:', modelPath);
                     return this.loadedModels.get(modelPath).clone();
                 }
                 
                 if (!this.modelLoader) {
-                    throw new Error('GLTFLoader尚未初始化，请稍后再试');
+                    throw new Error('GLTFLoader尚未初始化');
                 }
-                
-                console.log('开始加载GLTF模型:', modelPath);
-                this.updateDebugInfo('加载GLTF: ' + modelPath);
                 
                 return new Promise((resolve, reject) => {
                     this.modelLoader.load(
                         modelPath,
                         (gltf) => {
-                            console.log('GLTF模型加载成功:', modelPath);
-                            this.updateDebugInfo('GLTF加载成功: ' + modelPath);
-                            
-                            // 确保模型有正确的材质
                             gltf.scene.traverse((child) => {
                                 if (child.isMesh) {
                                     child.castShadow = true;
                                     child.receiveShadow = true;
-                                    if (child.material) {
-                                        child.material.needsUpdate = true;
-                                    }
                                 }
                             });
                             
@@ -625,84 +560,48 @@
                         (progress) => {
                             if (progress.total > 0) {
                                 const percent = (progress.loaded / progress.total * 100).toFixed(1);
-                                console.log('GLTF加载进度:', percent + '%');
-                                this.updateDebugInfo('加载进度: ' + percent + '%');
+                                console.log('加载进度:', percent + '%');
                             }
                         },
                         (error) => {
-                            console.error('GLTF模型加载失败:', modelPath, error);
-                            this.updateDebugInfo('GLTF加载失败，尝试创建替代模型');
-                            
-                            // 如果GLTF加载失败，创建一个简单的替代模型
-                            try {
-                                const fallbackModel = this.createFallbackModel(modelPath);
-                                console.log('使用替代模型:', modelPath);
-                                this.updateDebugInfo('已创建替代模型: ' + modelPath);
-                                resolve(fallbackModel);
-                            } catch (fallbackError) {
-                                console.error('替代模型创建也失败:', fallbackError);
-                                reject(new Error('GLTF和替代模型都创建失败: ' + error.message));
-                            }
+                            console.error('GLTF加载失败:', error);
+                            const fallbackModel = this.createFallbackModel(modelPath);
+                            resolve(fallbackModel);
                         }
                     );
                 });
             }
             
             createFallbackModel(modelPath) {
-                console.log('创建替代模型:', modelPath);
-                
                 const group = new THREE.Group();
-                let geometry, material;
                 
                 if (modelPath.includes('model1')) {
-                    // 乐器1 - 立方体钢琴
-                    geometry = new THREE.BoxGeometry(1, 0.3, 2);
-                    material = new THREE.MeshPhongMaterial({ 
-                        color: 0x8B4513,
-                        shininess: 30
-                    });
-                    
+                    const geometry = new THREE.BoxGeometry(1, 0.3, 2);
+                    const material = new THREE.MeshPhongMaterial({ color: 0x8B4513 });
                     const piano = new THREE.Mesh(geometry, material);
                     group.add(piano);
                     
-                    // 添加琴键
-                    const keyGeometry = new THREE.BoxGeometry(0.1, 0.05, 0.3);
-                    const keyMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
-                    
                     for (let i = 0; i < 7; i++) {
+                        const keyGeometry = new THREE.BoxGeometry(0.1, 0.05, 0.3);
+                        const keyMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
                         const key = new THREE.Mesh(keyGeometry, keyMaterial);
                         key.position.set(-0.35 + i * 0.12, 0.2, 0.8);
                         group.add(key);
                     }
-                    
-                } else if (modelPath.includes('model2')) {
-                    // 乐器2 - 圆柱体鼓
-                    geometry = new THREE.CylinderGeometry(0.8, 0.8, 0.5, 16);
-                    material = new THREE.MeshPhongMaterial({ 
-                        color: 0x696969,
-                        shininess: 50
-                    });
-                    
+                } else {
+                    const geometry = new THREE.CylinderGeometry(0.8, 0.8, 0.5, 16);
+                    const material = new THREE.MeshPhongMaterial({ color: 0x696969 });
                     const drum = new THREE.Mesh(geometry, material);
                     group.add(drum);
                     
-                    // 添加鼓面
                     const topGeometry = new THREE.CircleGeometry(0.8, 16);
                     const topMaterial = new THREE.MeshPhongMaterial({ color: 0xF5DEB3 });
                     const drumTop = new THREE.Mesh(topGeometry, topMaterial);
                     drumTop.rotation.x = -Math.PI / 2;
                     drumTop.position.y = 0.25;
                     group.add(drumTop);
-                    
-                } else {
-                    // 默认 - 球体
-                    geometry = new THREE.SphereGeometry(0.5, 16, 8);
-                    material = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
-                    const sphere = new THREE.Mesh(geometry, material);
-                    group.add(sphere);
                 }
                 
-                console.log('替代模型创建成功');
                 return group;
             }
             
@@ -717,17 +616,12 @@
                     }
                     
                     model.traverse((child) => {
-                        if (child.isMesh && child.material) {
+                        if (child.isMesh && child.material && child.material.color) {
                             colorIndex = (colorIndex + 1) % colors.length;
-                            if (child.material.color) {
-                                child.material.color.setHex(colors[colorIndex]);
-                            }
+                            child.material.color.setHex(colors[colorIndex]);
                         }
                     });
-                    console.log('模型颜色变化:', colorIndex);
-                }, 3000); // 每3秒变化一次
-                
-                return interval;
+                }, 3000);
             }
             
             toggleAudio() {
@@ -735,13 +629,11 @@
             }
             
             render() {
-                // 旋转测试立方体
                 if (this.testCube) {
                     this.testCube.rotation.x += 0.01;
                     this.testCube.rotation.y += 0.01;
                 }
                 
-                // 旋转活跃模型
                 if (this.activeModel) {
                     this.activeModel.rotation.y += 0.005;
                 }
@@ -749,7 +641,6 @@
                 this.renderer.render(this.scene, this.camera);
             }
             
-            // UI辅助方法
             hideStartContainer() {
                 document.getElementById('startContainer').style.display = 'none';
             }
@@ -797,35 +688,26 @@
                 this.audioCache = new Map();
                 this.currentAudio = null;
                 this.isPlaying = false;
-                console.log('AudioManager初始化');
             }
             
             async preloadAudio(configs) {
-                console.log('开始预加载音频文件...');
                 for (const [key, config] of Object.entries(configs)) {
                     try {
                         const audio = new Audio();
                         audio.src = config.audio;
                         audio.preload = 'auto';
                         
-                        await new Promise((resolve, reject) => {
-                            audio.oncanplaythrough = () => {
-                                console.log('音频预加载成功:', config.audio);
-                                resolve();
-                            };
-                            audio.onerror = (error) => {
-                                console.error('音频预加载失败:', config.audio, error);
-                                resolve(); // 继续加载其他音频
-                            };
+                        await new Promise((resolve) => {
+                            audio.oncanplaythrough = resolve;
+                            audio.onerror = resolve;
                             audio.load();
                         });
                         
                         this.audioCache.set(config.audio, audio);
                     } catch (error) {
-                        console.error('音频处理错误:', config.audio, error);
+                        console.error('音频处理错误:', error);
                     }
                 }
-                console.log('音频预加载完成，已加载', this.audioCache.size, '个音频文件');
             }
             
             async switchAudio(audioPath) {
@@ -837,23 +719,17 @@
                 this.currentAudio = this.audioCache.get(audioPath);
                 this.isPlaying = false;
                 this.updatePlayButton();
-                console.log('切换音频:', audioPath);
             }
             
             togglePlayback() {
-                if (!this.currentAudio) {
-                    console.log('没有可播放的音频');
-                    return;
-                }
+                if (!this.currentAudio) return;
                 
                 if (this.isPlaying) {
                     this.currentAudio.pause();
                     this.isPlaying = false;
-                    console.log('音频已暂停');
                 } else {
                     this.currentAudio.play().then(() => {
                         this.isPlaying = true;
-                        console.log('音频开始播放');
                     }).catch((error) => {
                         console.error('音频播放失败:', error);
                     });
@@ -874,10 +750,6 @@
             constructor() {
                 this.canvas = null;
                 this.context = null;
-                this.video = null;
-                this.isDetecting = false;
-                this.onDetectionCallback = null;
-                console.log('QRDetector初始化');
             }
             
             init() {
@@ -885,21 +757,6 @@
                 this.context = this.canvas.getContext('2d');
                 this.canvas.width = 640;
                 this.canvas.height = 480;
-                console.log('QRDetector设置完成');
-            }
-            
-            async startDetection(callback) {
-                this.onDetectionCallback = callback;
-                console.log('开始二维码检测');
-                // 此处可以添加实际的摄像头二维码检测逻辑
-            }
-            
-            stopDetection() {
-                this.isDetecting = false;
-                if (this.video && this.video.srcObject) {
-                    this.video.srcObject.getTracks().forEach(track => track.stop());
-                }
-                console.log('二维码检测已停止');
             }
         }
         
@@ -909,17 +766,17 @@
             console.log('THREE版本:', THREE.REVISION);
             console.log('jsQR可用:', typeof jsQR !== 'undefined');
             console.log('WebXR可用:', !!navigator.xr);
-            console.log('GLTFLoader状态:', window.gltfLoaderReady ? '已加载' : '加载中...');
-            console.log('DRACOLoader状态:', typeof THREE.DRACOLoader !== 'undefined' ? '已加载' : '加载中...');
+            console.log('GLTFLoader可用:', typeof THREE.GLTFLoader !== 'undefined');
+            console.log('DRACOLoader可用:', typeof THREE.DRACOLoader !== 'undefined');
             
             try {
                 app = new WebXRARInstrument();
-                window.app = app; // 设置全局引用供GLTFLoader回调使用
             } catch (error) {
                 console.error('应用初始化失败:', error);
                 document.getElementById('startContainer').innerHTML = 
                     '<h2>初始化失败</h2><p>错误: ' + error.message + '</p>' +
-                    '<button onclick="location.reload()">重新加载</button>';
+                    '<button onclick="location.reload()">重新加载</button>' +
+                    '<br><br><button onclick="showDownloadLinks()">查看下载说明</button>';
             }
         });
         
@@ -932,10 +789,6 @@
                 colno: colno,
                 error: error
             });
-            
-            if (app) {
-                app.updateDebugInfo('错误: ' + message);
-            }
         };
     </script>
 </body>

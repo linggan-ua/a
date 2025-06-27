@@ -232,7 +232,7 @@
                 model: 'model1.gltf',
                 audio: 'audio1.mp3',
                 info: 'info1.txt',
-                scale: [0.002, 0.002, 0.002],
+                scale: [0.006, 0.006, 0.006],
                 name: '琵琶'
             },
             'pattern2': {
@@ -530,7 +530,7 @@
                     const model = await this.loadModel(config.model);
                     if (model) {
                         // 设置模型位置和缩放
-                        model.position.set(1, 0, -1.5); // 在用户前方1.5米
+                        model.position.set(0, 0, -0.2); // 在用户前方1.5米
                         model.scale.set(...config.scale);
                         
                         // 添加到场景

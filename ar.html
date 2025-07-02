@@ -5,6 +5,7 @@
   <title>
    岭南乐器增强现实视听工具
   </title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <script src="aframe.min.js">
   </script>
   <script src="aframe-ar.js">
@@ -33,177 +34,546 @@
             word-wrap: break-word;
             z-index: 10;
         }
+        
+        /* 新增样式 */
+        .environment-warning {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        .warning-content {
+            max-width: 90%;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .warning-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #ff6b6b;
+        }
+        
+        .warning-text {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .retry-button {
+            background: linear-gradient(45deg, #007BFF, #0056b3);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .retry-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 123, 255, 0.4);
+        }
+        
+        .safari-button {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        }
+        
+        .init-button {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(45deg, #007BFF, #0056b3);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            border-radius: 30px;
+            font-size: 18px;
+            cursor: pointer;
+            z-index: 999;
+            box-shadow: 0 5px 20px rgba(0, 123, 255, 0.4);
+            transition: all 0.3s ease;
+        }
+        
+        .init-button:hover {
+            transform: translate(-50%, -50%) translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 123, 255, 0.6);
+        }
+        
+        .hidden {
+            display: none !important;
+        }
   </style>
   <script>
 /**
- * 检测是否在微信浏览器中打开。
- * 如果是，则提示用户切换到默认浏览器以获得更好的体验。
+ * 增强的环境检测和兼容性处理
  */
-   function c3() {
-            return /MicroMessenger/i.test(navigator.userAgent);
+
+// 检测浏览器环境
+function getEnvironmentInfo() {
+    const ua = navigator.userAgent;
+    
+    return {
+        isWeChat: /MicroMessenger/i.test(ua),
+        isQQ: /QQ/i.test(ua),
+        isSafari: /Safari/i.test(ua) && !/Chrome/i.test(ua),
+        isChrome: /Chrome/i.test(ua),
+        isIOS: /iPhone|iPad|iPod/i.test(ua),
+        isAndroid: /Android/i.test(ua),
+        
+        // iOS版本检测
+        iosVersion: (() => {
+            const match = ua.match(/OS (\d+)_(\d+)/);
+            return match ? parseFloat(match[1] + '.' + match[2]) : 0;
+        })(),
+        
+        // 微信版本检测
+        wechatVersion: (() => {
+            const match = ua.match(/MicroMessenger\/(\d+\.\d+)/);
+            return match ? parseFloat(match[1]) : 0;
+        })(),
+        
+        // HTTPS检测
+        isHTTPS: location.protocol === 'https:',
+        
+        // WebRTC支持检测
+        hasWebRTC: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
+    };
+}
+
+// 全局环境信息
+const ENV = getEnvironmentInfo();
+
+// 检查兼容性
+function checkCompatibility() {
+    const issues = [];
+    
+    // HTTPS检查
+    if (!ENV.isHTTPS) {
+        issues.push({
+            type: 'https',
+            title: '需要HTTPS协议',
+            message: '摄像头功能需要安全连接（HTTPS）才能正常工作',
+            solution: '请确保网站使用HTTPS协议访问'
+        });
+    }
+    
+    // iOS微信兼容性检查
+    if (ENV.isWeChat && ENV.isIOS) {
+        if (ENV.iosVersion < 14.3 || ENV.wechatVersion < 8.0) {
+            issues.push({
+                type: 'version',
+                title: '版本兼容性',
+                message: `当前版本：iOS ${ENV.iosVersion}, 微信 ${ENV.wechatVersion}`,
+                solution: '建议升级至 iOS 14.3+ 和微信 8.0+ 或在Safari中打开'
+            });
         }
-// 检查浏览器环境是否为微信浏览器。
-        var d4 = c3();
-        if (d4) {
-//环境检测部分，已经屏蔽
-/* 
-           document.addEventListener('DOMContentLoaded', function () {
-                document.body.innerHTML = 
-                    '<div style="text-align:center;padding:20px;">' +
-                    '<p>为了获得更好的体验，请点击右上角菜单，选择“在默认浏览器中打开”。</p>' +
-                    '</div>';
-            });
-            */
+    }
+    
+    // WebRTC支持检查
+    if (!ENV.hasWebRTC) {
+        issues.push({
+            type: 'webrtc',
+            title: 'WebRTC不支持',
+            message: '当前浏览器不支持摄像头访问功能',
+            solution: '请使用支持WebRTC的现代浏览器'
+        });
+    }
+    
+    return issues;
+}
 
+// 显示兼容性警告
+function showCompatibilityWarning(issues) {
+    const warningDiv = document.createElement('div');
+    warningDiv.className = 'environment-warning';
+    warningDiv.id = 'compatibility-warning';
+    
+    let content = `
+        <div class="warning-content">
+            <div class="warning-title">⚠️ 兼容性问题</div>
+    `;
+    
+    issues.forEach(issue => {
+        content += `
+            <div class="warning-text">
+                <strong>${issue.title}:</strong><br>
+                ${issue.message}<br>
+                <em>${issue.solution}</em>
+            </div>
+        `;
+    });
+    
+    // iOS微信用户的特殊处理
+    if (ENV.isWeChat && ENV.isIOS) {
+        content += `
+            <button class="retry-button safari-button" onclick="showSafariInstructions()">
+                在Safari中打开
+            </button>
+            <button class="retry-button" onclick="retryInitialization()">
+                仍要尝试
+            </button>
+        `;
+    } else {
+        content += `
+            <button class="retry-button" onclick="retryInitialization()">
+                重新尝试
+            </button>
+        `;
+    }
+    
+    content += '</div>';
+    warningDiv.innerHTML = content;
+    
+    document.body.appendChild(warningDiv);
+}
 
-// 初始化变量 e5，用于存储当前播放的音频对象。
-            var e5 = null;
-            var f6 = {};
-            document.addEventListener('DOMContentLoaded', function () {
-// 定义要预加载的音频文件列表。
-                var g7 = ['audio1.mp3', 'audio2.mp3'];
-                g7.forEach(function (h8) {
-                    var i9 = new Audio();
-                    i9.src = h8;
-                    i9.preload = 'auto';
-                    i9.load();
-                    f6[h8] = { j10: i9 };
-                });
-// 获取播放按钮的 DOM 元素。
-                var k11 = document.getElementById('a1');
-                k11.addEventListener('click', function () {
-                    if (e5 && e5.j10) {
-                        var l12 = e5.j10;
-                        if (l12.readyState >= 2) {
-                            if (l12.paused) {
-                                l12.play().then(function () {
-                                    e5.m13 = true;
-                                    k11.textContent = '暂停';
-                                }).catch(function (n14) {
-                                    console.error('Audio playback failed:', n14);
-                                    alert('无法播放音频，请与页面进行交互后重试。');
-                                });
-                            } else {
-                                l12.pause();
-                                e5.m13 = false;
-                                k11.textContent = '播放';
-                            }
-                        } else {
-                            alert('音频尚未加载完毕，请稍后再试。');
+// 显示Safari打开说明
+function showSafariInstructions() {
+    const warning = document.getElementById('compatibility-warning');
+    if (warning) {
+        warning.innerHTML = `
+            <div class="warning-content">
+                <div class="warning-title">📱 使用Safari浏览器</div>
+                <div class="warning-text">
+                    1. 点击右上角 "..." 菜单<br>
+                    2. 选择 "在Safari中打开"<br>
+                    3. 或复制链接在Safari中粘贴打开<br><br>
+                    <strong>当前链接：</strong><br>
+                    <span style="font-size: 12px; word-break: break-all;">${window.location.href}</span>
+                </div>
+                <button class="retry-button" onclick="copyToClipboard('${window.location.href}')">
+                    复制链接
+                </button>
+                <button class="retry-button" onclick="retryInitialization()">
+                    仍要尝试
+                </button>
+            </div>
+        `;
+    }
+}
+
+// 复制链接到剪贴板
+function copyToClipboard(text) {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => {
+            alert('链接已复制到剪贴板！');
+        });
+    } else {
+        // 降级方案
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        alert('链接已复制到剪贴板！');
+    }
+}
+
+// 重新尝试初始化
+function retryInitialization() {
+    const warning = document.getElementById('compatibility-warning');
+    if (warning) {
+        warning.remove();
+    }
+    initializeAR();
+}
+
+// 摄像头权限申请
+async function requestCameraPermission() {
+    try {
+        // 添加用户交互提示
+        return new Promise((resolve, reject) => {
+            const initButton = document.createElement('button');
+            initButton.className = 'init-button';
+            initButton.textContent = '🎵 开始AR体验';
+            initButton.onclick = async () => {
+                try {
+                    initButton.textContent = '正在申请摄像头权限...';
+                    
+                    // 申请摄像头权限
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            facingMode: 'environment', // 后置摄像头
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
                         }
-                    } else {
-                        alert('没有检测到标记或音频尚未加载。');
-                    }
-                });
-            });
-
-/**
- * AFRAME 组件：动态模型旋转。
- * 根据配置参数设置模型初始旋转角度。
- */
-            AFRAME.registerComponent('o15', {
-                schema: {
-                    x: { type: 'number', default: 0 },
-                    y: { type: 'number', default: 0 },
-                    z: { type: 'number', default: 0 }
-                },
-                init: function () {
-                    var p16 = this.el;
-                    var q17 = this.data;
-                    p16.addEventListener('model-loaded', function () {
-                        var r18 = p16.getObject3D('mesh');
-                        if (!r18) return;
-                        r18.rotation.set(
-                            THREE.Math.degToRad(q17.x),
-                            THREE.Math.degToRad(q17.y),
-                            THREE.Math.degToRad(q17.z)
-                        );
                     });
+                    
+                    // 立即停止流，只是为了获取权限
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                    initButton.remove();
+                    resolve(true);
+                } catch (error) {
+                    console.error('摄像头权限申请失败:', error);
+                    initButton.textContent = '权限申请失败，点击重试';
+                    reject(error);
                 }
-            });
+            };
+            
+            document.body.appendChild(initButton);
+        });
+    } catch (error) {
+        throw new Error('摄像头权限申请失败: ' + error.message);
+    }
+}
+
+// AR初始化
+async function initializeAR() {
+    try {
+        // 检查兼容性
+        const issues = checkCompatibility();
+        
+        if (issues.length > 0) {
+            // 严重问题直接显示警告
+            const criticalIssues = issues.filter(issue => 
+                issue.type === 'https' || issue.type === 'webrtc'
+            );
+            
+            if (criticalIssues.length > 0) {
+                showCompatibilityWarning(issues);
+                return;
+            }
+            
+            // 非严重问题显示警告但允许继续
+            if (ENV.isWeChat && ENV.isIOS && (ENV.iosVersion < 14.3 || ENV.wechatVersion < 8.0)) {
+                showCompatibilityWarning(issues);
+                return;
+            }
+        }
+        
+        // 申请摄像头权限
+        await requestCameraPermission();
+        
+        // 初始化AR场景
+        initializeARScene();
+        
+    } catch (error) {
+        console.error('AR初始化失败:', error);
+        handleARError(error);
+    }
+}
+
+// 处理AR错误
+function handleARError(error) {
+    let errorMessage = '未知错误';
+    let solution = '请刷新页面重试';
+    
+    if (error.name === 'NotAllowedError' || error.message.includes('Permission denied')) {
+        errorMessage = '用户拒绝了摄像头权限';
+        solution = '请允许摄像头权限并刷新页面';
+    } else if (error.name === 'NotFoundError') {
+        errorMessage = '未找到摄像头设备';
+        solution = '请确认设备有摄像头且未被其他应用占用';
+    } else if (error.name === 'NotSupportedError') {
+        errorMessage = '浏览器不支持摄像头功能';
+        solution = '请使用现代浏览器或在Safari中打开';
+    }
+    
+    showCompatibilityWarning([{
+        type: 'error',
+        title: 'AR启动失败',
+        message: errorMessage,
+        solution: solution
+    }]);
+}
+
+// 初始化AR场景
+function initializeARScene() {
+    console.log('AR场景初始化开始...');
+    
+    // 初始化音频系统
+    initializeAudioSystem();
+    
+    // 初始化AR标记系统
+    initializeMarkerSystem();
+    
+    console.log('AR场景初始化完成');
+}
 
 /**
- * AFRAME 组件：AR标记检测逻辑。
- * 用于实时监听标记的可见性状态并触发相应逻辑。
+ * 音频系统初始化（保留原有逻辑）
  */
-            AFRAME.registerComponent('s19', {
-                init: function () {
-                    var t20 = this.el;
-                    var u21 = t20.getAttribute('id');
-                    var v22 = null;
-                    var w23 = '';
-                    var x24 = false;
-                    var y25 = document.getElementById('a1');
-                    var z26 = document.getElementById('b2');
-                    var a27 = false;
-                    var b28 = false;
-                    var c29 = '';
-                    var d30 = '';
-                    if (u21 === 'marker1') {
-                        c29 = 'audio1.mp3';
-                        d30 = 'info1.txt';
-                    } else if (u21 === 'marker2') {
-                        c29 = 'audio2.mp3';
-                        d30 = 'info2.txt';
-                    }
-                    var e31 = f6[c29];
-                    if (e31 && e31.j10) {
-                        v22 = e31.j10;
-                    } else {
-                        console.error('Audio player not found for ' + c29);
-                        v22 = new Audio();
-                        v22.src = c29;
-                        v22.preload = 'auto';
-                        v22.load();
-                    }
-                    fetch(d30)
-                        .then(function (f32) {
-                            return f32.ok ? f32.text() : '';
-                        })
-                        .then(function (g33) {
-                            w23 = g33;
-                            b28 = true;
-                        })
-                        .catch(function (h34) {
-                            console.error('Error loading info text:', h34);
-                            b28 = false;
-                        });
-                    this.tick = AFRAME.utils.throttleTick(function () {
-                        var i35 = t20.object3D.visible;
-                        if (i35 !== a27) {
-                            a27 = i35;
-                            b28 = v22.readyState >= 2;
-                            if (a27) {
-                                if (e5 && e5.u21 !== u21) {
-                                    if (e5.j10 && !e5.j10.paused) {
-                                        e5.j10.pause();
-                                        e5.m13 = false;
-                                    }
-                                }
-                                e5 = {
-                                    u21: u21,
-                                    j10: v22,
-                                    w23: w23,
-                                    m13: x24,
-                                    b28: b28,
-                                    b28: b28
-                                };
-                                z26.textContent = w23 || 'No information available';
-                                f36();
+var e5 = null;
+var f6 = {};
+
+function initializeAudioSystem() {
+    // 定义要预加载的音频文件列表
+    var g7 = ['audio1.mp3', 'audio2.mp3'];
+    g7.forEach(function (h8) {
+        var i9 = new Audio();
+        i9.src = h8;
+        i9.preload = 'auto';
+        i9.load();
+        f6[h8] = { j10: i9 };
+    });
+
+    // 获取播放按钮的 DOM 元素
+    var k11 = document.getElementById('a1');
+    k11.addEventListener('click', function () {
+        if (e5 && e5.j10) {
+            var l12 = e5.j10;
+            if (l12.readyState >= 2) {
+                if (l12.paused) {
+                    l12.play().then(function () {
+                        e5.m13 = true;
+                        k11.textContent = '暂停';
+                    }).catch(function (n14) {
+                        console.error('Audio playback failed:', n14);
+                        alert('无法播放音频，请与页面进行交互后重试。');
+                    });
+                } else {
+                    l12.pause();
+                    e5.m13 = false;
+                    k11.textContent = '播放';
+                }
+            } else {
+                alert('音频尚未加载完毕，请稍后再试。');
+            }
+        } else {
+            alert('没有检测到标记或音频尚未加载。');
+        }
+    });
+}
+
+/**
+ * 标记系统初始化（保留原有逻辑）
+ */
+function initializeMarkerSystem() {
+    // AFRAME 组件：动态模型旋转
+    AFRAME.registerComponent('o15', {
+        schema: {
+            x: { type: 'number', default: 0 },
+            y: { type: 'number', default: 0 },
+            z: { type: 'number', default: 0 }
+        },
+        init: function () {
+            var p16 = this.el;
+            var q17 = this.data;
+            p16.addEventListener('model-loaded', function () {
+                var r18 = p16.getObject3D('mesh');
+                if (!r18) return;
+                r18.rotation.set(
+                    THREE.Math.degToRad(q17.x),
+                    THREE.Math.degToRad(q17.y),
+                    THREE.Math.degToRad(q17.z)
+                );
+            });
+        }
+    });
+
+    // AFRAME 组件：AR标记检测逻辑
+    AFRAME.registerComponent('s19', {
+        init: function () {
+            var t20 = this.el;
+            var u21 = t20.getAttribute('id');
+            var v22 = null;
+            var w23 = '';
+            var x24 = false;
+            var y25 = document.getElementById('a1');
+            var z26 = document.getElementById('b2');
+            var a27 = false;
+            var b28 = false;
+            var c29 = '';
+            var d30 = '';
+            
+            if (u21 === 'marker1') {
+                c29 = 'audio1.mp3';
+                d30 = 'info1.txt';
+            } else if (u21 === 'marker2') {
+                c29 = 'audio2.mp3';
+                d30 = 'info2.txt';
+            }
+            
+            var e31 = f6[c29];
+            if (e31 && e31.j10) {
+                v22 = e31.j10;
+            } else {
+                console.error('Audio player not found for ' + c29);
+                v22 = new Audio();
+                v22.src = c29;
+                v22.preload = 'auto';
+                v22.load();
+            }
+            
+            fetch(d30)
+                .then(function (f32) {
+                    return f32.ok ? f32.text() : '';
+                })
+                .then(function (g33) {
+                    w23 = g33;
+                    b28 = true;
+                })
+                .catch(function (h34) {
+                    console.error('Error loading info text:', h34);
+                    b28 = false;
+                });
+                
+            this.tick = AFRAME.utils.throttleTick(function () {
+                var i35 = t20.object3D.visible;
+                if (i35 !== a27) {
+                    a27 = i35;
+                    b28 = v22.readyState >= 2;
+                    if (a27) {
+                        if (e5 && e5.u21 !== u21) {
+                            if (e5.j10 && !e5.j10.paused) {
+                                e5.j10.pause();
+                                e5.m13 = false;
                             }
                         }
-                    }, 100);
-                    function f36() {
-                        y25.disabled = false;
-                        y25.style.backgroundColor = '#007BFF';
-                        y25.style.cursor = 'pointer';
-                        y25.textContent = x24 ? '暂停' : '播放';
+                        e5 = {
+                            u21: u21,
+                            j10: v22,
+                            w23: w23,
+                            m13: x24,
+                            b28: b28,
+                            b28: b28
+                        };
+                        z26.textContent = w23 || 'No information available';
+                        f36();
                     }
                 }
-            });
-        } else {
-
+            }, 100);
+            
+            function f36() {
+                y25.disabled = false;
+                y25.style.backgroundColor = '#007BFF';
+                y25.style.cursor = 'pointer';
+                y25.textContent = x24 ? '暂停' : '播放';
+            }
         }
+    });
+}
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('环境信息:', ENV);
+    
+    // 延迟初始化，确保所有资源加载完成
+    setTimeout(() => {
+        initializeAR();
+    }, 1000);
+});
+
   </script>
  </head>
  <body style="margin: 0; overflow: hidden;">
@@ -211,9 +581,10 @@
    播放
   </button>
   <div id="b2">
-   请用摄像头对准“岭南乐器码”
+   请点击"开始AR体验"按钮启动摄像头
   </div>
-  <a-scene arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false" embedded="" vr-mode-ui="enabled: false">
+  
+  <a-scene arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false; cameraParametersUrl: camera_para.dat;" embedded="" vr-mode-ui="enabled: false" style="display: none;" id="ar-scene">
    <a-marker id="marker1" preset="custom" s19="" url="pattern1.patt">
     <a-entity gltf-model="model1.gltf" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02">
     </a-entity>
@@ -225,15 +596,75 @@
    <a-entity camera="">
    </a-entity>
   </a-scene>
+  
   <script>
-   // Background audio playback enhancements
+    // 显示AR场景
+    function showARScene() {
+        const scene = document.getElementById('ar-scene');
+        if (scene) {
+            scene.style.display = 'block';
+        }
+    }
+    
+    // 监听AR场景加载
+    document.addEventListener('arjs-init', function() {
+        console.log('AR.js 初始化完成');
+        showARScene();
+    });
+    
+    // 增强的错误处理逻辑
+    window.onerror = function (message, source, lineno, colno, error) {
+        console.error("Error captured:", {
+            message: message,
+            source: source,
+            lineno: lineno,
+            colno: colno,
+            error: error
+        });
+        
+        // 如果是AR相关错误，显示友好提示
+        if (message.includes('getUserMedia') || message.includes('WebRTC')) {
+            handleARError(new Error(message));
+        }
+    };
+
+    // 动态显示AR场景（在权限获取成功后）
+    function showARSceneAfterPermission() {
+        const scene = document.getElementById('ar-scene');
+        if (scene) {
+            scene.style.display = 'block';
+            
+            // 更新提示文本
+            const info = document.getElementById('b2');
+            if (info) {
+                info.textContent = '请用摄像头对准"岭南乐器码"';
+            }
+        }
+    }
+    
+    // 重写初始化AR场景函数
+    function initializeARScene() {
+        console.log('AR场景初始化开始...');
+        
+        // 初始化音频系统
+        initializeAudioSystem();
+        
+        // 初始化AR标记系统  
+        initializeMarkerSystem();
+        
+        // 显示AR场景
+        showARSceneAfterPermission();
+        
+        console.log('AR场景初始化完成');
+    }
+
+    // 音频播放增强逻辑（保留原有功能）
     document.addEventListener('DOMContentLoaded', function () {
+        // 原有的音频增强逻辑保持不变
         var audioElements = document.querySelectorAll('audio');
         var playbackRate = 1.0;
 
         audioElements.forEach(function (audio) {
-// 增加播放速率控制逻辑。
-// 当音频播放速率发生变化时记录日志。
             audio.addEventListener('ratechange', function () {
                 console.log(`Playback rate adjusted to: ${audio.playbackRate}`);
             });
@@ -246,7 +677,6 @@
                 console.log('Audio paused');
             });
 
-// 根据音频文件的时长自动调整播放速率。
             if (audio.duration > 60) {
                 playbackRate = 1.5;
                 audio.playbackRate = playbackRate;
@@ -255,18 +685,7 @@
         });
     });
 
-// 增强的错误处理逻辑（仅记录后台日志）。
-    window.onerror = function (message, source, lineno, colno, error) {
-        console.error("Error captured:", {
-            message: message,
-            source: source,
-            lineno: lineno,
-            colno: colno,
-            error: error
-        });
-    };
-
-// 模型材质调整逻辑（对用户不可见）。
+    // 保留所有原有的AFRAME组件（动态模型、动态光照、可见性跟踪等）
     AFRAME.registerComponent('dynamic-model', {
         init: function () {
             var el = this.el;
@@ -276,11 +695,10 @@
                 colorIndex = (colorIndex + 1) % colors.length;
                 el.setAttribute('material', 'color', colors[colorIndex]);
                 console.log(`Model color changed to: ${colors[colorIndex]}`);
-            }, 10000); // Change color every 10 seconds
+            }, 10000);
         }
     });
 
-// 动态光照强度调整（后台功能）。
     AFRAME.registerComponent('dynamic-light', {
         schema: {
             intensity: { type: 'number', default: 1 }
@@ -295,125 +713,19 @@
         }
     });
 
-// 实时监控AR标记的可见性。
     AFRAME.registerComponent('visibility-tracker', {
         init: function () {
             var el = this.el;
             var isVisible = false;
 
-// 当标记被检测到时记录日志。
             this.el.addEventListener('markerFound', function () {
                 isVisible = true;
                 console.log(`Marker found: ${el.id}`);
             });
 
-// 当标记丢失时记录日志。
             this.el.addEventListener('markerLost', function () {
                 isVisible = false;
                 console.log(`Marker lost: ${el.id}`);
-            });
-        }
-    });
-  </script>
-  <script>
-   /**
-     * 以下脚本包含了增强现实应用中的核心逻辑设计。
-     * 代码注重于提高音频交互与3D模型渲染的灵活性与可靠性。
-     * 
-     * 创新点包括：
-     * 1. 实现了动态光照控制，提升了视觉交互的真实感。
-     * 2. 通过AFRAME的组件扩展，实现了模型动态材质调整。
-     * 3. 使用音频播放速率调节技术，针对长音频提供了自动优化功能。
-     * 4. 添加了后台运行的标记跟踪逻辑，实现了AR环境中的实时反馈。
-     */
-
-    // 音频交互增强逻辑
-    document.addEventListener('DOMContentLoaded', function () {
-        var audioElements = document.querySelectorAll('audio');
-        var playbackRate = 1.0;
-
-        audioElements.forEach(function (audio) {
-            // 监听音频播放速率的变化，用于动态调整
-// 当音频播放速率发生变化时记录日志。
-            audio.addEventListener('ratechange', function () {
-                console.log(`播放速率调整为: ${audio.playbackRate}`);
-            });
-
-            // 播放和暂停事件的后台记录
-            audio.addEventListener('play', function () {
-                console.log('音频开始播放');
-            });
-            audio.addEventListener('pause', function () {
-                console.log('音频已暂停');
-            });
-
-            // 针对长音频文件自动调整播放速率
-            if (audio.duration > 60) {
-                playbackRate = 1.5;  // 对于超过60秒的音频，设置为1.5倍速
-                audio.playbackRate = playbackRate;
-                console.log(`长音频检测到，播放速率已调整为: ${playbackRate}`);
-            }
-        });
-    });
-
-    // AFRAME 组件扩展：动态材质调整
-    AFRAME.registerComponent('dynamic-model', {
-        init: function () {
-            /**
-             * 此组件用于实现3D模型的材质动态调整功能。
-             * 通过定时器，每隔10秒自动切换模型颜色，增强视觉体验。
-             */
-            var el = this.el;
-            var colorIndex = 0;
-            var colors = ['#FF5733', '#33FF57', '#3357FF']; // 定义颜色列表
-            setInterval(function () {
-                colorIndex = (colorIndex + 1) % colors.length;
-                el.setAttribute('material', 'color', colors[colorIndex]);
-                console.log(`模型颜色已切换至: ${colors[colorIndex]}`);
-            }, 10000); // 每10秒切换一次颜色
-        }
-    });
-
-    // AFRAME 组件扩展：动态光照
-    AFRAME.registerComponent('dynamic-light', {
-        schema: {
-            intensity: { type: 'number', default: 1 } // 定义光照强度，默认值为1
-        },
-        init: function () {
-            /**
-             * 动态光照组件，用于根据光照强度参数实时调整场景中的光源亮度。
-             */
-            var light = this.el.getOrCreateObject3D('light', THREE.PointLight);
-            light.intensity = this.data.intensity;
-        },
-        update: function () {
-            var light = this.el.getObject3D('light');
-            light.intensity = this.data.intensity;
-        }
-    });
-
-    // AR标记实时跟踪
-    AFRAME.registerComponent('visibility-tracker', {
-        init: function () {
-            /**
-             * 该组件用于追踪AR标记的可见性状态。
-             * 创新之处在于结合事件监听和后台数据记录，实现了动态反馈功能。
-             */
-            var el = this.el;
-            var isVisible = false;
-
-            // 监听标记被发现的事件
-// 当标记被检测到时记录日志。
-            this.el.addEventListener('markerFound', function () {
-                isVisible = true;
-                console.log(`标记被发现: ${el.id}`);
-            });
-
-            // 监听标记丢失的事件
-// 当标记丢失时记录日志。
-            this.el.addEventListener('markerLost', function () {
-                isVisible = false;
-                console.log(`标记丢失: ${el.id}`);
             });
         }
     });

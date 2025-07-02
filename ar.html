@@ -157,16 +157,17 @@
             text-align: center;
         }
         
-        /* 摄像头权限弹窗 - iOS原生样式 */
-        .mock-dialog-content.camera-permission {
+        /* 摄像头权限弹窗 - iOS原生样式（无色按钮 + 高斯模糊） */
+        .camera-permission {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.8);
         }
         
-        /* 传感器权限弹窗 - 保持原来的彩色样式 */
-        .mock-dialog-content.sensor-permission {
+        /* 传感器权限弹窗 - Web API样式（红蓝色按钮） */
+        .sensor-permission {
             background: white;
+            border: 1px solid rgba(0, 0, 0, 0.1);
         }
         
         .mock-dialog-text {
@@ -182,13 +183,13 @@
             margin: 10px -15px -15px -15px;
         }
         
-        /* 摄像头权限按钮 - iOS原生样式（无色） */
-        .mock-dialog-content.camera-permission .mock-dialog-buttons {
+        /* iOS原生样式按钮（摄像头权限） */
+        .camera-permission .mock-dialog-buttons {
             border-top: 1px solid rgba(0, 0, 0, 0.1);
         }
         
-        .mock-dialog-content.camera-permission .mock-deny-btn,
-        .mock-dialog-content.camera-permission .mock-allow-btn {
+        .camera-permission .mock-deny-btn,
+        .camera-permission .mock-allow-btn {
             flex: 1;
             padding: 12px;
             border: none;
@@ -201,23 +202,22 @@
             transition: background-color 0.2s;
         }
         
-        .mock-dialog-content.camera-permission .mock-deny-btn {
+        .camera-permission .mock-deny-btn {
             border-right: 1px solid rgba(0, 0, 0, 0.1);
-            color: #007AFF;
         }
         
-        .mock-dialog-content.camera-permission .mock-allow-btn {
+        .camera-permission .mock-allow-btn {
             font-weight: 600;
-            color: #007AFF;
         }
         
-        /* 传感器权限按钮 - 保持原来的红蓝色样式 */
-        .mock-dialog-content.sensor-permission .mock-dialog-buttons {
+        /* Web API样式按钮（传感器权限） */
+        .sensor-permission .mock-dialog-buttons {
             gap: 10px;
+            margin: 15px 0 0 0;
         }
         
-        .mock-dialog-content.sensor-permission .mock-deny-btn,
-        .mock-dialog-content.sensor-permission .mock-allow-btn {
+        .sensor-permission .mock-deny-btn,
+        .sensor-permission .mock-allow-btn {
             flex: 1;
             padding: 12px;
             border: none;
@@ -227,16 +227,17 @@
             cursor: default;
         }
         
-        .mock-dialog-content.sensor-permission .mock-deny-btn {
+        .sensor-permission .mock-deny-btn {
             background: #FF3B30;
             color: white;
         }
         
-        .mock-dialog-content.sensor-permission .mock-allow-btn {
+        .sensor-permission .mock-allow-btn {
             background: #007AFF;
             color: white;
         }
         
+        /* 动画效果 */
         .camera-allow {
             animation: cameraButtonGlow 2s infinite;
         }
@@ -245,7 +246,6 @@
             animation: sensorButtonGlow 2s infinite 1s;
         }
         
-        /* iOS摄像头权限按钮动画 - 背景色变化 */
         @keyframes cameraButtonGlow {
             0%, 100% { 
                 background-color: rgba(0, 122, 255, 0.1);
@@ -255,7 +255,6 @@
             }
         }
         
-        /* 传感器权限按钮动画 - 阴影变化 */
         @keyframes sensorButtonGlow {
             0%, 100% { 
                 box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.7);
@@ -510,7 +509,7 @@ function createStartOverlay() {
                 <div class="permission-step">
                     <div class="step-title">第1步：摄像头权限</div>
                     <div class="mock-permission-dialog">
-                        <div class="mock-dialog-content">
+                        <div class="mock-dialog-content camera-permission">
                             <div class="mock-dialog-text">
                                 允许"linggan-ua.github.io"<br>
                                 使用您的摄像头？
@@ -531,7 +530,7 @@ function createStartOverlay() {
                 <div class="permission-step">
                     <div class="step-title">第2步：传感器权限</div>
                     <div class="mock-permission-dialog">
-                        <div class="mock-dialog-content">
+                        <div class="mock-dialog-content sensor-permission">
                             <div class="mock-dialog-text">
                                 This immersive website requires<br>
                                 access to your device motion sensors.

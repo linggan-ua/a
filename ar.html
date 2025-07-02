@@ -10,99 +10,31 @@
   <script src="aframe-ar.js">
   </script>
   <style>
-        /* 播放按钮样式 */
+        /* 原有的播放按钮样式 */
         #a1 {
             position: absolute;
             top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 15px 30px;
-            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            left: 20px;
+            padding: 10px 20px;
+            background-color: grey;
             color: white;
             border: none;
-            border-radius: 25px;
-            font-size: 16px;
-            font-weight: bold;
             cursor: not-allowed;
             z-index: 10;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
         }
         
-        #a1:not(:disabled) {
-            cursor: pointer;
-            animation: pulse 2s infinite;
-        }
-        
-        #a1:not(:disabled):hover {
-            transform: translateX(-50%) translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-        }
-        
-        @keyframes pulse {
-            0% { box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3); }
-            50% { box-shadow: 0 4px 25px rgba(78, 205, 196, 0.5); }
-            100% { box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3); }
-        }
-        
-        /* 信息面板样式 */
+        /* 原有的信息面板样式 */
         #b2 {
             position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
+            top: 70px;
+            left: 20px;
             width: calc(100% - 40px);
-            max-width: 400px;
-            padding: 15px 20px;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
+            padding: 10px 20px;
+            background-color: #FFF;
+            color: #000;
             border: none;
-            border-radius: 15px;
             word-wrap: break-word;
             z-index: 10;
-            text-align: center;
-            font-size: 14px;
-            line-height: 1.4;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        /* 状态指示器 */
-        .status-indicator {
-            position: absolute;
-            top: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            z-index: 15;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-            display: none;
-        }
-        
-        .status-loading {
-            background: rgba(255, 193, 7, 0.9);
-            color: #333;
-            animation: statusPulse 1.5s infinite;
-        }
-        
-        .status-ready {
-            background: rgba(40, 167, 69, 0.9);
-            color: white;
-        }
-        
-        .status-error {
-            background: rgba(220, 53, 69, 0.9);
-            color: white;
-        }
-        
-        @keyframes statusPulse {
-            0%, 100% { opacity: 0.8; }
-            50% { opacity: 1; }
         }
         
         /* 启动覆盖层 */
@@ -170,7 +102,7 @@
             margin-bottom: 30px;
         }
         
-        /* 权限指南样式 - 优化版本 */
+        /* 权限指南样式 - 紧凑版 */
         .permission-guide {
             background: rgba(255, 255, 255, 0.1);
             border-radius: 15px;
@@ -210,13 +142,6 @@
             margin-bottom: 8px;
         }
         
-        /* 紧凑的权限步骤容器 */
-        .permission-steps-compact {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        
         /* 真实iOS风格的权限弹窗 */
         .mock-permission-dialog {
             position: relative;
@@ -233,18 +158,6 @@
             text-align: center;
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.8);
-        }
-        
-        /* 摄像头权限弹窗样式（中文，真实iOS风格） */
-        .camera-permission {
-            background: rgba(248, 248, 248, 0.95);
-            backdrop-filter: blur(20px);
-        }
-        
-        /* 传感器权限弹窗样式（英文，真实iOS风格） */
-        .sensor-permission {
-            background: rgba(248, 248, 248, 0.95);
-            backdrop-filter: blur(20px);
         }
         
         .mock-dialog-text {
@@ -284,11 +197,6 @@
             color: #007AFF;
         }
         
-        .mock-deny-btn:active, .mock-allow-btn:active {
-            background-color: rgba(0, 122, 255, 0.1);
-        }
-        
-        /* 不同类型的Allow按钮动画 */
         .camera-allow {
             animation: cameraButtonGlow 2s infinite;
         }
@@ -315,7 +223,7 @@
             }
         }
         
-        /* 箭头指示 - 缩小版 */
+        /* 箭头指示 */
         .permission-arrow {
             position: absolute;
             right: -30px;
@@ -367,41 +275,27 @@
             display: block;
         }
         
-        /* 白屏检测提示 */
-        .white-screen-hint {
+        .hidden {
+            display: none !important;
+        }
+        
+        /* 权限被拒绝覆盖层 - 启动页风格 */
+        .permission-denied-overlay {
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
             color: white;
-            padding: 25px;
-            border-radius: 15px;
             text-align: center;
-            z-index: 999;
-            max-width: 90%;
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            display: none;
         }
         
-        .hint-button {
-            background: linear-gradient(45deg, #007BFF, #0056b3);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            margin: 10px 5px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .hint-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.4);
-        }
-        
-        /* 重新授权步骤指南 */
         .reauth-steps {
             margin: 15px 0;
         }
@@ -463,7 +357,6 @@
             border-bottom: none;
         }
         
-        /* 权限被拒绝按钮组 */
         .denied-buttons {
             display: flex;
             gap: 15px;
@@ -476,50 +369,16 @@
             background: linear-gradient(45deg, #4CAF50, #45a049);
         }
         
-        .retry-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
-        }
-        
         .refresh-btn {
             background: linear-gradient(45deg, #2196F3, #1976D2);
-        }
-        
-        .refresh-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(33, 150, 243, 0.4);
         }
         
         .back-btn {
             background: linear-gradient(45deg, #FF9800, #F57C00);
         }
         
-        .back-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(255, 152, 0, 0.4);
-        }
-        
-        /* 权限被拒绝覆盖层复用启动页样式 */
-        .permission-denied-overlay {
-            /* 复用 .start-overlay 的所有样式 */
-        }
-        
-        .hidden {
-            display: none !important;
-        }
-        
         /* 响应式设计 */
         @media (max-width: 480px) {
-            #a1 {
-                font-size: 14px;
-                padding: 12px 24px;
-            }
-            
-            #b2 {
-                font-size: 13px;
-                padding: 12px 16px;
-            }
-            
             .start-title {
                 font-size: 2em;
             }
@@ -568,61 +427,15 @@
                 right: -30px;
                 font-size: 9px;
             }
-            
-            /* 重新授权步骤移动端样式 */
-            .reauth-step {
-                margin: 8px 0;
-                padding: 8px;
-            }
-            
-            .step-number {
-                min-width: 20px;
-                height: 20px;
-                font-size: 10px;
-                margin-right: 8px;
-            }
-            
-            .step-text {
-                font-size: 0.8em;
-            }
-            
-            .step-desc {
-                font-size: 0.75em;
-            }
-            
-            .simple-steps {
-                margin: 8px 0;
-            }
-            
-            .simple-steps div {
-                padding: 4px 0;
-                font-size: 0.8em;
-            }
-            
-            .denied-buttons {
-                flex-direction: column;
-                gap: 10px;
-                margin-top: 15px;
-            }
-            
-            .start-button {
-                padding: 15px 30px;
-                font-size: 16px;
-                width: 100%;
-                max-width: 280px;
-            }
         }
   </style>
   <script>
 /**
- * 修复的AR启动流程
- * 关键：延迟AR.js初始化，直到用户点击启动
+ * 简化版AR启动 - 只改启动页，保持AR界面原有性能
  */
 
 let isARStarted = false;
 let startOverlay;
-let whiteScreenHint;
-let statusIndicator;
 
 // 环境检测
 function getDeviceInfo() {
@@ -633,34 +446,6 @@ function getDeviceInfo() {
         isAndroid: /Android/i.test(ua),
         isDesktop: !/iPhone|iPad|iPod|Android/i.test(ua)
     };
-}
-
-// 创建状态指示器
-function createStatusIndicator() {
-    statusIndicator = document.createElement('div');
-    statusIndicator.className = 'status-indicator status-loading';
-    statusIndicator.id = 'status-indicator';
-    statusIndicator.textContent = '📷 准备中...';
-    document.body.appendChild(statusIndicator);
-}
-
-// 更新状态指示器
-function updateStatus(status, message) {
-    if (!statusIndicator) return;
-    
-    statusIndicator.className = `status-indicator status-${status}`;
-    statusIndicator.textContent = message;
-    statusIndicator.style.display = 'block';
-    
-    // 成功状态3秒后自动隐藏
-    if (status === 'ready') {
-        setTimeout(() => {
-            statusIndicator.style.opacity = '0';
-            setTimeout(() => {
-                statusIndicator.style.display = 'none';
-            }, 300);
-        }, 3000);
-    }
 }
 
 // 创建启动覆盖层
@@ -683,7 +468,7 @@ function createStartOverlay() {
                 <div class="permission-step">
                     <div class="step-title">第1步：摄像头权限</div>
                     <div class="mock-permission-dialog">
-                        <div class="mock-dialog-content camera-permission">
+                        <div class="mock-dialog-content">
                             <div class="mock-dialog-text">
                                 允许"linggan-ua.github.io"<br>
                                 使用您的摄像头？
@@ -704,7 +489,7 @@ function createStartOverlay() {
                 <div class="permission-step">
                     <div class="step-title">第2步：传感器权限</div>
                     <div class="mock-permission-dialog">
-                        <div class="mock-dialog-content sensor-permission">
+                        <div class="mock-dialog-content">
                             <div class="mock-dialog-text">
                                 This immersive website requires<br>
                                 access to your device motion sensors.
@@ -754,444 +539,36 @@ function createStartOverlay() {
     document.body.appendChild(startOverlay);
 }
 
-// 创建白屏提示
-function createWhiteScreenHint() {
-    whiteScreenHint = document.createElement('div');
-    whiteScreenHint.className = 'white-screen-hint';
-    whiteScreenHint.id = 'white-screen-hint';
-    
-    whiteScreenHint.innerHTML = `
-        <h3>🔧 摄像头激活中...</h3>
-        <p>如果看到空白屏幕，请尝试：</p>
-        <button class="hint-button" onclick="clickToActivate()">🎯 激活摄像头</button>
-        <button class="hint-button" onclick="refreshPage()">🔄 刷新页面</button>
-        <div style="font-size: 12px; margin-top: 15px; opacity: 0.8;">
-            💡 iOS用户建议在Safari中打开获得最佳体验
-        </div>
-    `;
-    
-    document.body.appendChild(whiteScreenHint);
-}
-
-// 启动AR - 关键修复函数
-async function startAR() {
+// 简单的启动AR函数
+function startAR() {
     if (isARStarted) return;
     
     console.log('用户点击启动AR');
     isARStarted = true;
     
-    try {
-        // 隐藏启动覆盖层
-        startOverlay.classList.add('hidden');
-        
-        // 显示状态指示器
-        updateStatus('loading', '📷 启动摄像头中...');
-        
-        // 更新信息面板
-        document.getElementById('b2').innerHTML = `
-            <div style="display: flex; align-items: center; justify-content: center;">
-                <span style="margin-right: 10px;">🔄</span>
-                正在启动摄像头，请允许权限...
-            </div>
-        `;
-        
-        // 关键：显示并激活AR场景
-        const arScene = document.getElementById('ar-scene');
-        arScene.classList.add('active');
-        
-        // 等待AR.js初始化
-        await waitForARJSInitialization();
-        
-        // 应用iOS视频修复
-        applyIOSVideoFix();
-        
-        // 初始化音频系统
-        initializeAudioSystem();
-        
-        // 监控AR状态和权限
-        monitorARStatusAndPermissions();
-        
-        console.log('AR启动流程完成');
-        
-    } catch (error) {
-        console.error('AR启动失败:', error);
-        handlePermissionError(error);
-    }
-}
-
-// 等待AR.js初始化
-function waitForARJSInitialization() {
-    return new Promise((resolve) => {
-        // 检查AR.js是否已经加载
-        if (window.AFRAME && window.AFRAME.components && window.AFRAME.components.arjs) {
-            console.log('AR.js已加载');
-            setTimeout(resolve, 1000); // 给AR.js一些时间初始化
-        } else {
-            // 等待AR.js加载完成
-            const checkInterval = setInterval(() => {
-                if (window.AFRAME && window.AFRAME.components && window.AFRAME.components.arjs) {
-                    clearInterval(checkInterval);
-                    console.log('AR.js加载完成');
-                    setTimeout(resolve, 1000);
-                }
-            }, 100);
-        }
-    });
-}
-
-// 处理权限错误
-function handlePermissionError(error) {
-    console.error('权限错误:', error);
+    // 隐藏启动覆盖层
+    startOverlay.classList.add('hidden');
     
-    if (error.name === 'NotAllowedError') {
-        // 用户拒绝了摄像头权限
-        showPermissionDeniedUI('camera');
-    } else if (error.name === 'NotFoundError') {
-        // 没有找到摄像头设备
-        showPermissionDeniedUI('no-camera');
-    } else if (error.name === 'NotSupportedError') {
-        // 浏览器不支持
-        showPermissionDeniedUI('not-supported');
-    } else {
-        // 其他错误
-        showPermissionDeniedUI('other');
-    }
-}
-
-// 显示权限被拒绝的UI - 启动页风格
-function showPermissionDeniedUI(type) {
-    updateStatus('error', '❌ 权限被拒绝');
-    
-    let title, subtitle, guideContent;
-    const device = getDeviceInfo();
-    
-    switch(type) {
-        case 'camera':
-            title = '📷 摄像头权限被拒绝';
-            subtitle = '需要重新授权才能使用AR功能';
-            guideContent = device.isIOS ? `
-                <div class="permission-guide">
-                    <div class="guide-title">🔧 重新授权指南</div>
-                    <div class="guide-text">请按照以下步骤重新授权摄像头权限</div>
-                    
-                    <div class="reauth-steps">
-                        <div class="reauth-step">
-                            <div class="step-number">1</div>
-                            <div class="step-content">
-                                <div class="step-text">点击地址栏左侧的🔒图标</div>
-                                <div class="step-desc">或长按地址栏查看网站信息</div>
-                            </div>
-                        </div>
-                        
-                        <div class="reauth-step">
-                            <div class="step-number">2</div>
-                            <div class="step-content">
-                                <div class="step-text">找到"摄像头"选项</div>
-                                <div class="step-desc">将其设置为"允许"</div>
-                            </div>
-                        </div>
-                        
-                        <div class="reauth-step">
-                            <div class="step-number">3</div>
-                            <div class="step-content">
-                                <div class="step-text">刷新页面重新开始</div>
-                                <div class="step-desc">或点击下方"重新尝试"按钮</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            ` : `
-                <div class="permission-guide">
-                    <div class="guide-title">🔧 重新授权指南</div>
-                    <div class="guide-text">请按照以下步骤重新授权摄像头权限</div>
-                    <div class="simple-steps">
-                        <div>• 点击地址栏左侧的摄像头图标</div>
-                        <div>• 选择"始终允许"或"允许"</div>
-                        <div>• 刷新页面重新开始</div>
-                    </div>
-                </div>
-            `;
-            break;
-        case 'no-camera':
-            title = '📷 未找到摄像头';
-            subtitle = '设备摄像头不可用或被占用';
-            guideContent = `
-                <div class="permission-guide">
-                    <div class="guide-title">🔍 问题排查</div>
-                    <div class="simple-steps">
-                        <div>• 确认设备有摄像头且工作正常</div>
-                        <div>• 关闭其他使用摄像头的应用</div>
-                        <div>• 检查摄像头是否被其他网页占用</div>
-                        <div>• 重启浏览器后重试</div>
-                    </div>
-                </div>
-            `;
-            break;
-        case 'not-supported':
-            title = '🚫 浏览器不支持';
-            subtitle = '当前浏览器不支持摄像头功能';
-            guideContent = `
-                <div class="permission-guide">
-                    <div class="guide-title">🌐 浏览器建议</div>
-                    <div class="simple-steps">
-                        <div>• 推荐使用 Safari 浏览器（iOS）</div>
-                        <div>• 或使用 Chrome、Firefox（Android）</div>
-                        <div>• 确保浏览器版本是最新的</div>
-                        <div>• 避免使用微信等内置浏览器</div>
-                    </div>
-                </div>
-            `;
-            break;
-        default:
-            title = '❌ 启动失败';
-            subtitle = 'AR功能启动遇到问题';
-            guideContent = `
-                <div class="permission-guide">
-                    <div class="guide-title">🔧 故障排除</div>
-                    <div class="simple-steps">
-                        <div>• 检查网络连接是否正常</div>
-                        <div>• 刷新页面重新尝试</div>
-                        <div>• 清除浏览器缓存</div>
-                        <div>• 尝试在其他浏览器中打开</div>
-                    </div>
-                </div>
-            `;
-    }
-    
-    // 创建类似启动页的权限指导界面
-    const deniedOverlay = document.createElement('div');
-    deniedOverlay.className = 'permission-denied-overlay start-overlay';
-    deniedOverlay.innerHTML = `
-        <div class="start-title">${title}</div>
-        <div class="start-subtitle">${subtitle}</div>
-        
-        ${guideContent}
-        
-        <div class="denied-buttons">
-            <button class="start-button retry-btn" onclick="retryPermission()">
-                🔄 重新尝试
-            </button>
-            <button class="start-button refresh-btn" onclick="refreshPage()">
-                🔃 刷新页面
-            </button>
-            <button class="start-button back-btn" onclick="backToStart()">
-                ⬅️ 返回开始
-            </button>
-        </div>
-        
-        <div style="font-size: 0.9em; opacity: 0.8; margin-top: 15px;">
-            💡 如果问题持续存在，建议在Safari中打开
-        </div>
-    `;
-    
-    document.body.appendChild(deniedOverlay);
-    
-    // 更新底部信息
-    document.getElementById('b2').innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: center;">
-            <span style="margin-right: 10px;">❌</span>
-            ${subtitle}
-        </div>
-    `;
-}
-
-// 重新尝试获取权限
-function retryPermission() {
-    // 移除权限被拒绝UI
-    const deniedUI = document.querySelector('.permission-denied-overlay');
-    if (deniedUI) {
-        deniedUI.remove();
-    }
-    
-    // 重置状态
-    isARStarted = false;
-    statusIndicator.style.display = 'none';
-    
-    // 重新启动
-    startAR();
-}
-
-// 返回开始页面
-function backToStart() {
-    // 移除权限被拒绝UI
-    const deniedUI = document.querySelector('.permission-denied-overlay');
-    if (deniedUI) {
-        deniedUI.remove();
-    }
-    
-    // 隐藏AR场景
+    // 显示AR场景
     const arScene = document.getElementById('ar-scene');
-    arScene.classList.remove('active');
+    arScene.classList.add('active');
     
-    // 显示启动覆盖层
-    startOverlay.classList.remove('hidden');
+    // 应用iOS视频修复（如果需要）
+    applyIOSVideoFix();
     
-    // 重置状态
-    isARStarted = false;
-    statusIndicator.style.display = 'none';
-    
-    // 重置信息面板
-    document.getElementById('b2').textContent = '🎵 准备启动AR体验...';
+    console.log('AR启动完成');
 }
 
-// 监控AR状态和权限 - 增强版本
-function monitorARStatusAndPermissions() {
-    let checkCount = 0;
-    const maxChecks = 30; // 6秒检查
-    
-    const checkInterval = setInterval(() => {
-        checkCount++;
-        const videos = document.querySelectorAll('video');
-        const canvas = document.querySelector('canvas');
-        const markers = document.querySelectorAll('a-marker');
-        
-        let hasWorkingVideo = false;
-        let hasCanvas = false;
-        let hasError = false;
-        
-        // 检查视频是否正常工作
-        videos.forEach(video => {
-            if (video.videoWidth > 0 && video.videoHeight > 0 && !video.paused) {
-                hasWorkingVideo = true;
-                console.log('检测到工作中的视频:', video.videoWidth, 'x', video.videoHeight);
-            }
-            
-            // 检查视频错误
-            if (video.error) {
-                hasError = true;
-                console.error('视频错误:', video.error);
-            }
-        });
-        
-        // 检查canvas是否存在且有内容
-        if (canvas && canvas.width > 0 && canvas.height > 0) {
-            hasCanvas = true;
-            console.log('检测到canvas:', canvas.width, 'x', canvas.height);
-        }
-        
-        // 检查AR标记是否注册成功
-        let markersRegistered = markers.length > 0;
-        
-        // 如果有视频错误，立即处理
-        if (hasError) {
-            clearInterval(checkInterval);
-            handlePermissionError(new Error('Video playback error'));
-            return;
-        }
-        
-        // AR成功启动的条件：有工作的视频 + 有canvas + 标记已注册
-        if (hasWorkingVideo && hasCanvas && markersRegistered) {
-            clearInterval(checkInterval);
-            updateStatus('ready', '✅ AR就绪');
-            
-            document.getElementById('b2').innerHTML = `
-                <div style="display: flex; align-items: center; justify-content: center;">
-                    <span style="margin-right: 10px;">📱</span>
-                    请用摄像头对准"岭南乐器码"
-                </div>
-            `;
-            
-            whiteScreenHint.style.display = 'none';
-            console.log('AR状态监控：成功就绪');
-            
-        } else if (checkCount >= maxChecks) {
-            // 检查超时，可能权限被拒绝或其他问题
-            clearInterval(checkInterval);
-            console.log('AR状态监控：超时，检查权限状态');
-            
-            // 尝试检测权限状态
-            if (navigator.permissions) {
-                navigator.permissions.query({name: 'camera'}).then(permissionStatus => {
-                    if (permissionStatus.state === 'denied') {
-                        handlePermissionError({name: 'NotAllowedError'});
-                    } else {
-                        // 不是权限问题，可能是其他技术问题
-                        updateStatus('error', '⚠️ 需要激活');
-                        document.getElementById('b2').innerHTML = `
-                            <div style="display: flex; align-items: center; justify-content: center;">
-                                <span style="margin-right: 10px;">⚠️</span>
-                                摄像头启动遇到问题，请点击"激活摄像头"
-                            </div>
-                        `;
-                        whiteScreenHint.style.display = 'block';
-                    }
-                }).catch(() => {
-                    // 权限API不支持，显示通用提示
-                    updateStatus('error', '⚠️ 需要激活');
-                    whiteScreenHint.style.display = 'block';
-                });
-            } else {
-                // 浏览器不支持权限API，显示通用提示
-                updateStatus('error', '⚠️ 需要激活');
-                whiteScreenHint.style.display = 'block';
-            }
-        } else {
-            // 继续检查中，更新进度信息
-            console.log(`AR状态检查 ${checkCount}/${maxChecks}: 视频=${hasWorkingVideo}, Canvas=${hasCanvas}, 标记=${markersRegistered}`);
-            
-            // 动态更新状态信息
-            if (checkCount < 10) {
-                updateStatus('loading', '📷 申请摄像头权限...');
-            } else if (checkCount < 20) {
-                updateStatus('loading', '🔄 初始化AR引擎...');
-            } else {
-                updateStatus('loading', '⏳ 准备AR场景...');
-            }
-        }
-    }, 200);
-}
-
-// 点击激活摄像头
-function clickToActivate() {
-    whiteScreenHint.style.display = 'none';
-    updateStatus('loading', '🔄 重新激活中...');
-    
-    // 模拟点击AR场景来触发用户手势
-    const scene = document.querySelector('a-scene');
-    if (scene) {
-        const clickEvent = new MouseEvent('click', {
-            bubbles: true,
-            cancelable: true,
-            view: window
-        });
-        scene.dispatchEvent(clickEvent);
-    }
-    
-    // 重新应用视频修复
-    setTimeout(() => {
-        applyIOSVideoFix();
-        // 重新监控状态，包括权限检测
-        setTimeout(() => {
-            monitorARStatusAndPermissions();
-        }, 1000);
-    }, 500);
-    
-    document.getElementById('b2').innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: center;">
-            <span style="margin-right: 10px;">🔄</span>
-            正在重新激活摄像头...
-        </div>
-    `;
-}
-
-// 刷新页面
-function refreshPage() {
-    window.location.reload();
-}
-
-// iOS视频修复
+// 简单的iOS视频修复
 function applyIOSVideoFix() {
     const device = getDeviceInfo();
     
     if (!device.isIOS) {
-        console.log('非iOS设备，跳过视频修复');
         return;
     }
     
-    console.log('在用户手势后应用iOS视频修复');
-    
     let fixAttempts = 0;
-    const maxAttempts = 20;
+    const maxAttempts = 15;
     
     const fixVideoElements = () => {
         fixAttempts++;
@@ -1211,58 +588,133 @@ function applyIOSVideoFix() {
         }
         
         if (fixAttempts < maxAttempts) {
-            setTimeout(fixVideoElements, 200);
+            setTimeout(fixVideoElements, 300);
         }
     };
     
-    fixVideoElements();
+    setTimeout(fixVideoElements, 1000);
 }
 
-// 初始化音频系统（延迟初始化）
-function initializeAudioSystem() {
-    console.log('初始化音频系统');
-    // 这里会在AR启动后初始化，确保原有音频功能正常
+// 处理权限被拒绝 - 简化版
+function handlePermissionDenied() {
+    console.log('检测到权限被拒绝');
+    
+    const device = getDeviceInfo();
+    
+    const deniedOverlay = document.createElement('div');
+    deniedOverlay.className = 'permission-denied-overlay';
+    deniedOverlay.innerHTML = `
+        <div class="start-title">📷 摄像头权限被拒绝</div>
+        <div class="start-subtitle">需要重新授权才能使用AR功能</div>
+        
+        <div class="permission-guide">
+            <div class="guide-title">🔧 重新授权指南</div>
+            <div class="guide-text">请按照以下步骤重新授权摄像头权限</div>
+            
+            ${device.isIOS ? `
+                <div class="reauth-steps">
+                    <div class="reauth-step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <div class="step-text">点击地址栏左侧的🔒图标</div>
+                            <div class="step-desc">或长按地址栏查看网站信息</div>
+                        </div>
+                    </div>
+                    
+                    <div class="reauth-step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <div class="step-text">找到"摄像头"选项</div>
+                            <div class="step-desc">将其设置为"允许"</div>
+                        </div>
+                    </div>
+                    
+                    <div class="reauth-step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <div class="step-text">刷新页面重新开始</div>
+                            <div class="step-desc">或点击下方"重新尝试"按钮</div>
+                        </div>
+                    </div>
+                </div>
+            ` : `
+                <div class="simple-steps">
+                    <div>• 点击地址栏左侧的摄像头图标</div>
+                    <div>• 选择"始终允许"或"允许"</div>
+                    <div>• 刷新页面重新开始</div>
+                </div>
+            `}
+        </div>
+        
+        <div class="denied-buttons">
+            <button class="start-button retry-btn" onclick="retryPermission()">
+                🔄 重新尝试
+            </button>
+            <button class="start-button refresh-btn" onclick="refreshPage()">
+                🔃 刷新页面
+            </button>
+            <button class="start-button back-btn" onclick="backToStart()">
+                ⬅️ 返回开始
+            </button>
+        </div>
+        
+        <div style="font-size: 0.9em; opacity: 0.8; margin-top: 15px;">
+            💡 如果问题持续存在，建议在Safari中打开
+        </div>
+    `;
+    
+    document.body.appendChild(deniedOverlay);
 }
 
-// 页面加载完成后只显示启动覆盖层，不初始化AR
+// 重新尝试
+function retryPermission() {
+    const deniedUI = document.querySelector('.permission-denied-overlay');
+    if (deniedUI) {
+        deniedUI.remove();
+    }
+    isARStarted = false;
+    startAR();
+}
+
+// 刷新页面
+function refreshPage() {
+    window.location.reload();
+}
+
+// 返回开始
+function backToStart() {
+    const deniedUI = document.querySelector('.permission-denied-overlay');
+    if (deniedUI) {
+        deniedUI.remove();
+    }
+    
+    const arScene = document.getElementById('ar-scene');
+    arScene.classList.remove('active');
+    
+    startOverlay.classList.remove('hidden');
+    isARStarted = false;
+    
+    document.getElementById('b2').textContent = '请用摄像头对准"岭南乐器码"';
+}
+
+// 页面加载完成后显示启动覆盖层
 document.addEventListener('DOMContentLoaded', function() {
     console.log('页面加载完成，显示启动界面');
     createStartOverlay();
-    createWhiteScreenHint();
-    createStatusIndicator();
     
-    // 监听全局错误，捕获权限相关错误
-    window.addEventListener('error', function(event) {
-        if (isARStarted && event.error) {
-            console.error('捕获到全局错误:', event.error);
-            
-            // 检查是否是权限相关错误
-            const errorMessage = event.error.message || '';
-            if (errorMessage.includes('Permission denied') || 
-                errorMessage.includes('NotAllowedError') ||
-                errorMessage.includes('getUserMedia')) {
-                handlePermissionError(event.error);
-            }
-        }
-    });
-    
-    // 监听未处理的Promise拒绝（可能包含权限错误）
+    // 监听权限被拒绝错误
     window.addEventListener('unhandledrejection', function(event) {
-        if (isARStarted && event.reason) {
-            console.error('捕获到未处理的Promise拒绝:', event.reason);
-            
-            // 检查是否是权限相关错误
-            if (event.reason.name === 'NotAllowedError' || 
-                event.reason.name === 'NotFoundError' ||
-                event.reason.name === 'NotSupportedError') {
-                event.preventDefault(); // 防止控制台报错
-                handlePermissionError(event.reason);
-            }
+        if (isARStarted && event.reason && 
+            (event.reason.name === 'NotAllowedError' || 
+             event.reason.message && event.reason.message.includes('not allowed'))) {
+            console.log('捕获到权限拒绝错误');
+            event.preventDefault();
+            setTimeout(handlePermissionDenied, 500);
         }
     });
 });
 
-// ===== 以下是完全保留的原有代码 =====
+// ===== 以下是完全保留的原有代码，确保AR功能正常 =====
 
 // 检测是否在微信浏览器中打开
 function c3() {
@@ -1274,9 +726,7 @@ if (d4) {
     // 原有的音频系统代码完全保持不变
     var e5 = null;
     var f6 = {};
-    
-    // 延迟执行音频初始化，确保在AR启动后
-    function initializeOriginalAudio() {
+    document.addEventListener('DOMContentLoaded', function () {
         var g7 = ['audio1.mp3', 'audio2.mp3'];
         g7.forEach(function (h8) {
             var i9 = new Audio();
@@ -1294,7 +744,7 @@ if (d4) {
                     if (l12.paused) {
                         l12.play().then(function () {
                             e5.m13 = true;
-                            k11.textContent = '⏸️ 暂停';
+                            k11.textContent = '暂停';
                         }).catch(function (n14) {
                             console.error('Audio playback failed:', n14);
                             alert('无法播放音频，请与页面进行交互后重试。');
@@ -1302,7 +752,7 @@ if (d4) {
                     } else {
                         l12.pause();
                         e5.m13 = false;
-                        k11.textContent = '▶️ 播放';
+                        k11.textContent = '播放';
                     }
                 } else {
                     alert('音频尚未加载完毕，请稍后再试。');
@@ -1311,154 +761,118 @@ if (d4) {
                 alert('没有检测到标记或音频尚未加载。');
             }
         });
-    }
-    
-    // 重新定义initializeAudioSystem以调用原有逻辑
-    function initializeAudioSystem() {
-        initializeOriginalAudio();
-        initializeARComponents();
-    }
+    });
 
     // 原有的AFRAME组件代码完全保持不变
-    function initializeARComponents() {
-        // AFRAME 组件：动态模型旋转
-        AFRAME.registerComponent('o15', {
-            schema: {
-                x: { type: 'number', default: 0 },
-                y: { type: 'number', default: 0 },
-                z: { type: 'number', default: 0 }
-            },
-            init: function () {
-                var p16 = this.el;
-                var q17 = this.data;
-                p16.addEventListener('model-loaded', function () {
-                    var r18 = p16.getObject3D('mesh');
-                    if (!r18) return;
-                    r18.rotation.set(
-                        THREE.Math.degToRad(q17.x),
-                        THREE.Math.degToRad(q17.y),
-                        THREE.Math.degToRad(q17.z)
-                    );
-                });
-            }
-        });
+    AFRAME.registerComponent('o15', {
+        schema: {
+            x: { type: 'number', default: 0 },
+            y: { type: 'number', default: 0 },
+            z: { type: 'number', default: 0 }
+        },
+        init: function () {
+            var p16 = this.el;
+            var q17 = this.data;
+            p16.addEventListener('model-loaded', function () {
+                var r18 = p16.getObject3D('mesh');
+                if (!r18) return;
+                r18.rotation.set(
+                    THREE.Math.degToRad(q17.x),
+                    THREE.Math.degToRad(q17.y),
+                    THREE.Math.degToRad(q17.z)
+                );
+            });
+        }
+    });
 
-        // AFRAME 组件：AR标记检测逻辑
-        AFRAME.registerComponent('s19', {
-            init: function () {
-                var t20 = this.el;
-                var u21 = t20.getAttribute('id');
-                var v22 = null;
-                var w23 = '';
-                var x24 = false;
-                var y25 = document.getElementById('a1');
-                var z26 = document.getElementById('b2');
-                var a27 = false;
-                var b28 = false;
-                var c29 = '';
-                var d30 = '';
-                if (u21 === 'marker1') {
-                    c29 = 'audio1.mp3';
-                    d30 = 'info1.txt';
-                } else if (u21 === 'marker2') {
-                    c29 = 'audio2.mp3';
-                    d30 = 'info2.txt';
-                }
-                var e31 = f6[c29];
-                if (e31 && e31.j10) {
-                    v22 = e31.j10;
-                } else {
-                    console.error('Audio player not found for ' + c29);
-                    v22 = new Audio();
-                    v22.src = c29;
-                    v22.preload = 'auto';
-                    v22.load();
-                }
-                fetch(d30)
-                    .then(function (f32) {
-                        return f32.ok ? f32.text() : '';
-                    })
-                    .then(function (g33) {
-                        w23 = g33;
-                        b28 = true;
-                    })
-                    .catch(function (h34) {
-                        console.error('Error loading info text:', h34);
-                        b28 = false;
-                    });
-                this.tick = AFRAME.utils.throttleTick(function () {
-                    var i35 = t20.object3D.visible;
-                    if (i35 !== a27) {
-                        a27 = i35;
-                        b28 = v22.readyState >= 2;
-                        if (i35) {
-                            if (e5 && e5.u21 !== u21) {
-                                if (e5.j10 && !e5.j10.paused) {
-                                    e5.j10.pause();
-                                    e5.m13 = false;
-                                }
-                            }
-                            e5 = {
-                                u21: u21,
-                                j10: v22,
-                                w23: w23,
-                                m13: x24,
-                                b28: b28,
-                                b28: b28
-                            };
-                            
-                            // 美化信息显示
-                            z26.innerHTML = `
-                                <div style="display: flex; align-items: center; justify-content: center; flex-direction: column;">
-                                    <div style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">🎼 ${w23.split('\n')[0] || '岭南乐器'}</div>
-                                    <div style="font-size: 14px; opacity: 0.9;">${w23.split('\n')[1] || ''}</div>
-                                </div>
-                            `;
-                            
-                            f36();
-                        } else {
-                            // 标记丢失时的显示
-                            z26.innerHTML = `
-                                <div style="display: flex; align-items: center; justify-content: center;">
-                                    <span style="margin-right: 10px;">📱</span>
-                                    请用摄像头对准"岭南乐器码"
-                                </div>
-                            `;
-                        }
-                    }
-                }, 100);
-                function f36() {
-                    y25.disabled = false;
-                    y25.style.background = 'linear-gradient(45deg, #FF6B6B, #4ECDC4)';
-                    y25.style.cursor = 'pointer';
-                    y25.textContent = x24 ? '⏸️ 暂停' : '▶️ 播放';
-                }
+    AFRAME.registerComponent('s19', {
+        init: function () {
+            var t20 = this.el;
+            var u21 = t20.getAttribute('id');
+            var v22 = null;
+            var w23 = '';
+            var x24 = false;
+            var y25 = document.getElementById('a1');
+            var z26 = document.getElementById('b2');
+            var a27 = false;
+            var b28 = false;
+            var c29 = '';
+            var d30 = '';
+            if (u21 === 'marker1') {
+                c29 = 'audio1.mp3';
+                d30 = 'info1.txt';
+            } else if (u21 === 'marker2') {
+                c29 = 'audio2.mp3';
+                d30 = 'info2.txt';
             }
-        });
-    }
+            var e31 = f6[c29];
+            if (e31 && e31.j10) {
+                v22 = e31.j10;
+            } else {
+                console.error('Audio player not found for ' + c29);
+                v22 = new Audio();
+                v22.src = c29;
+                v22.preload = 'auto';
+                v22.load();
+            }
+            fetch(d30)
+                .then(function (f32) {
+                    return f32.ok ? f32.text() : '';
+                })
+                .then(function (g33) {
+                    w23 = g33;
+                    b28 = true;
+                })
+                .catch(function (h34) {
+                    console.error('Error loading info text:', h34);
+                    b28 = false;
+                });
+            this.tick = AFRAME.utils.throttleTick(function () {
+                var i35 = t20.object3D.visible;
+                if (i35 !== a27) {
+                    a27 = i35;
+                    b28 = v22.readyState >= 2;
+                    if (i35) {
+                        if (e5 && e5.u21 !== u21) {
+                            if (e5.j10 && !e5.j10.paused) {
+                                e5.j10.pause();
+                                e5.m13 = false;
+                            }
+                        }
+                        e5 = {
+                            u21: u21,
+                            j10: v22,
+                            w23: w23,
+                            m13: x24,
+                            b28: b28,
+                            b28: b28
+                        };
+                        z26.textContent = w23 || 'No information available';
+                        f36();
+                    }
+                }
+            }, 100);
+            function f36() {
+                y25.disabled = false;
+                y25.style.backgroundColor = '#007BFF';
+                y25.style.cursor = 'pointer';
+                y25.textContent = x24 ? '暂停' : '播放';
+            }
+        }
+    });
 } else {
-    // 非微信环境
-    function initializeAudioSystem() {
-        initializeARComponents();
-    }
-    
-    function initializeARComponents() {
-        // 简化的组件初始化，保持基本功能
-        console.log('非微信环境，基础AR组件初始化');
-    }
+
 }
 
   </script>
  </head>
  <body style="margin: 0; overflow: hidden;">
-  <!-- 播放按钮 -->
+  <!-- 原有的播放按钮和信息面板，保持不变 -->
   <button disabled="" id="a1">
-   ▶️ 播放
+   播放
   </button>
-  
-  <!-- 信息面板 -->
   <div id="b2">
-   🎵 准备启动AR体验...
+   请用摄像头对准"岭南乐器码"
   </div>
   
   <!-- AR场景：初始隐藏，用户点击启动后才显示 -->
@@ -1512,7 +926,6 @@ if (d4) {
         });
     };
 
-    // 保留原有AFRAME组件
     AFRAME.registerComponent('dynamic-model', {
         init: function () {
             var el = this.el;
@@ -1553,6 +966,76 @@ if (d4) {
             this.el.addEventListener('markerLost', function () {
                 isVisible = false;
                 console.log(`Marker lost: ${el.id}`);
+            });
+        }
+    });
+  </script>
+  <script>
+   // 重复代码保持与原版一致
+   document.addEventListener('DOMContentLoaded', function () {
+        var audioElements = document.querySelectorAll('audio');
+        var playbackRate = 1.0;
+
+        audioElements.forEach(function (audio) {
+            audio.addEventListener('ratechange', function () {
+                console.log(`播放速率调整为: ${audio.playbackRate}`);
+            });
+
+            audio.addEventListener('play', function () {
+                console.log('音频开始播放');
+            });
+            audio.addEventListener('pause', function () {
+                console.log('音频已暂停');
+            });
+
+            if (audio.duration > 60) {
+                playbackRate = 1.5;
+                audio.playbackRate = playbackRate;
+                console.log(`长音频检测到，播放速率已调整为: ${playbackRate}`);
+            }
+        });
+    });
+
+    AFRAME.registerComponent('dynamic-model', {
+        init: function () {
+            var el = this.el;
+            var colorIndex = 0;
+            var colors = ['#FF5733', '#33FF57', '#3357FF'];
+            setInterval(function () {
+                colorIndex = (colorIndex + 1) % colors.length;
+                el.setAttribute('material', 'color', colors[colorIndex]);
+                console.log(`模型颜色已切换至: ${colors[colorIndex]}`);
+            }, 10000);
+        }
+    });
+
+    AFRAME.registerComponent('dynamic-light', {
+        schema: {
+            intensity: { type: 'number', default: 1 }
+        },
+        init: function () {
+            var light = this.el.getOrCreateObject3D('light', THREE.PointLight);
+            light.intensity = this.data.intensity;
+        },
+        update: function () {
+            var light = this.el.getObject3D('light');
+            light.intensity = this.data.intensity;
+        }
+    });
+
+    AFRAME.registerComponent('visibility-tracker', {
+        init: function () {
+            var el = this.el;
+            var isVisible = false;
+
+            this.el.addEventListener('markerFound', function () {
+                isVisible = true;
+                console.log(`标记被发现: ${el.id}`);
+            });
+
+            this.el.addEventListener('markerLost', function () {
+                isVisible = false;
+                console.log(`标记丢失: ${el.id}`);
             });
         }
     });

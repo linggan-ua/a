@@ -10,31 +10,101 @@
   <script src="aframe-ar.js">
   </script>
   <style>
-   #a1 {
+        /* 美化的播放按钮 */
+        #a1 {
             position: absolute;
             top: 20px;
-            left: 20px;
-            padding: 10px 20px;
-            background-color: grey;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 30px;
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
             color: white;
             border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
             cursor: not-allowed;
             z-index: 10;
-        }
-        #b2 {
-            position: absolute;
-            top: 70px;
-            left: 20px;
-            width: calc(100% - 40px);
-            padding: 10px 20px;
-            background-color: #FFF;
-            color: #000;
-            border: none;
-            word-wrap: break-word;
-            z-index: 10;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
         }
         
-        /* 启动覆盖层 */
+        #a1:not(:disabled) {
+            cursor: pointer;
+            animation: pulse 2s infinite;
+        }
+        
+        #a1:not(:disabled):hover {
+            transform: translateX(-50%) translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3); }
+            50% { box-shadow: 0 4px 25px rgba(78, 205, 196, 0.5); }
+            100% { box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3); }
+        }
+        
+        /* 美化的信息面板 */
+        #b2 {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 40px);
+            max-width: 400px;
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            word-wrap: break-word;
+            z-index: 10;
+            text-align: center;
+            font-size: 14px;
+            line-height: 1.4;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        /* 状态指示器 */
+        .status-indicator {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 15;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .status-loading {
+            background: rgba(255, 193, 7, 0.9);
+            color: #333;
+            animation: statusPulse 1.5s infinite;
+        }
+        
+        .status-ready {
+            background: rgba(40, 167, 69, 0.9);
+            color: white;
+        }
+        
+        .status-error {
+            background: rgba(220, 53, 69, 0.9);
+            color: white;
+        }
+        
+        @keyframes statusPulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+        
+        /* 启动覆盖层美化 */
         .start-overlay {
             position: fixed;
             top: 0;
@@ -63,6 +133,19 @@
             margin: 20px;
             box-shadow: 0 8px 25px rgba(0,0,0,0.3);
             transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .start-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
         }
         
         .start-button:hover {
@@ -70,56 +153,122 @@
             box-shadow: 0 12px 35px rgba(0,0,0,0.4);
         }
         
+        .start-button:hover::before {
+            left: 100%;
+        }
+        
         .start-title {
-            font-size: 2em;
+            font-size: 2.5em;
             margin-bottom: 10px;
             text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
         
         .start-subtitle {
-            font-size: 1.1em;
+            font-size: 1.2em;
             opacity: 0.9;
             margin-bottom: 30px;
         }
         
-        /* 白屏检测提示 */
+        /* 白屏检测提示美化 */
         .white-screen-hint {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.9);
             color: white;
-            padding: 20px;
-            border-radius: 10px;
+            padding: 25px;
+            border-radius: 15px;
             text-align: center;
             z-index: 999;
+            max-width: 90%;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             display: none;
         }
         
         .hint-button {
-            background: #007BFF;
+            background: linear-gradient(45deg, #007BFF, #0056b3);
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
+            padding: 12px 24px;
+            border-radius: 8px;
             margin: 10px 5px;
             cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .hint-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.4);
+        }
+        
+        /* AR场景美化 */
+        a-scene {
+            background: linear-gradient(45deg, #1e3c72, #2a5298);
         }
         
         .hidden {
             display: none !important;
         }
+        
+        /* 响应式设计 */
+        @media (max-width: 480px) {
+            #a1 {
+                font-size: 14px;
+                padding: 12px 24px;
+            }
+            
+            #b2 {
+                font-size: 13px;
+                padding: 12px 16px;
+            }
+            
+            .start-title {
+                font-size: 2em;
+            }
+            
+            .start-subtitle {
+                font-size: 1em;
+            }
+        }
   </style>
   <script>
 /**
- * 用户手势触发的AR方案
- * 解决浏览器安全策略要求用户交互才能访问摄像头的问题
+ * 美化的AR界面，带有精确的状态管理
  */
 
 let isARStarted = false;
 let startOverlay;
 let whiteScreenHint;
+let statusIndicator;
+
+// 创建状态指示器
+function createStatusIndicator() {
+    statusIndicator = document.createElement('div');
+    statusIndicator.className = 'status-indicator status-loading';
+    statusIndicator.id = 'status-indicator';
+    statusIndicator.textContent = '📷 准备中...';
+    document.body.appendChild(statusIndicator);
+}
+
+// 更新状态指示器
+function updateStatus(status, message) {
+    if (!statusIndicator) return;
+    
+    statusIndicator.className = `status-indicator status-${status}`;
+    statusIndicator.textContent = message;
+    
+    // 成功状态3秒后自动隐藏
+    if (status === 'ready') {
+        setTimeout(() => {
+            statusIndicator.style.opacity = '0';
+            setTimeout(() => {
+                statusIndicator.style.display = 'none';
+            }, 300);
+        }, 3000);
+    }
+}
 
 // 环境检测
 function getDeviceInfo() {
@@ -138,13 +287,13 @@ function createStartOverlay() {
     startOverlay.id = 'start-overlay';
     
     startOverlay.innerHTML = `
-        <div class="start-title">🎵 岭南乐器AR体验</div>
-        <div class="start-subtitle">点击下方按钮启动摄像头和AR功能</div>
+        <div class="start-title">🎵 岭南乐器AR</div>
+        <div class="start-subtitle">沉浸式音乐文化体验</div>
         <button class="start-button" onclick="startAR()">
-            📱 启动AR体验
+            ✨ 启动AR体验
         </button>
         <div style="font-size: 0.9em; opacity: 0.8; margin-top: 20px;">
-            为了保护您的隐私，需要您的授权才能访问摄像头
+            💡 点击启动后请允许摄像头和传感器权限
         </div>
     `;
     
@@ -158,12 +307,12 @@ function createWhiteScreenHint() {
     whiteScreenHint.id = 'white-screen-hint';
     
     whiteScreenHint.innerHTML = `
-        <h3>🤔 摄像头启动中...</h3>
-        <p>如果看到空白屏幕，请：</p>
-        <button class="hint-button" onclick="clickToActivate()">点击激活摄像头</button>
-        <button class="hint-button" onclick="refreshPage()">刷新页面</button>
-        <div style="font-size: 12px; margin-top: 10px; opacity: 0.8;">
-            iOS用户建议在Safari中打开
+        <h3>🔧 摄像头激活中...</h3>
+        <p>如果看到空白屏幕，请尝试：</p>
+        <button class="hint-button" onclick="clickToActivate()">🎯 激活摄像头</button>
+        <button class="hint-button" onclick="refreshPage()">🔄 刷新页面</button>
+        <div style="font-size: 12px; margin-top: 15px; opacity: 0.8;">
+            💡 iOS用户建议在Safari中打开获得最佳体验
         </div>
     `;
     
@@ -180,51 +329,85 @@ async function startAR() {
         // 隐藏启动覆盖层
         startOverlay.classList.add('hidden');
         
-        // 更新提示信息
-        document.getElementById('b2').textContent = '正在启动摄像头，请允许权限...';
+        // 更新状态
+        updateStatus('loading', '📷 启动摄像头中...');
+        
+        // 更新信息面板
+        document.getElementById('b2').innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: center;">
+                <span style="margin-right: 10px;">🔄</span>
+                正在启动摄像头，请允许权限...
+            </div>
+        `;
         
         // 应用iOS视频修复
         applyIOSVideoFix();
         
-        // 5秒后检查是否有白屏问题
-        setTimeout(() => {
-            checkForWhiteScreen();
-        }, 5000);
+        // 监控AR状态
+        monitorARStatus();
         
         console.log('AR启动成功，用户手势已触发');
         
     } catch (error) {
         console.error('AR启动失败:', error);
+        updateStatus('error', '❌ 启动失败');
         alert('AR启动失败，请刷新页面重试');
     }
 }
 
-// 检查白屏问题
-function checkForWhiteScreen() {
-    const videos = document.querySelectorAll('video');
-    const canvas = document.querySelector('canvas');
+// 监控AR状态
+function monitorARStatus() {
+    let checkCount = 0;
+    const maxChecks = 25; // 5秒检查
     
-    let hasWorkingVideo = false;
-    
-    videos.forEach(video => {
-        if (video.videoWidth > 0 && video.videoHeight > 0) {
-            hasWorkingVideo = true;
+    const checkInterval = setInterval(() => {
+        checkCount++;
+        const videos = document.querySelectorAll('video');
+        const canvas = document.querySelector('canvas');
+        
+        let hasWorkingVideo = false;
+        
+        videos.forEach(video => {
+            if (video.videoWidth > 0 && video.videoHeight > 0) {
+                hasWorkingVideo = true;
+            }
+        });
+        
+        if (hasWorkingVideo && canvas && canvas.width > 0) {
+            // AR成功启动
+            clearInterval(checkInterval);
+            updateStatus('ready', '✅ AR就绪');
+            
+            document.getElementById('b2').innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center;">
+                    <span style="margin-right: 10px;">📱</span>
+                    请用摄像头对准"岭南乐器码"
+                </div>
+            `;
+            
+            whiteScreenHint.style.display = 'none';
+            
+        } else if (checkCount >= maxChecks) {
+            // 检查超时，可能有白屏问题
+            clearInterval(checkInterval);
+            updateStatus('error', '⚠️ 需要激活');
+            
+            document.getElementById('b2').innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center;">
+                    <span style="margin-right: 10px;">⚠️</span>
+                    摄像头启动遇到问题，请点击"激活摄像头"
+                </div>
+            `;
+            
+            whiteScreenHint.style.display = 'block';
         }
-    });
-    
-    // 如果没有工作的视频或canvas无内容，显示提示
-    if (!hasWorkingVideo || (canvas && canvas.width === 0)) {
-        whiteScreenHint.style.display = 'block';
-        document.getElementById('b2').textContent = '摄像头启动遇到问题，请点击下方按钮';
-    } else {
-        document.getElementById('b2').textContent = '请用摄像头对准"岭南乐器码"';
-        whiteScreenHint.style.display = 'none';
-    }
+    }, 200);
 }
 
 // 点击激活摄像头
 function clickToActivate() {
     whiteScreenHint.style.display = 'none';
+    updateStatus('loading', '🔄 重新激活中...');
     
     // 模拟点击AR场景来触发用户手势
     const scene = document.querySelector('a-scene');
@@ -240,11 +423,16 @@ function clickToActivate() {
     // 重新应用视频修复
     setTimeout(() => {
         applyIOSVideoFix();
-        // 再次检查
-        setTimeout(checkForWhiteScreen, 3000);
+        // 重新监控状态
+        setTimeout(monitorARStatus, 1000);
     }, 500);
     
-    document.getElementById('b2').textContent = '正在重新激活摄像头...';
+    document.getElementById('b2').innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center;">
+            <span style="margin-right: 10px;">🔄</span>
+            正在重新激活摄像头...
+        </div>
+    `;
 }
 
 // 刷新页面
@@ -252,7 +440,7 @@ function refreshPage() {
     window.location.reload();
 }
 
-// iOS视频修复（与之前相同，但在用户手势后执行）
+// iOS视频修复
 function applyIOSVideoFix() {
     const device = getDeviceInfo();
     
@@ -291,10 +479,11 @@ function applyIOSVideoFix() {
     fixVideoElements();
 }
 
-// 页面加载完成后显示启动覆盖层
+// 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', function() {
     createStartOverlay();
     createWhiteScreenHint();
+    createStatusIndicator();
 });
 
 // 检测是否在微信浏览器中打开（原有代码保持不变）
@@ -325,7 +514,7 @@ if (d4) {
                     if (l12.paused) {
                         l12.play().then(function () {
                             e5.m13 = true;
-                            k11.textContent = '暂停';
+                            k11.textContent = '⏸️ 暂停';
                         }).catch(function (n14) {
                             console.error('Audio playback failed:', n14);
                             alert('无法播放音频，请与页面进行交互后重试。');
@@ -333,7 +522,7 @@ if (d4) {
                     } else {
                         l12.pause();
                         e5.m13 = false;
-                        k11.textContent = '播放';
+                        k11.textContent = '▶️ 播放';
                     }
                 } else {
                     alert('音频尚未加载完毕，请稍后再试。');
@@ -413,7 +602,7 @@ if (d4) {
                 if (i35 !== a27) {
                     a27 = i35;
                     b28 = v22.readyState >= 2;
-                    if (a27) {
+                    if (i35) {
                         if (e5 && e5.u21 !== u21) {
                             if (e5.j10 && !e5.j10.paused) {
                                 e5.j10.pause();
@@ -428,35 +617,55 @@ if (d4) {
                             b28: b28,
                             b28: b28
                         };
-                        z26.textContent = w23 || 'No information available';
+                        
+                        // 美化信息显示
+                        z26.innerHTML = `
+                            <div style="display: flex; align-items: center; justify-content: center; flex-direction: column;">
+                                <div style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">🎼 ${w23.split('\n')[0] || '岭南乐器'}</div>
+                                <div style="font-size: 14px; opacity: 0.9;">${w23.split('\n')[1] || ''}</div>
+                            </div>
+                        `;
+                        
                         f36();
+                    } else {
+                        // 标记丢失时的显示
+                        z26.innerHTML = `
+                            <div style="display: flex; align-items: center; justify-content: center;">
+                                <span style="margin-right: 10px;">📱</span>
+                                请用摄像头对准"岭南乐器码"
+                            </div>
+                        `;
                     }
                 }
             }, 100);
             function f36() {
                 y25.disabled = false;
-                y25.style.backgroundColor = '#007BFF';
+                y25.style.background = 'linear-gradient(45deg, #FF6B6B, #4ECDC4)';
                 y25.style.cursor = 'pointer';
-                y25.textContent = x24 ? '暂停' : '播放';
+                y25.textContent = x24 ? '⏸️ 暂停' : '▶️ 播放';
             }
         }
     });
 } else {
-    // 非微信环境也应用iOS修复（如果是iOS设备）
+    // 非微信环境
     document.addEventListener('DOMContentLoaded', function() {
         createStartOverlay();
         createWhiteScreenHint();
+        createStatusIndicator();
     });
 }
 
   </script>
  </head>
  <body style="margin: 0; overflow: hidden;">
+  <!-- 美化的播放按钮，居中显示 -->
   <button disabled="" id="a1">
-   播放
+   ▶️ 播放
   </button>
+  
+  <!-- 美化的信息面板，底部居中显示 -->
   <div id="b2">
-   准备启动AR体验...
+   🎵 准备启动AR体验...
   </div>
   
   <a-scene arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false" embedded="" vr-mode-ui="enabled: false">
@@ -473,7 +682,7 @@ if (d4) {
   </a-scene>
   
   <script>
-   // 保留原有的所有增强功能
+   // 保留原有的增强功能
    document.addEventListener('DOMContentLoaded', function () {
         var audioElements = document.querySelectorAll('audio');
         var playbackRate = 1.0;
@@ -509,6 +718,7 @@ if (d4) {
         });
     };
 
+    // 保留原有AFRAME组件
     AFRAME.registerComponent('dynamic-model', {
         init: function () {
             var el = this.el;
@@ -549,76 +759,6 @@ if (d4) {
             this.el.addEventListener('markerLost', function () {
                 isVisible = false;
                 console.log(`Marker lost: ${el.id}`);
-            });
-        }
-    });
-  </script>
-  <script>
-   // 重复代码保持与原版一致
-   document.addEventListener('DOMContentLoaded', function () {
-        var audioElements = document.querySelectorAll('audio');
-        var playbackRate = 1.0;
-
-        audioElements.forEach(function (audio) {
-            audio.addEventListener('ratechange', function () {
-                console.log(`播放速率调整为: ${audio.playbackRate}`);
-            });
-
-            audio.addEventListener('play', function () {
-                console.log('音频开始播放');
-            });
-            audio.addEventListener('pause', function () {
-                console.log('音频已暂停');
-            });
-
-            if (audio.duration > 60) {
-                playbackRate = 1.5;
-                audio.playbackRate = playbackRate;
-                console.log(`长音频检测到，播放速率已调整为: ${playbackRate}`);
-            }
-        });
-    });
-
-    AFRAME.registerComponent('dynamic-model', {
-        init: function () {
-            var el = this.el;
-            var colorIndex = 0;
-            var colors = ['#FF5733', '#33FF57', '#3357FF'];
-            setInterval(function () {
-                colorIndex = (colorIndex + 1) % colors.length;
-                el.setAttribute('material', 'color', colors[colorIndex]);
-                console.log(`模型颜色已切换至: ${colors[colorIndex]}`);
-            }, 10000);
-        }
-    });
-
-    AFRAME.registerComponent('dynamic-light', {
-        schema: {
-            intensity: { type: 'number', default: 1 }
-        },
-        init: function () {
-            var light = this.el.getOrCreateObject3D('light', THREE.PointLight);
-            light.intensity = this.data.intensity;
-        },
-        update: function () {
-            var light = this.el.getObject3D('light');
-            light.intensity = this.data.intensity;
-        }
-    });
-
-    AFRAME.registerComponent('visibility-tracker', {
-        init: function () {
-            var el = this.el;
-            var isVisible = false;
-
-            this.el.addEventListener('markerFound', function () {
-                isVisible = true;
-                console.log(`标记被发现: ${el.id}`);
-            });
-
-            this.el.addEventListener('markerLost', function () {
-                isVisible = false;
-                console.log(`标记丢失: ${el.id}`);
             });
         }
     });

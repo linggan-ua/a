@@ -178,7 +178,7 @@
             margin: 20px 0;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            max-width: 90%;
+            max-width: 95%;
         }
         
         .guide-title {
@@ -192,6 +192,22 @@
             font-size: 0.9em;
             margin-bottom: 15px;
             opacity: 0.9;
+        }
+        
+        /* 权限步骤样式 */
+        .permission-step {
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .step-title {
+            font-size: 0.9em;
+            font-weight: bold;
+            color: #81C784;
+            margin-bottom: 10px;
         }
         
         /* 模拟权限弹窗 */
@@ -208,6 +224,16 @@
             color: #333;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
             text-align: center;
+        }
+        
+        /* 摄像头权限弹窗样式（中文） */
+        .camera-permission {
+            background: linear-gradient(to bottom, #f8f9fa, #ffffff);
+        }
+        
+        /* 传感器权限弹窗样式（英文） */
+        .sensor-permission {
+            background: linear-gradient(to bottom, #ffffff, #f8f9fa);
         }
         
         .mock-dialog-text {
@@ -241,15 +267,32 @@
             background: #007AFF;
             color: white;
             position: relative;
-            animation: allowButtonGlow 2s infinite;
         }
         
-        @keyframes allowButtonGlow {
+        /* 不同类型的Allow按钮动画 */
+        .camera-allow {
+            animation: cameraButtonGlow 2s infinite;
+        }
+        
+        .sensor-allow {
+            animation: sensorButtonGlow 2s infinite 1s; /* 延迟1秒开始 */
+        }
+        
+        @keyframes cameraButtonGlow {
             0%, 100% { 
                 box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.7);
             }
             50% { 
                 box-shadow: 0 0 0 8px rgba(0, 122, 255, 0);
+            }
+        }
+        
+        @keyframes sensorButtonGlow {
+            0%, 100% { 
+                box-shadow: 0 0 0 0 rgba(129, 199, 132, 0.7);
+            }
+            50% { 
+                box-shadow: 0 0 0 8px rgba(129, 199, 132, 0);
             }
         }
         
@@ -366,10 +409,20 @@
             .permission-guide {
                 padding: 15px;
                 margin: 15px 0;
+                max-width: 98%;
+            }
+            
+            .permission-step {
+                padding: 12px;
+                margin: 10px 0;
+            }
+            
+            .step-title {
+                font-size: 0.85em;
             }
             
             .mock-permission-dialog {
-                width: 250px;
+                width: 240px;
             }
             
             .mock-dialog-content {
@@ -386,12 +439,12 @@
             }
             
             .permission-arrow {
-                right: -35px;
+                right: -30px;
             }
             
             .permission-hint {
-                right: -45px;
-                font-size: 11px;
+                right: -40px;
+                font-size: 10px;
             }
         }
   </style>
@@ -455,30 +508,56 @@ function createStartOverlay() {
     
     // 根据设备类型显示不同的权限指南
     const permissionGuideHTML = device.isIOS ? `
-        <!-- iOS设备权限提示区域 -->
+        <!-- iOS设备双权限提示区域 -->
         <div class="permission-guide">
-            <div class="guide-title">📱 iOS权限授权指南</div>
-            <div class="guide-text">启动后会弹出权限窗口，请点击 "Allow" 授权传感器</div>
+            <div class="guide-title">📱 iOS双重权限授权指南</div>
+            <div class="guide-text">启动后会依次弹出两个权限窗口，请都点击"允许/Allow"</div>
             
-            <!-- 模拟权限弹窗 -->
-            <div class="mock-permission-dialog">
-                <div class="mock-dialog-content">
-                    <div class="mock-dialog-text">
-                        This immersive website requires<br>
-                        access to your device motion<br>
-                        sensors.
+            <!-- 第一个：摄像头权限弹窗 -->
+            <div class="permission-step">
+                <div class="step-title">第1步：摄像头权限</div>
+                <div class="mock-permission-dialog">
+                    <div class="mock-dialog-content camera-permission">
+                        <div class="mock-dialog-text">
+                            允许"linggan-ua.github.io"<br>
+                            使用您的摄像头？
+                        </div>
+                        <div class="mock-dialog-buttons">
+                            <button class="mock-deny-btn">不允许</button>
+                            <button class="mock-allow-btn camera-allow">允许</button>
+                        </div>
                     </div>
-                    <div class="mock-dialog-buttons">
-                        <button class="mock-deny-btn">Deny</button>
-                        <button class="mock-allow-btn">Allow</button>
+                    <!-- 箭头指示 -->
+                    <div class="permission-arrow">
+                        <div class="arrow-line"></div>
+                        <div class="arrow-head"></div>
                     </div>
+                    <div class="permission-hint">👆 点击允许</div>
                 </div>
-                <!-- 箭头指示 -->
-                <div class="permission-arrow">
-                    <div class="arrow-line"></div>
-                    <div class="arrow-head"></div>
+            </div>
+            
+            <!-- 第二个：传感器权限弹窗 -->
+            <div class="permission-step">
+                <div class="step-title">第2步：传感器权限</div>
+                <div class="mock-permission-dialog">
+                    <div class="mock-dialog-content sensor-permission">
+                        <div class="mock-dialog-text">
+                            This immersive website requires<br>
+                            access to your device motion<br>
+                            sensors.
+                        </div>
+                        <div class="mock-dialog-buttons">
+                            <button class="mock-deny-btn">Deny</button>
+                            <button class="mock-allow-btn sensor-allow">Allow</button>
+                        </div>
+                    </div>
+                    <!-- 箭头指示 -->
+                    <div class="permission-arrow">
+                        <div class="arrow-line"></div>
+                        <div class="arrow-head"></div>
+                    </div>
+                    <div class="permission-hint">👆 点击Allow</div>
                 </div>
-                <div class="permission-hint">👆 点击这里授权</div>
             </div>
         </div>
     ` : device.isDesktop ? `
@@ -598,26 +677,39 @@ function waitForARJSInitialization() {
     });
 }
 
-// 监控AR状态
+// 监控AR状态 - 修复版本
 function monitorARStatus() {
     let checkCount = 0;
-    const maxChecks = 25; // 5秒检查
+    const maxChecks = 30; // 6秒检查
     
     const checkInterval = setInterval(() => {
         checkCount++;
         const videos = document.querySelectorAll('video');
         const canvas = document.querySelector('canvas');
+        const markers = document.querySelectorAll('a-marker');
         
         let hasWorkingVideo = false;
+        let hasCanvas = false;
         
+        // 检查视频是否正常工作
         videos.forEach(video => {
-            if (video.videoWidth > 0 && video.videoHeight > 0) {
+            if (video.videoWidth > 0 && video.videoHeight > 0 && !video.paused) {
                 hasWorkingVideo = true;
+                console.log('检测到工作中的视频:', video.videoWidth, 'x', video.videoHeight);
             }
         });
         
-        if (hasWorkingVideo && canvas && canvas.width > 0) {
-            // AR成功启动
+        // 检查canvas是否存在且有内容
+        if (canvas && canvas.width > 0 && canvas.height > 0) {
+            hasCanvas = true;
+            console.log('检测到canvas:', canvas.width, 'x', canvas.height);
+        }
+        
+        // 检查AR标记是否注册成功
+        let markersRegistered = markers.length > 0;
+        
+        // AR成功启动的条件：有工作的视频 + 有canvas + 标记已注册
+        if (hasWorkingVideo && hasCanvas && markersRegistered) {
             clearInterval(checkInterval);
             updateStatus('ready', '✅ AR就绪');
             
@@ -629,10 +721,12 @@ function monitorARStatus() {
             `;
             
             whiteScreenHint.style.display = 'none';
+            console.log('AR状态监控：成功就绪');
             
         } else if (checkCount >= maxChecks) {
             // 检查超时，可能有白屏问题
             clearInterval(checkInterval);
+            console.log('AR状态监控：超时，可能需要手动激活');
             updateStatus('error', '⚠️ 需要激活');
             
             document.getElementById('b2').innerHTML = `
@@ -643,6 +737,9 @@ function monitorARStatus() {
             `;
             
             whiteScreenHint.style.display = 'block';
+        } else {
+            // 继续检查中，更新进度信息
+            console.log(`AR状态检查 ${checkCount}/${maxChecks}: 视频=${hasWorkingVideo}, Canvas=${hasCanvas}, 标记=${markersRegistered}`);
         }
     }, 200);
 }

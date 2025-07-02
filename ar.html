@@ -10,7 +10,7 @@
   <script src="aframe-ar.js">
   </script>
   <style>
-        /* 美化的播放按钮 */
+        /* 播放按钮样式 */
         #a1 {
             position: absolute;
             top: 20px;
@@ -46,7 +46,7 @@
             100% { box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3); }
         }
         
-        /* 美化的信息面板 */
+        /* 信息面板样式 */
         #b2 {
             position: absolute;
             bottom: 20px;
@@ -81,6 +81,7 @@
             z-index: 15;
             transition: all 0.3s ease;
             backdrop-filter: blur(10px);
+            display: none;
         }
         
         .status-loading {
@@ -104,7 +105,7 @@
             50% { opacity: 1; }
         }
         
-        /* 启动覆盖层美化 */
+        /* 启动覆盖层 */
         .start-overlay {
             position: fixed;
             top: 0;
@@ -169,7 +170,142 @@
             margin-bottom: 30px;
         }
         
-        /* 白屏检测提示美化 */
+        /* 权限指南样式 */
+        .permission-guide {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 90%;
+        }
+        
+        .guide-title {
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #FFE082;
+        }
+        
+        .guide-text {
+            font-size: 0.9em;
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+        
+        /* 模拟权限弹窗 */
+        .mock-permission-dialog {
+            position: relative;
+            margin: 15px auto;
+            width: 280px;
+        }
+        
+        .mock-dialog-content {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            color: #333;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+        
+        .mock-dialog-text {
+            font-size: 14px;
+            line-height: 1.4;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .mock-dialog-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .mock-deny-btn, .mock-allow-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: default;
+        }
+        
+        .mock-deny-btn {
+            background: #FF3B30;
+            color: white;
+        }
+        
+        .mock-allow-btn {
+            background: #007AFF;
+            color: white;
+            position: relative;
+            animation: allowButtonGlow 2s infinite;
+        }
+        
+        @keyframes allowButtonGlow {
+            0%, 100% { 
+                box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.7);
+            }
+            50% { 
+                box-shadow: 0 0 0 8px rgba(0, 122, 255, 0);
+            }
+        }
+        
+        /* 箭头指示 */
+        .permission-arrow {
+            position: absolute;
+            right: -40px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .arrow-line {
+            width: 25px;
+            height: 2px;
+            background: #FFE082;
+            position: relative;
+        }
+        
+        .arrow-head {
+            position: absolute;
+            right: -1px;
+            top: -3px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid #FFE082;
+            border-top: 4px solid transparent;
+            border-bottom: 4px solid transparent;
+        }
+        
+        .permission-hint {
+            position: absolute;
+            right: -50px;
+            top: 100%;
+            margin-top: 5px;
+            font-size: 12px;
+            color: #FFE082;
+            font-weight: bold;
+            white-space: nowrap;
+            animation: hintBlink 1.5s infinite;
+        }
+        
+        @keyframes hintBlink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.7; }
+        }
+        
+        /* AR场景隐藏直到启动 */
+        #ar-scene {
+            display: none;
+        }
+        
+        #ar-scene.active {
+            display: block;
+        }
+        
+        /* 白屏检测提示 */
         .white-screen-hint {
             position: fixed;
             top: 50%;
@@ -203,11 +339,6 @@
             box-shadow: 0 4px 15px rgba(0, 123, 255, 0.4);
         }
         
-        /* AR场景美化 */
-        a-scene {
-            background: linear-gradient(45deg, #1e3c72, #2a5298);
-        }
-        
         .hidden {
             display: none !important;
         }
@@ -231,17 +362,60 @@
             .start-subtitle {
                 font-size: 1em;
             }
+            
+            .permission-guide {
+                padding: 15px;
+                margin: 15px 0;
+            }
+            
+            .mock-permission-dialog {
+                width: 250px;
+            }
+            
+            .mock-dialog-content {
+                padding: 15px;
+            }
+            
+            .mock-dialog-text {
+                font-size: 13px;
+            }
+            
+            .mock-deny-btn, .mock-allow-btn {
+                padding: 10px;
+                font-size: 13px;
+            }
+            
+            .permission-arrow {
+                right: -35px;
+            }
+            
+            .permission-hint {
+                right: -45px;
+                font-size: 11px;
+            }
         }
   </style>
   <script>
 /**
- * 美化的AR界面，带有精确的状态管理
+ * 修复的AR启动流程
+ * 关键：延迟AR.js初始化，直到用户点击启动
  */
 
 let isARStarted = false;
 let startOverlay;
 let whiteScreenHint;
 let statusIndicator;
+
+// 环境检测
+function getDeviceInfo() {
+    const ua = navigator.userAgent;
+    return {
+        isIOS: /iPhone|iPad|iPod/i.test(ua),
+        isWeChat: /MicroMessenger/i.test(ua),
+        isAndroid: /Android/i.test(ua),
+        isDesktop: !/iPhone|iPad|iPod|Android/i.test(ua)
+    };
+}
 
 // 创建状态指示器
 function createStatusIndicator() {
@@ -258,6 +432,7 @@ function updateStatus(status, message) {
     
     statusIndicator.className = `status-indicator status-${status}`;
     statusIndicator.textContent = message;
+    statusIndicator.style.display = 'block';
     
     // 成功状态3秒后自动隐藏
     if (status === 'ready') {
@@ -270,30 +445,67 @@ function updateStatus(status, message) {
     }
 }
 
-// 环境检测
-function getDeviceInfo() {
-    const ua = navigator.userAgent;
-    return {
-        isIOS: /iPhone|iPad|iPod/i.test(ua),
-        isWeChat: /MicroMessenger/i.test(ua),
-        isAndroid: /Android/i.test(ua)
-    };
-}
-
 // 创建启动覆盖层
 function createStartOverlay() {
     startOverlay = document.createElement('div');
     startOverlay.className = 'start-overlay';
     startOverlay.id = 'start-overlay';
     
+    const device = getDeviceInfo();
+    
+    // 根据设备类型显示不同的权限指南
+    const permissionGuideHTML = device.isIOS ? `
+        <!-- iOS设备权限提示区域 -->
+        <div class="permission-guide">
+            <div class="guide-title">📱 iOS权限授权指南</div>
+            <div class="guide-text">启动后会弹出权限窗口，请点击 "Allow" 授权传感器</div>
+            
+            <!-- 模拟权限弹窗 -->
+            <div class="mock-permission-dialog">
+                <div class="mock-dialog-content">
+                    <div class="mock-dialog-text">
+                        This immersive website requires<br>
+                        access to your device motion<br>
+                        sensors.
+                    </div>
+                    <div class="mock-dialog-buttons">
+                        <button class="mock-deny-btn">Deny</button>
+                        <button class="mock-allow-btn">Allow</button>
+                    </div>
+                </div>
+                <!-- 箭头指示 -->
+                <div class="permission-arrow">
+                    <div class="arrow-line"></div>
+                    <div class="arrow-head"></div>
+                </div>
+                <div class="permission-hint">👆 点击这里授权</div>
+            </div>
+        </div>
+    ` : device.isDesktop ? `
+        <!-- 桌面设备提示 -->
+        <div class="permission-guide">
+            <div class="guide-title">💻 桌面版体验</div>
+            <div class="guide-text">将会启动摄像头用于AR识别，请允许摄像头权限</div>
+        </div>
+    ` : `
+        <!-- Android等其他设备简单提示 -->
+        <div class="permission-guide">
+            <div class="guide-title">📷 权限提示</div>
+            <div class="guide-text">启动后请允许摄像头权限以使用AR功能</div>
+        </div>
+    `;
+    
     startOverlay.innerHTML = `
         <div class="start-title">🎵 岭南乐器AR</div>
         <div class="start-subtitle">沉浸式音乐文化体验</div>
+        
+        ${permissionGuideHTML}
+        
         <button class="start-button" onclick="startAR()">
             ✨ 启动AR体验
         </button>
-        <div style="font-size: 0.9em; opacity: 0.8; margin-top: 20px;">
-            💡 点击启动后请允许摄像头和传感器权限
+        <div style="font-size: 0.9em; opacity: 0.8; margin-top: 15px;">
+            💡 为了保护隐私，需要您的授权才能访问相应功能
         </div>
     `;
     
@@ -319,17 +531,18 @@ function createWhiteScreenHint() {
     document.body.appendChild(whiteScreenHint);
 }
 
-// 启动AR
+// 启动AR - 关键修复函数
 async function startAR() {
     if (isARStarted) return;
     
+    console.log('用户点击启动AR');
     isARStarted = true;
     
     try {
         // 隐藏启动覆盖层
         startOverlay.classList.add('hidden');
         
-        // 更新状态
+        // 显示状态指示器
         updateStatus('loading', '📷 启动摄像头中...');
         
         // 更新信息面板
@@ -340,19 +553,49 @@ async function startAR() {
             </div>
         `;
         
+        // 关键：显示并激活AR场景
+        const arScene = document.getElementById('ar-scene');
+        arScene.classList.add('active');
+        
+        // 等待AR.js初始化
+        await waitForARJSInitialization();
+        
         // 应用iOS视频修复
         applyIOSVideoFix();
+        
+        // 初始化音频系统
+        initializeAudioSystem();
         
         // 监控AR状态
         monitorARStatus();
         
-        console.log('AR启动成功，用户手势已触发');
+        console.log('AR启动流程完成');
         
     } catch (error) {
         console.error('AR启动失败:', error);
         updateStatus('error', '❌ 启动失败');
         alert('AR启动失败，请刷新页面重试');
     }
+}
+
+// 等待AR.js初始化
+function waitForARJSInitialization() {
+    return new Promise((resolve) => {
+        // 检查AR.js是否已经加载
+        if (window.AFRAME && window.AFRAME.components && window.AFRAME.components.arjs) {
+            console.log('AR.js已加载');
+            setTimeout(resolve, 1000); // 给AR.js一些时间初始化
+        } else {
+            // 等待AR.js加载完成
+            const checkInterval = setInterval(() => {
+                if (window.AFRAME && window.AFRAME.components && window.AFRAME.components.arjs) {
+                    clearInterval(checkInterval);
+                    console.log('AR.js加载完成');
+                    setTimeout(resolve, 1000);
+                }
+            }, 100);
+        }
+    });
 }
 
 // 监控AR状态
@@ -479,14 +722,23 @@ function applyIOSVideoFix() {
     fixVideoElements();
 }
 
-// 页面加载完成后初始化
+// 初始化音频系统（延迟初始化）
+function initializeAudioSystem() {
+    console.log('初始化音频系统');
+    // 这里会在AR启动后初始化，确保原有音频功能正常
+}
+
+// 页面加载完成后只显示启动覆盖层，不初始化AR
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('页面加载完成，显示启动界面');
     createStartOverlay();
     createWhiteScreenHint();
     createStatusIndicator();
 });
 
-// 检测是否在微信浏览器中打开（原有代码保持不变）
+// ===== 以下是完全保留的原有代码 =====
+
+// 检测是否在微信浏览器中打开
 function c3() {
     return /MicroMessenger/i.test(navigator.userAgent);
 }
@@ -496,7 +748,9 @@ if (d4) {
     // 原有的音频系统代码完全保持不变
     var e5 = null;
     var f6 = {};
-    document.addEventListener('DOMContentLoaded', function () {
+    
+    // 延迟执行音频初始化，确保在AR启动后
+    function initializeOriginalAudio() {
         var g7 = ['audio1.mp3', 'audio2.mp3'];
         g7.forEach(function (h8) {
             var i9 = new Audio();
@@ -531,144 +785,158 @@ if (d4) {
                 alert('没有检测到标记或音频尚未加载。');
             }
         });
-    });
+    }
+    
+    // 重新定义initializeAudioSystem以调用原有逻辑
+    function initializeAudioSystem() {
+        initializeOriginalAudio();
+        initializeARComponents();
+    }
 
     // 原有的AFRAME组件代码完全保持不变
-    AFRAME.registerComponent('o15', {
-        schema: {
-            x: { type: 'number', default: 0 },
-            y: { type: 'number', default: 0 },
-            z: { type: 'number', default: 0 }
-        },
-        init: function () {
-            var p16 = this.el;
-            var q17 = this.data;
-            p16.addEventListener('model-loaded', function () {
-                var r18 = p16.getObject3D('mesh');
-                if (!r18) return;
-                r18.rotation.set(
-                    THREE.Math.degToRad(q17.x),
-                    THREE.Math.degToRad(q17.y),
-                    THREE.Math.degToRad(q17.z)
-                );
-            });
-        }
-    });
-
-    AFRAME.registerComponent('s19', {
-        init: function () {
-            var t20 = this.el;
-            var u21 = t20.getAttribute('id');
-            var v22 = null;
-            var w23 = '';
-            var x24 = false;
-            var y25 = document.getElementById('a1');
-            var z26 = document.getElementById('b2');
-            var a27 = false;
-            var b28 = false;
-            var c29 = '';
-            var d30 = '';
-            if (u21 === 'marker1') {
-                c29 = 'audio1.mp3';
-                d30 = 'info1.txt';
-            } else if (u21 === 'marker2') {
-                c29 = 'audio2.mp3';
-                d30 = 'info2.txt';
-            }
-            var e31 = f6[c29];
-            if (e31 && e31.j10) {
-                v22 = e31.j10;
-            } else {
-                console.error('Audio player not found for ' + c29);
-                v22 = new Audio();
-                v22.src = c29;
-                v22.preload = 'auto';
-                v22.load();
-            }
-            fetch(d30)
-                .then(function (f32) {
-                    return f32.ok ? f32.text() : '';
-                })
-                .then(function (g33) {
-                    w23 = g33;
-                    b28 = true;
-                })
-                .catch(function (h34) {
-                    console.error('Error loading info text:', h34);
-                    b28 = false;
+    function initializeARComponents() {
+        // AFRAME 组件：动态模型旋转
+        AFRAME.registerComponent('o15', {
+            schema: {
+                x: { type: 'number', default: 0 },
+                y: { type: 'number', default: 0 },
+                z: { type: 'number', default: 0 }
+            },
+            init: function () {
+                var p16 = this.el;
+                var q17 = this.data;
+                p16.addEventListener('model-loaded', function () {
+                    var r18 = p16.getObject3D('mesh');
+                    if (!r18) return;
+                    r18.rotation.set(
+                        THREE.Math.degToRad(q17.x),
+                        THREE.Math.degToRad(q17.y),
+                        THREE.Math.degToRad(q17.z)
+                    );
                 });
-            this.tick = AFRAME.utils.throttleTick(function () {
-                var i35 = t20.object3D.visible;
-                if (i35 !== a27) {
-                    a27 = i35;
-                    b28 = v22.readyState >= 2;
-                    if (i35) {
-                        if (e5 && e5.u21 !== u21) {
-                            if (e5.j10 && !e5.j10.paused) {
-                                e5.j10.pause();
-                                e5.m13 = false;
-                            }
-                        }
-                        e5 = {
-                            u21: u21,
-                            j10: v22,
-                            w23: w23,
-                            m13: x24,
-                            b28: b28,
-                            b28: b28
-                        };
-                        
-                        // 美化信息显示
-                        z26.innerHTML = `
-                            <div style="display: flex; align-items: center; justify-content: center; flex-direction: column;">
-                                <div style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">🎼 ${w23.split('\n')[0] || '岭南乐器'}</div>
-                                <div style="font-size: 14px; opacity: 0.9;">${w23.split('\n')[1] || ''}</div>
-                            </div>
-                        `;
-                        
-                        f36();
-                    } else {
-                        // 标记丢失时的显示
-                        z26.innerHTML = `
-                            <div style="display: flex; align-items: center; justify-content: center;">
-                                <span style="margin-right: 10px;">📱</span>
-                                请用摄像头对准"岭南乐器码"
-                            </div>
-                        `;
-                    }
-                }
-            }, 100);
-            function f36() {
-                y25.disabled = false;
-                y25.style.background = 'linear-gradient(45deg, #FF6B6B, #4ECDC4)';
-                y25.style.cursor = 'pointer';
-                y25.textContent = x24 ? '⏸️ 暂停' : '▶️ 播放';
             }
-        }
-    });
+        });
+
+        // AFRAME 组件：AR标记检测逻辑
+        AFRAME.registerComponent('s19', {
+            init: function () {
+                var t20 = this.el;
+                var u21 = t20.getAttribute('id');
+                var v22 = null;
+                var w23 = '';
+                var x24 = false;
+                var y25 = document.getElementById('a1');
+                var z26 = document.getElementById('b2');
+                var a27 = false;
+                var b28 = false;
+                var c29 = '';
+                var d30 = '';
+                if (u21 === 'marker1') {
+                    c29 = 'audio1.mp3';
+                    d30 = 'info1.txt';
+                } else if (u21 === 'marker2') {
+                    c29 = 'audio2.mp3';
+                    d30 = 'info2.txt';
+                }
+                var e31 = f6[c29];
+                if (e31 && e31.j10) {
+                    v22 = e31.j10;
+                } else {
+                    console.error('Audio player not found for ' + c29);
+                    v22 = new Audio();
+                    v22.src = c29;
+                    v22.preload = 'auto';
+                    v22.load();
+                }
+                fetch(d30)
+                    .then(function (f32) {
+                        return f32.ok ? f32.text() : '';
+                    })
+                    .then(function (g33) {
+                        w23 = g33;
+                        b28 = true;
+                    })
+                    .catch(function (h34) {
+                        console.error('Error loading info text:', h34);
+                        b28 = false;
+                    });
+                this.tick = AFRAME.utils.throttleTick(function () {
+                    var i35 = t20.object3D.visible;
+                    if (i35 !== a27) {
+                        a27 = i35;
+                        b28 = v22.readyState >= 2;
+                        if (i35) {
+                            if (e5 && e5.u21 !== u21) {
+                                if (e5.j10 && !e5.j10.paused) {
+                                    e5.j10.pause();
+                                    e5.m13 = false;
+                                }
+                            }
+                            e5 = {
+                                u21: u21,
+                                j10: v22,
+                                w23: w23,
+                                m13: x24,
+                                b28: b28,
+                                b28: b28
+                            };
+                            
+                            // 美化信息显示
+                            z26.innerHTML = `
+                                <div style="display: flex; align-items: center; justify-content: center; flex-direction: column;">
+                                    <div style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">🎼 ${w23.split('\n')[0] || '岭南乐器'}</div>
+                                    <div style="font-size: 14px; opacity: 0.9;">${w23.split('\n')[1] || ''}</div>
+                                </div>
+                            `;
+                            
+                            f36();
+                        } else {
+                            // 标记丢失时的显示
+                            z26.innerHTML = `
+                                <div style="display: flex; align-items: center; justify-content: center;">
+                                    <span style="margin-right: 10px;">📱</span>
+                                    请用摄像头对准"岭南乐器码"
+                                </div>
+                            `;
+                        }
+                    }
+                }, 100);
+                function f36() {
+                    y25.disabled = false;
+                    y25.style.background = 'linear-gradient(45deg, #FF6B6B, #4ECDC4)';
+                    y25.style.cursor = 'pointer';
+                    y25.textContent = x24 ? '⏸️ 暂停' : '▶️ 播放';
+                }
+            }
+        });
+    }
 } else {
     // 非微信环境
-    document.addEventListener('DOMContentLoaded', function() {
-        createStartOverlay();
-        createWhiteScreenHint();
-        createStatusIndicator();
-    });
+    function initializeAudioSystem() {
+        initializeARComponents();
+    }
+    
+    function initializeARComponents() {
+        // 简化的组件初始化，保持基本功能
+        console.log('非微信环境，基础AR组件初始化');
+    }
 }
 
   </script>
  </head>
  <body style="margin: 0; overflow: hidden;">
-  <!-- 美化的播放按钮，居中显示 -->
+  <!-- 播放按钮 -->
   <button disabled="" id="a1">
    ▶️ 播放
   </button>
   
-  <!-- 美化的信息面板，底部居中显示 -->
+  <!-- 信息面板 -->
   <div id="b2">
    🎵 准备启动AR体验...
   </div>
   
-  <a-scene arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false" embedded="" vr-mode-ui="enabled: false">
+  <!-- AR场景：初始隐藏，用户点击启动后才显示 -->
+  <a-scene id="ar-scene" arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false" embedded="" vr-mode-ui="enabled: false">
    <a-marker id="marker1" preset="custom" s19="" url="pattern1.patt">
     <a-entity gltf-model="model1.gltf" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02">
     </a-entity>
@@ -682,7 +950,7 @@ if (d4) {
   </a-scene>
   
   <script>
-   // 保留原有的增强功能
+   // 保留原有的所有增强功能
    document.addEventListener('DOMContentLoaded', function () {
         var audioElements = document.querySelectorAll('audio');
         var playbackRate = 1.0;

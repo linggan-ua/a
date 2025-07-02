@@ -10,8 +10,7 @@
   <script src="aframe-ar.js">
   </script>
   <style>
-        /* 原有的播放按钮样式 */
-        #a1 {
+   #a1 {
             position: absolute;
             top: 20px;
             left: 20px;
@@ -22,8 +21,6 @@
             cursor: not-allowed;
             z-index: 10;
         }
-        
-        /* 原有的信息面板样式 */
         #b2 {
             position: absolute;
             top: 70px;
@@ -66,19 +63,6 @@
             margin: 20px;
             box-shadow: 0 8px 25px rgba(0,0,0,0.3);
             transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .start-button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.5s;
         }
         
         .start-button:hover {
@@ -86,356 +70,56 @@
             box-shadow: 0 12px 35px rgba(0,0,0,0.4);
         }
         
-        .start-button:hover::before {
-            left: 100%;
-        }
-        
         .start-title {
-            font-size: 2.5em;
+            font-size: 2em;
             margin-bottom: 10px;
             text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
         
         .start-subtitle {
-            font-size: 1.2em;
+            font-size: 1.1em;
             opacity: 0.9;
             margin-bottom: 30px;
         }
         
-        /* 权限指南样式 - 紧凑版 */
-        .permission-guide {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 15px;
-            margin: 15px 0;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            max-width: 95%;
-        }
-        
-        .guide-title {
-            font-size: 1em;
-            font-weight: bold;
-            margin-bottom: 8px;
-            color: #FFE082;
-        }
-        
-        .guide-text {
-            font-size: 0.85em;
-            margin-bottom: 12px;
-            opacity: 0.9;
-        }
-        
-        /* 权限步骤样式 - 紧凑版 */
-        .permission-step {
-            margin: 10px 0;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .step-title {
-            font-size: 0.8em;
-            font-weight: bold;
-            color: #81C784;
-            margin-bottom: 8px;
-        }
-        
-        /* 真实iOS风格的权限弹窗 */
-        .mock-permission-dialog {
-            position: relative;
-            margin: 10px auto;
-            width: 240px;
-        }
-        
-        .mock-dialog-content {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 12px;
-            padding: 15px;
-            color: #333;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            text-align: center;
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.8);
-        }
-        
-        .mock-dialog-text {
-            font-size: 12px;
-            line-height: 1.4;
-            margin-bottom: 15px;
-            color: #333;
-            font-weight: 400;
-        }
-        
-        .mock-dialog-buttons {
-            display: flex;
-            border-top: 1px solid rgba(0, 0, 0, 0.1);
-            margin: 10px -15px -15px -15px;
-        }
-        
-        .mock-deny-btn, .mock-allow-btn {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 0;
-            font-size: 14px;
-            font-weight: 400;
-            cursor: default;
-            background: transparent;
-            color: #007AFF;
-            transition: background-color 0.2s;
-        }
-        
-        .mock-deny-btn {
-            border-right: 1px solid rgba(0, 0, 0, 0.1);
-            color: #007AFF;
-        }
-        
-        .mock-allow-btn {
-            font-weight: 600;
-            color: #007AFF;
-        }
-        
-        .camera-allow {
-            animation: cameraButtonGlow 2s infinite;
-        }
-        
-        .sensor-allow {
-            animation: sensorButtonGlow 2s infinite 1s;
-        }
-        
-        @keyframes cameraButtonGlow {
-            0%, 100% { 
-                background-color: rgba(0, 122, 255, 0.1);
-            }
-            50% { 
-                background-color: rgba(0, 122, 255, 0.2);
-            }
-        }
-        
-        @keyframes sensorButtonGlow {
-            0%, 100% { 
-                background-color: rgba(0, 122, 255, 0.1);
-            }
-            50% { 
-                background-color: rgba(0, 122, 255, 0.2);
-            }
-        }
-        
-        /* 箭头指示 */
-        .permission-arrow {
-            position: absolute;
-            right: -30px;
+        /* 白屏检测提示 */
+        .white-screen-hint {
+            position: fixed;
             top: 50%;
-            transform: translateY(-50%);
-        }
-        
-        .arrow-line {
-            width: 20px;
-            height: 2px;
-            background: #FFE082;
-            position: relative;
-        }
-        
-        .arrow-head {
-            position: absolute;
-            right: -1px;
-            top: -2px;
-            width: 0;
-            height: 0;
-            border-left: 6px solid #FFE082;
-            border-top: 3px solid transparent;
-            border-bottom: 3px solid transparent;
-        }
-        
-        .permission-hint {
-            position: absolute;
-            right: -35px;
-            top: 100%;
-            margin-top: 3px;
-            font-size: 10px;
-            color: #FFE082;
-            font-weight: bold;
-            white-space: nowrap;
-            animation: hintBlink 1.5s infinite;
-        }
-        
-        @keyframes hintBlink {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0.7; }
-        }
-        
-        /* AR场景隐藏直到启动 */
-        #ar-scene {
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 999;
             display: none;
         }
         
-        #ar-scene.active {
-            display: block;
+        .hint-button {
+            background: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin: 10px 5px;
+            cursor: pointer;
         }
         
         .hidden {
             display: none !important;
         }
-        
-        /* 权限被拒绝覆盖层 - 启动页风格 */
-        .permission-denied-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 1001;
-            color: white;
-            text-align: center;
-        }
-        
-        .reauth-steps {
-            margin: 15px 0;
-        }
-        
-        .reauth-step {
-            display: flex;
-            align-items: flex-start;
-            margin: 12px 0;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            border-left: 3px solid #FFE082;
-        }
-        
-        .step-number {
-            min-width: 24px;
-            height: 24px;
-            background: #FFE082;
-            color: #333;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 12px;
-            margin-right: 12px;
-            flex-shrink: 0;
-        }
-        
-        .step-content {
-            flex: 1;
-        }
-        
-        .step-text {
-            font-weight: bold;
-            font-size: 0.9em;
-            margin-bottom: 3px;
-            color: white;
-        }
-        
-        .step-desc {
-            font-size: 0.8em;
-            opacity: 0.8;
-            color: #E0E0E0;
-        }
-        
-        .simple-steps {
-            margin: 10px 0;
-        }
-        
-        .simple-steps div {
-            padding: 6px 0;
-            font-size: 0.85em;
-            opacity: 0.9;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .simple-steps div:last-child {
-            border-bottom: none;
-        }
-        
-        .denied-buttons {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-top: 25px;
-        }
-        
-        .retry-btn {
-            background: linear-gradient(45deg, #4CAF50, #45a049);
-        }
-        
-        .refresh-btn {
-            background: linear-gradient(45deg, #2196F3, #1976D2);
-        }
-        
-        .back-btn {
-            background: linear-gradient(45deg, #FF9800, #F57C00);
-        }
-        
-        /* 响应式设计 */
-        @media (max-width: 480px) {
-            .start-title {
-                font-size: 2em;
-            }
-            
-            .start-subtitle {
-                font-size: 1em;
-            }
-            
-            .permission-guide {
-                padding: 12px;
-                margin: 12px 0;
-                max-width: 98%;
-            }
-            
-            .permission-step {
-                padding: 8px;
-                margin: 8px 0;
-            }
-            
-            .step-title {
-                font-size: 0.75em;
-            }
-            
-            .mock-permission-dialog {
-                width: 200px;
-            }
-            
-            .mock-dialog-content {
-                padding: 12px;
-            }
-            
-            .mock-dialog-text {
-                font-size: 11px;
-            }
-            
-            .mock-deny-btn, .mock-allow-btn {
-                padding: 8px;
-                font-size: 12px;
-            }
-            
-            .permission-arrow {
-                right: -25px;
-            }
-            
-            .permission-hint {
-                right: -30px;
-                font-size: 9px;
-            }
-        }
   </style>
   <script>
 /**
- * 简化版AR启动 - 只改启动页，保持AR界面原有性能
+ * 用户手势触发的AR方案
+ * 解决浏览器安全策略要求用户交互才能访问摄像头的问题
  */
 
 let isARStarted = false;
 let startOverlay;
+let whiteScreenHint;
 
 // 环境检测
 function getDeviceInfo() {
@@ -443,8 +127,7 @@ function getDeviceInfo() {
     return {
         isIOS: /iPhone|iPad|iPod/i.test(ua),
         isWeChat: /MicroMessenger/i.test(ua),
-        isAndroid: /Android/i.test(ua),
-        isDesktop: !/iPhone|iPad|iPod|Android/i.test(ua)
+        isAndroid: /Android/i.test(ua)
     };
 }
 
@@ -454,121 +137,134 @@ function createStartOverlay() {
     startOverlay.className = 'start-overlay';
     startOverlay.id = 'start-overlay';
     
-    const device = getDeviceInfo();
-    
-    // 根据设备类型显示不同的权限指南 - 紧凑版
-    const permissionGuideHTML = device.isIOS ? `
-        <!-- iOS设备紧凑双权限提示 -->
-        <div class="permission-guide">
-            <div class="guide-title">📱 权限授权指南</div>
-            <div class="guide-text">启动后会弹出两个权限窗口，请都点击"允许/Allow"</div>
-            
-            <!-- 紧凑的权限步骤 -->
-            <div class="permission-steps-compact">
-                <div class="permission-step">
-                    <div class="step-title">第1步：摄像头权限</div>
-                    <div class="mock-permission-dialog">
-                        <div class="mock-dialog-content">
-                            <div class="mock-dialog-text">
-                                允许"linggan-ua.github.io"<br>
-                                使用您的摄像头？
-                            </div>
-                            <div class="mock-dialog-buttons">
-                                <button class="mock-deny-btn">不允许</button>
-                                <button class="mock-allow-btn camera-allow">允许</button>
-                            </div>
-                        </div>
-                        <div class="permission-arrow">
-                            <div class="arrow-line"></div>
-                            <div class="arrow-head"></div>
-                        </div>
-                        <div class="permission-hint">👆允许</div>
-                    </div>
-                </div>
-                
-                <div class="permission-step">
-                    <div class="step-title">第2步：传感器权限</div>
-                    <div class="mock-permission-dialog">
-                        <div class="mock-dialog-content">
-                            <div class="mock-dialog-text">
-                                This immersive website requires<br>
-                                access to your device motion sensors.
-                            </div>
-                            <div class="mock-dialog-buttons">
-                                <button class="mock-deny-btn">Deny</button>
-                                <button class="mock-allow-btn sensor-allow">Allow</button>
-                            </div>
-                        </div>
-                        <div class="permission-arrow">
-                            <div class="arrow-line"></div>
-                            <div class="arrow-head"></div>
-                        </div>
-                        <div class="permission-hint">👆Allow</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    ` : device.isDesktop ? `
-        <!-- 桌面设备简洁提示 -->
-        <div class="permission-guide">
-            <div class="guide-title">💻 桌面版体验</div>
-            <div class="guide-text">启动后请允许摄像头权限以使用AR功能</div>
-        </div>
-    ` : `
-        <!-- Android等其他设备简洁提示 -->
-        <div class="permission-guide">
-            <div class="guide-title">📷 权限提示</div>
-            <div class="guide-text">启动后请允许摄像头权限以使用AR功能</div>
-        </div>
-    `;
-    
     startOverlay.innerHTML = `
-        <div class="start-title">🎵 岭南乐器AR</div>
-        <div class="start-subtitle">沉浸式音乐文化体验</div>
-        
-        ${permissionGuideHTML}
-        
+        <div class="start-title">🎵 岭南乐器AR体验</div>
+        <div class="start-subtitle">点击下方按钮启动摄像头和AR功能</div>
         <button class="start-button" onclick="startAR()">
-            ✨ 启动AR体验
+            📱 启动AR体验
         </button>
-        <div style="font-size: 0.9em; opacity: 0.8; margin-top: 15px;">
-            💡 为了保护隐私，需要您的授权才能访问相应功能
+        <div style="font-size: 0.9em; opacity: 0.8; margin-top: 20px;">
+            为了保护您的隐私，需要您的授权才能访问摄像头
         </div>
     `;
     
     document.body.appendChild(startOverlay);
 }
 
-// 简单的启动AR函数
-function startAR() {
-    if (isARStarted) return;
+// 创建白屏提示
+function createWhiteScreenHint() {
+    whiteScreenHint = document.createElement('div');
+    whiteScreenHint.className = 'white-screen-hint';
+    whiteScreenHint.id = 'white-screen-hint';
     
-    console.log('用户点击启动AR');
-    isARStarted = true;
+    whiteScreenHint.innerHTML = `
+        <h3>🤔 摄像头启动中...</h3>
+        <p>如果看到空白屏幕，请：</p>
+        <button class="hint-button" onclick="clickToActivate()">点击激活摄像头</button>
+        <button class="hint-button" onclick="refreshPage()">刷新页面</button>
+        <div style="font-size: 12px; margin-top: 10px; opacity: 0.8;">
+            iOS用户建议在Safari中打开
+        </div>
+    `;
     
-    // 隐藏启动覆盖层
-    startOverlay.classList.add('hidden');
-    
-    // 显示AR场景
-    const arScene = document.getElementById('ar-scene');
-    arScene.classList.add('active');
-    
-    // 应用iOS视频修复（如果需要）
-    applyIOSVideoFix();
-    
-    console.log('AR启动完成');
+    document.body.appendChild(whiteScreenHint);
 }
 
-// 简单的iOS视频修复
+// 启动AR
+async function startAR() {
+    if (isARStarted) return;
+    
+    isARStarted = true;
+    
+    try {
+        // 隐藏启动覆盖层
+        startOverlay.classList.add('hidden');
+        
+        // 更新提示信息
+        document.getElementById('b2').textContent = '正在启动摄像头，请允许权限...';
+        
+        // 应用iOS视频修复
+        applyIOSVideoFix();
+        
+        // 5秒后检查是否有白屏问题
+        setTimeout(() => {
+            checkForWhiteScreen();
+        }, 5000);
+        
+        console.log('AR启动成功，用户手势已触发');
+        
+    } catch (error) {
+        console.error('AR启动失败:', error);
+        alert('AR启动失败，请刷新页面重试');
+    }
+}
+
+// 检查白屏问题
+function checkForWhiteScreen() {
+    const videos = document.querySelectorAll('video');
+    const canvas = document.querySelector('canvas');
+    
+    let hasWorkingVideo = false;
+    
+    videos.forEach(video => {
+        if (video.videoWidth > 0 && video.videoHeight > 0) {
+            hasWorkingVideo = true;
+        }
+    });
+    
+    // 如果没有工作的视频或canvas无内容，显示提示
+    if (!hasWorkingVideo || (canvas && canvas.width === 0)) {
+        whiteScreenHint.style.display = 'block';
+        document.getElementById('b2').textContent = '摄像头启动遇到问题，请点击下方按钮';
+    } else {
+        document.getElementById('b2').textContent = '请用摄像头对准"岭南乐器码"';
+        whiteScreenHint.style.display = 'none';
+    }
+}
+
+// 点击激活摄像头
+function clickToActivate() {
+    whiteScreenHint.style.display = 'none';
+    
+    // 模拟点击AR场景来触发用户手势
+    const scene = document.querySelector('a-scene');
+    if (scene) {
+        const clickEvent = new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window
+        });
+        scene.dispatchEvent(clickEvent);
+    }
+    
+    // 重新应用视频修复
+    setTimeout(() => {
+        applyIOSVideoFix();
+        // 再次检查
+        setTimeout(checkForWhiteScreen, 3000);
+    }, 500);
+    
+    document.getElementById('b2').textContent = '正在重新激活摄像头...';
+}
+
+// 刷新页面
+function refreshPage() {
+    window.location.reload();
+}
+
+// iOS视频修复（与之前相同，但在用户手势后执行）
 function applyIOSVideoFix() {
     const device = getDeviceInfo();
     
     if (!device.isIOS) {
+        console.log('非iOS设备，跳过视频修复');
         return;
     }
     
+    console.log('在用户手势后应用iOS视频修复');
+    
     let fixAttempts = 0;
-    const maxAttempts = 15;
+    const maxAttempts = 20;
     
     const fixVideoElements = () => {
         fixAttempts++;
@@ -588,135 +284,20 @@ function applyIOSVideoFix() {
         }
         
         if (fixAttempts < maxAttempts) {
-            setTimeout(fixVideoElements, 300);
+            setTimeout(fixVideoElements, 200);
         }
     };
     
-    setTimeout(fixVideoElements, 1000);
-}
-
-// 处理权限被拒绝 - 简化版
-function handlePermissionDenied() {
-    console.log('检测到权限被拒绝');
-    
-    const device = getDeviceInfo();
-    
-    const deniedOverlay = document.createElement('div');
-    deniedOverlay.className = 'permission-denied-overlay';
-    deniedOverlay.innerHTML = `
-        <div class="start-title">📷 摄像头权限被拒绝</div>
-        <div class="start-subtitle">需要重新授权才能使用AR功能</div>
-        
-        <div class="permission-guide">
-            <div class="guide-title">🔧 重新授权指南</div>
-            <div class="guide-text">请按照以下步骤重新授权摄像头权限</div>
-            
-            ${device.isIOS ? `
-                <div class="reauth-steps">
-                    <div class="reauth-step">
-                        <div class="step-number">1</div>
-                        <div class="step-content">
-                            <div class="step-text">点击地址栏左侧的🔒图标</div>
-                            <div class="step-desc">或长按地址栏查看网站信息</div>
-                        </div>
-                    </div>
-                    
-                    <div class="reauth-step">
-                        <div class="step-number">2</div>
-                        <div class="step-content">
-                            <div class="step-text">找到"摄像头"选项</div>
-                            <div class="step-desc">将其设置为"允许"</div>
-                        </div>
-                    </div>
-                    
-                    <div class="reauth-step">
-                        <div class="step-number">3</div>
-                        <div class="step-content">
-                            <div class="step-text">刷新页面重新开始</div>
-                            <div class="step-desc">或点击下方"重新尝试"按钮</div>
-                        </div>
-                    </div>
-                </div>
-            ` : `
-                <div class="simple-steps">
-                    <div>• 点击地址栏左侧的摄像头图标</div>
-                    <div>• 选择"始终允许"或"允许"</div>
-                    <div>• 刷新页面重新开始</div>
-                </div>
-            `}
-        </div>
-        
-        <div class="denied-buttons">
-            <button class="start-button retry-btn" onclick="retryPermission()">
-                🔄 重新尝试
-            </button>
-            <button class="start-button refresh-btn" onclick="refreshPage()">
-                🔃 刷新页面
-            </button>
-            <button class="start-button back-btn" onclick="backToStart()">
-                ⬅️ 返回开始
-            </button>
-        </div>
-        
-        <div style="font-size: 0.9em; opacity: 0.8; margin-top: 15px;">
-            💡 如果问题持续存在，建议在Safari中打开
-        </div>
-    `;
-    
-    document.body.appendChild(deniedOverlay);
-}
-
-// 重新尝试
-function retryPermission() {
-    const deniedUI = document.querySelector('.permission-denied-overlay');
-    if (deniedUI) {
-        deniedUI.remove();
-    }
-    isARStarted = false;
-    startAR();
-}
-
-// 刷新页面
-function refreshPage() {
-    window.location.reload();
-}
-
-// 返回开始
-function backToStart() {
-    const deniedUI = document.querySelector('.permission-denied-overlay');
-    if (deniedUI) {
-        deniedUI.remove();
-    }
-    
-    const arScene = document.getElementById('ar-scene');
-    arScene.classList.remove('active');
-    
-    startOverlay.classList.remove('hidden');
-    isARStarted = false;
-    
-    document.getElementById('b2').textContent = '请用摄像头对准"岭南乐器码"';
+    fixVideoElements();
 }
 
 // 页面加载完成后显示启动覆盖层
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('页面加载完成，显示启动界面');
     createStartOverlay();
-    
-    // 监听权限被拒绝错误
-    window.addEventListener('unhandledrejection', function(event) {
-        if (isARStarted && event.reason && 
-            (event.reason.name === 'NotAllowedError' || 
-             event.reason.message && event.reason.message.includes('not allowed'))) {
-            console.log('捕获到权限拒绝错误');
-            event.preventDefault();
-            setTimeout(handlePermissionDenied, 500);
-        }
-    });
+    createWhiteScreenHint();
 });
 
-// ===== 以下是完全保留的原有代码，确保AR功能正常 =====
-
-// 检测是否在微信浏览器中打开
+// 检测是否在微信浏览器中打开（原有代码保持不变）
 function c3() {
     return /MicroMessenger/i.test(navigator.userAgent);
 }
@@ -832,7 +413,7 @@ if (d4) {
                 if (i35 !== a27) {
                     a27 = i35;
                     b28 = v22.readyState >= 2;
-                    if (i35) {
+                    if (a27) {
                         if (e5 && e5.u21 !== u21) {
                             if (e5.j10 && !e5.j10.paused) {
                                 e5.j10.pause();
@@ -861,22 +442,24 @@ if (d4) {
         }
     });
 } else {
-
+    // 非微信环境也应用iOS修复（如果是iOS设备）
+    document.addEventListener('DOMContentLoaded', function() {
+        createStartOverlay();
+        createWhiteScreenHint();
+    });
 }
 
   </script>
  </head>
  <body style="margin: 0; overflow: hidden;">
-  <!-- 原有的播放按钮和信息面板，保持不变 -->
   <button disabled="" id="a1">
    播放
   </button>
   <div id="b2">
-   请用摄像头对准"岭南乐器码"
+   准备启动AR体验...
   </div>
   
-  <!-- AR场景：初始隐藏，用户点击启动后才显示 -->
-  <a-scene id="ar-scene" arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false" embedded="" vr-mode-ui="enabled: false">
+  <a-scene arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false" embedded="" vr-mode-ui="enabled: false">
    <a-marker id="marker1" preset="custom" s19="" url="pattern1.patt">
     <a-entity gltf-model="model1.gltf" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02">
     </a-entity>

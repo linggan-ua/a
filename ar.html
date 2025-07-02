@@ -5,7 +5,6 @@
   <title>
    岭南乐器增强现实视听工具
   </title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <script src="aframe.min.js">
   </script>
   <script src="aframe-ar.js">
@@ -35,301 +34,152 @@
             z-index: 10;
         }
         
-        /* 加载指示器 */
-        .loading-indicator {
+        /* 简单的帮助按钮 */
+        .help-button {
+            position: absolute;
+            top: 120px;
+            left: 20px;
+            padding: 8px 15px;
+            background-color: #FF6B6B;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 12px;
+            cursor: pointer;
+            z-index: 15;
+            display: none;
+        }
+        
+        .help-panel {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
+            background: white;
             padding: 20px;
             border-radius: 10px;
-            z-index: 999;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 1000;
+            max-width: 90%;
             text-align: center;
+            display: none;
         }
         
-        .loading-spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #007BFF;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
+        .help-panel button {
+            margin: 10px 5px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
         }
         
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .refresh-btn {
+            background: #007BFF;
+            color: white;
         }
         
-        .hidden {
-            display: none !important;
+        .close-btn {
+            background: #6C757D;
+            color: white;
         }
   </style>
   <script>
 /**
- * 稳定的iOS微信浏览器AR修复方案
- * 解决白屏和摄像头权限不稳定问题
+ * 简单稳定的iOS修复方案
+ * 原则：不破坏原有功能，只做必要的iOS兼容性修复
  */
 
-// 全局状态管理
-let ARState = {
-    isInitialized: false,
-    cameraPermissionGranted: false,
-    videoFixed: false,
-    sceneReady: false,
-    retryCount: 0,
-    maxRetries: 3
-};
-
-// 显示加载指示器
-function showLoading(message = '正在初始化AR...') {
-    let loading = document.getElementById('loading-indicator');
-    if (!loading) {
-        loading = document.createElement('div');
-        loading.id = 'loading-indicator';
-        loading.className = 'loading-indicator';
-        document.body.appendChild(loading);
-    }
-    loading.innerHTML = `
-        <div class="loading-spinner"></div>
-        <div>${message}</div>
-    `;
-    loading.classList.remove('hidden');
-}
-
-// 隐藏加载指示器
-function hideLoading() {
-    const loading = document.getElementById('loading-indicator');
-    if (loading) {
-        loading.classList.add('hidden');
-    }
-}
-
-// 检测环境
-function getEnvironmentInfo() {
+// 简单的环境检测
+function getDeviceInfo() {
     const ua = navigator.userAgent;
     return {
-        isWeChat: /MicroMessenger/i.test(ua),
         isIOS: /iPhone|iPad|iPod/i.test(ua),
-        isHTTPS: location.protocol === 'https:',
-        hasWebRTC: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
+        isWeChat: /MicroMessenger/i.test(ua),
+        isAndroid: /Android/i.test(ua)
     };
 }
 
-// 稳定的视频属性修复
-function fixVideoAttributes() {
-    return new Promise((resolve) => {
-        let attempts = 0;
-        const maxAttempts = 50; // 10秒内检查
+// 简单的iOS视频修复（只在iOS设备上运行）
+function applyIOSVideoFix() {
+    const device = getDeviceInfo();
+    
+    // 只对iOS设备应用修复
+    if (!device.isIOS) {
+        console.log('非iOS设备，跳过视频修复');
+        return;
+    }
+    
+    console.log('iOS设备检测到，应用视频兼容性修复');
+    
+    let fixAttempts = 0;
+    const maxAttempts = 25; // 5秒内检查
+    
+    const fixVideoElements = () => {
+        fixAttempts++;
+        const videos = document.querySelectorAll('video');
         
-        const checkVideo = () => {
-            attempts++;
-            const videos = document.querySelectorAll('video');
-            
-            if (videos.length > 0) {
-                let fixed = false;
-                videos.forEach(video => {
-                    if (!video.hasAttribute('data-ios-fixed')) {
-                        // 设置iOS兼容属性
-                        video.setAttribute('playsinline', '');
-                        video.setAttribute('webkit-playsinline', 'true');
-                        video.setAttribute('muted', '');
-                        video.setAttribute('autoplay', '');
-                        video.setAttribute('data-ios-fixed', 'true');
-                        
-                        // 强制重新加载视频
-                        video.load();
-                        
-                        console.log('视频属性修复完成:', video);
-                        fixed = true;
-                    }
-                });
-                
-                if (fixed) {
-                    ARState.videoFixed = true;
-                    resolve(true);
-                    return;
+        if (videos.length > 0) {
+            videos.forEach(video => {
+                // 只修复未处理过的video
+                if (!video.hasAttribute('data-ios-fixed')) {
+                    video.setAttribute('playsinline', '');
+                    video.setAttribute('webkit-playsinline', 'true');
+                    video.setAttribute('muted', '');
+                    video.setAttribute('data-ios-fixed', 'true');
+                    console.log('iOS视频属性修复完成');
                 }
-            }
-            
-            if (attempts < maxAttempts) {
-                setTimeout(checkVideo, 200);
-            } else {
-                console.warn('未找到video元素，但继续执行');
-                resolve(false);
-            }
-        };
+            });
+            return; // 修复完成，停止检查
+        }
         
-        checkVideo();
-    });
-}
-
-// 检查AR场景是否正确初始化
-function checkARScene() {
-    return new Promise((resolve) => {
-        let attempts = 0;
-        const maxAttempts = 30;
-        
-        const checkScene = () => {
-            attempts++;
-            const scene = document.querySelector('a-scene');
-            const canvas = document.querySelector('canvas');
-            
-            if (scene && canvas && canvas.width > 0 && canvas.height > 0) {
-                console.log('AR场景初始化成功');
-                ARState.sceneReady = true;
-                resolve(true);
-                return;
-            }
-            
-            if (attempts < maxAttempts) {
-                setTimeout(checkScene, 300);
-            } else {
-                console.warn('AR场景初始化可能失败');
-                resolve(false);
-            }
-        };
-        
-        checkScene();
-    });
-}
-
-// 重新初始化AR
-async function reinitializeAR() {
-    if (ARState.retryCount >= ARState.maxRetries) {
-        hideLoading();
-        alert('AR初始化失败次数过多，请刷新页面重试');
-        return;
-    }
+        // 如果还没找到video元素，继续检查
+        if (fixAttempts < maxAttempts) {
+            setTimeout(fixVideoElements, 200);
+        } else {
+            console.log('未检测到video元素，可能AR尚未初始化');
+            showHelpButton(); // 显示帮助按钮
+        }
+    };
     
-    ARState.retryCount++;
-    showLoading(`正在重新初始化AR (第${ARState.retryCount}次尝试)...`);
-    
-    try {
-        // 重置状态
-        ARState.isInitialized = false;
-        ARState.videoFixed = false;
-        ARState.sceneReady = false;
-        
-        // 等待场景准备就绪
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // 修复视频属性
-        await fixVideoAttributes();
-        
-        // 检查场景
-        await checkARScene();
-        
-        // 更新UI
-        updateUI();
-        
-        ARState.isInitialized = true;
-        hideLoading();
-        
-        console.log('AR重新初始化完成');
-        
-    } catch (error) {
-        console.error('AR重新初始化失败:', error);
-        setTimeout(reinitializeAR, 2000);
-    }
-}
-
-// 更新UI状态
-function updateUI() {
-    const infoDiv = document.getElementById('b2');
-    if (ARState.sceneReady) {
-        infoDiv.textContent = '请用摄像头对准"岭南乐器码"';
-        infoDiv.style.backgroundColor = '#E8F5E8';
-        infoDiv.style.color = '#2E7D32';
-    } else {
-        infoDiv.textContent = '正在启动摄像头，请稍候...';
-        infoDiv.style.backgroundColor = '#FFF3E0';
-        infoDiv.style.color = '#F57C00';
-    }
-}
-
-// 主初始化函数
-async function initializeAR() {
-    if (ARState.isInitialized) {
-        return;
-    }
-    
-    const env = getEnvironmentInfo();
-    console.log('环境信息:', env);
-    
-    // 基本环境检查
-    if (!env.hasWebRTC) {
-        alert('当前浏览器不支持摄像头功能，请使用现代浏览器');
-        return;
-    }
-    
-    if (!env.isHTTPS) {
-        alert('摄像头功能需要HTTPS协议，请确保网站使用安全连接');
-        return;
-    }
-    
-    showLoading('正在初始化AR...');
-    
-    try {
-        // 等待页面完全加载
-        await new Promise(resolve => {
-            if (document.readyState === 'complete') {
-                resolve();
-            } else {
-                window.addEventListener('load', resolve);
-            }
+    // 页面加载完成后开始检查
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(fixVideoElements, 1000); // 延迟1秒开始检查
         });
-        
-        // 等待AR.js初始化
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // 修复视频属性
-        showLoading('正在修复视频兼容性...');
-        await fixVideoAttributes();
-        
-        // 检查AR场景
-        showLoading('正在检查AR场景...');
-        await checkARScene();
-        
-        // 初始化音频系统
-        initializeAudioSystem();
-        
-        // 初始化AR组件
-        initializeARComponents();
-        
-        // 更新UI
-        updateUI();
-        
-        ARState.isInitialized = true;
-        hideLoading();
-        
-        console.log('AR初始化完成');
-        
-        // 监听页面可见性变化
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        
-    } catch (error) {
-        console.error('AR初始化失败:', error);
-        setTimeout(reinitializeAR, 1000);
+    } else {
+        setTimeout(fixVideoElements, 1000);
     }
 }
 
-// 处理页面可见性变化
-function handleVisibilityChange() {
-    if (document.visibilityState === 'visible' && ARState.isInitialized) {
-        // 页面重新可见时检查状态
-        setTimeout(async () => {
-            if (!ARState.sceneReady) {
-                console.log('页面重新可见，检查AR状态...');
-                await fixVideoAttributes();
-                await checkARScene();
-                updateUI();
+// 显示帮助按钮
+function showHelpButton() {
+    const helpBtn = document.getElementById('help-button');
+    if (helpBtn) {
+        helpBtn.style.display = 'block';
+        
+        // 10秒后如果AR正常工作，隐藏帮助按钮
+        setTimeout(() => {
+            const videos = document.querySelectorAll('video');
+            if (videos.length > 0 && videos[0].videoWidth > 0) {
+                helpBtn.style.display = 'none';
             }
-        }, 500);
+        }, 10000);
     }
+}
+
+// 显示帮助面板
+function showHelpPanel() {
+    document.getElementById('help-panel').style.display = 'block';
+}
+
+// 关闭帮助面板
+function closeHelpPanel() {
+    document.getElementById('help-panel').style.display = 'none';
+}
+
+// 刷新页面
+function refreshPage() {
+    window.location.reload();
 }
 
 // 检测是否在微信浏览器中打开
@@ -337,14 +187,16 @@ function c3() {
     return /MicroMessenger/i.test(navigator.userAgent);
 }
 
+// 原有代码保持不变
 var d4 = c3();
 if (d4) {
-    // 初始化变量 e5，用于存储当前播放的音频对象
+    // 应用iOS修复（不影响其他逻辑）
+    applyIOSVideoFix();
+
+    // 原有的音频系统代码完全保持不变
     var e5 = null;
     var f6 = {};
-    
-    // 音频系统初始化
-    function initializeAudioSystem() {
+    document.addEventListener('DOMContentLoaded', function () {
         var g7 = ['audio1.mp3', 'audio2.mp3'];
         g7.forEach(function (h8) {
             var i9 = new Audio();
@@ -379,141 +231,108 @@ if (d4) {
                 alert('没有检测到标记或音频尚未加载。');
             }
         });
-    }
+    });
 
-    // AR组件初始化
-    function initializeARComponents() {
-        // AFRAME 组件：动态模型旋转
-        AFRAME.registerComponent('o15', {
-            schema: {
-                x: { type: 'number', default: 0 },
-                y: { type: 'number', default: 0 },
-                z: { type: 'number', default: 0 }
-            },
-            init: function () {
-                var p16 = this.el;
-                var q17 = this.data;
-                p16.addEventListener('model-loaded', function () {
-                    var r18 = p16.getObject3D('mesh');
-                    if (!r18) return;
-                    r18.rotation.set(
-                        THREE.Math.degToRad(q17.x),
-                        THREE.Math.degToRad(q17.y),
-                        THREE.Math.degToRad(q17.z)
-                    );
+    // 原有的AFRAME组件代码完全保持不变
+    AFRAME.registerComponent('o15', {
+        schema: {
+            x: { type: 'number', default: 0 },
+            y: { type: 'number', default: 0 },
+            z: { type: 'number', default: 0 }
+        },
+        init: function () {
+            var p16 = this.el;
+            var q17 = this.data;
+            p16.addEventListener('model-loaded', function () {
+                var r18 = p16.getObject3D('mesh');
+                if (!r18) return;
+                r18.rotation.set(
+                    THREE.Math.degToRad(q17.x),
+                    THREE.Math.degToRad(q17.y),
+                    THREE.Math.degToRad(q17.z)
+                );
+            });
+        }
+    });
+
+    AFRAME.registerComponent('s19', {
+        init: function () {
+            var t20 = this.el;
+            var u21 = t20.getAttribute('id');
+            var v22 = null;
+            var w23 = '';
+            var x24 = false;
+            var y25 = document.getElementById('a1');
+            var z26 = document.getElementById('b2');
+            var a27 = false;
+            var b28 = false;
+            var c29 = '';
+            var d30 = '';
+            if (u21 === 'marker1') {
+                c29 = 'audio1.mp3';
+                d30 = 'info1.txt';
+            } else if (u21 === 'marker2') {
+                c29 = 'audio2.mp3';
+                d30 = 'info2.txt';
+            }
+            var e31 = f6[c29];
+            if (e31 && e31.j10) {
+                v22 = e31.j10;
+            } else {
+                console.error('Audio player not found for ' + c29);
+                v22 = new Audio();
+                v22.src = c29;
+                v22.preload = 'auto';
+                v22.load();
+            }
+            fetch(d30)
+                .then(function (f32) {
+                    return f32.ok ? f32.text() : '';
+                })
+                .then(function (g33) {
+                    w23 = g33;
+                    b28 = true;
+                })
+                .catch(function (h34) {
+                    console.error('Error loading info text:', h34);
+                    b28 = false;
                 });
-            }
-        });
-
-        // AFRAME 组件：AR标记检测逻辑
-        AFRAME.registerComponent('s19', {
-            init: function () {
-                var t20 = this.el;
-                var u21 = t20.getAttribute('id');
-                var v22 = null;
-                var w23 = '';
-                var x24 = false;
-                var y25 = document.getElementById('a1');
-                var z26 = document.getElementById('b2');
-                var a27 = false;
-                var b28 = false;
-                var c29 = '';
-                var d30 = '';
-                
-                if (u21 === 'marker1') {
-                    c29 = 'audio1.mp3';
-                    d30 = 'info1.txt';
-                } else if (u21 === 'marker2') {
-                    c29 = 'audio2.mp3';
-                    d30 = 'info2.txt';
-                }
-                
-                var e31 = f6[c29];
-                if (e31 && e31.j10) {
-                    v22 = e31.j10;
-                } else {
-                    console.error('Audio player not found for ' + c29);
-                    v22 = new Audio();
-                    v22.src = c29;
-                    v22.preload = 'auto';
-                    v22.load();
-                }
-                
-                fetch(d30)
-                    .then(function (f32) {
-                        return f32.ok ? f32.text() : '';
-                    })
-                    .then(function (g33) {
-                        w23 = g33;
-                        b28 = true;
-                    })
-                    .catch(function (h34) {
-                        console.error('Error loading info text:', h34);
-                        b28 = false;
-                    });
-                    
-                this.tick = AFRAME.utils.throttleTick(function () {
-                    var i35 = t20.object3D.visible;
-                    if (i35 !== a27) {
-                        a27 = i35;
-                        b28 = v22.readyState >= 2;
-                        if (a27) {
-                            if (e5 && e5.u21 !== u21) {
-                                if (e5.j10 && !e5.j10.paused) {
-                                    e5.j10.pause();
-                                    e5.m13 = false;
-                                }
+            this.tick = AFRAME.utils.throttleTick(function () {
+                var i35 = t20.object3D.visible;
+                if (i35 !== a27) {
+                    a27 = i35;
+                    b28 = v22.readyState >= 2;
+                    if (a27) {
+                        if (e5 && e5.u21 !== u21) {
+                            if (e5.j10 && !e5.j10.paused) {
+                                e5.j10.pause();
+                                e5.m13 = false;
                             }
-                            e5 = {
-                                u21: u21,
-                                j10: v22,
-                                w23: w23,
-                                m13: x24,
-                                b28: b28,
-                                b28: b28
-                            };
-                            z26.textContent = w23 || 'No information available';
-                            f36();
                         }
+                        e5 = {
+                            u21: u21,
+                            j10: v22,
+                            w23: w23,
+                            m13: x24,
+                            b28: b28,
+                            b28: b28
+                        };
+                        z26.textContent = w23 || 'No information available';
+                        f36();
                     }
-                }, 100);
-                
-                function f36() {
-                    y25.disabled = false;
-                    y25.style.backgroundColor = '#007BFF';
-                    y25.style.cursor = 'pointer';
-                    y25.textContent = x24 ? '暂停' : '播放';
                 }
+            }, 100);
+            function f36() {
+                y25.disabled = false;
+                y25.style.backgroundColor = '#007BFF';
+                y25.style.cursor = 'pointer';
+                y25.textContent = x24 ? '暂停' : '播放';
             }
-        });
-    }
-    
-    // 页面加载完成后初始化
-    document.addEventListener('DOMContentLoaded', function() {
-        // 延迟初始化，确保所有资源加载完成
-        setTimeout(initializeAR, 800);
-    });
-    
-    // 页面显示时也尝试初始化（处理页面缓存情况）
-    window.addEventListener('pageshow', function(event) {
-        if (event.persisted || !ARState.isInitialized) {
-            setTimeout(initializeAR, 500);
         }
     });
-    
-    // 错误重试机制
-    window.addEventListener('error', function(event) {
-        if (event.error && event.error.message && 
-            (event.error.message.includes('getUserMedia') || 
-             event.error.message.includes('WebRTC'))) {
-            console.log('检测到摄像头相关错误，尝试重新初始化...');
-            setTimeout(reinitializeAR, 1000);
-        }
-    });
-    
 } else {
-    // 非微信环境的处理
-    document.addEventListener('DOMContentLoaded', initializeAR);
+    // 非微信环境也应用iOS修复（如果是iOS设备）
+    applyIOSVideoFix();
 }
 
   </script>
@@ -523,10 +342,28 @@ if (d4) {
    播放
   </button>
   <div id="b2">
-   正在初始化AR，请稍候...
+   请用摄像头对准"岭南乐器码"
   </div>
   
-  <a-scene arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;" embedded="" vr-mode-ui="enabled: false">
+  <!-- 帮助按钮 -->
+  <button id="help-button" class="help-button" onclick="showHelpPanel()">
+   遇到问题?
+  </button>
+  
+  <!-- 帮助面板 -->
+  <div id="help-panel" class="help-panel">
+    <h3>📱 AR加载问题</h3>
+    <p>如果摄像头无法启动或出现白屏：</p>
+    <div>
+      <button class="refresh-btn" onclick="refreshPage()">🔄 刷新页面</button>
+      <button class="close-btn" onclick="closeHelpPanel()">❌ 关闭</button>
+    </div>
+    <p style="font-size: 12px; color: #666; margin-top: 15px;">
+      iOS用户建议在Safari浏览器中打开以获得最佳体验
+    </p>
+  </div>
+  
+  <a-scene arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false" embedded="" vr-mode-ui="enabled: false">
    <a-marker id="marker1" preset="custom" s19="" url="pattern1.patt">
     <a-entity gltf-model="model1.gltf" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02">
     </a-entity>
@@ -540,8 +377,8 @@ if (d4) {
   </a-scene>
   
   <script>
-    // 保留原有的增强功能
-    document.addEventListener('DOMContentLoaded', function () {
+   // 保留原有的所有增强功能，完全不修改
+   document.addEventListener('DOMContentLoaded', function () {
         var audioElements = document.querySelectorAll('audio');
         var playbackRate = 1.0;
 
@@ -566,7 +403,16 @@ if (d4) {
         });
     });
 
-    // 保留原有的AFRAME组件
+    window.onerror = function (message, source, lineno, colno, error) {
+        console.error("Error captured:", {
+            message: message,
+            source: source,
+            lineno: lineno,
+            colno: colno,
+            error: error
+        });
+    };
+
     AFRAME.registerComponent('dynamic-model', {
         init: function () {
             var el = this.el;
@@ -607,6 +453,76 @@ if (d4) {
             this.el.addEventListener('markerLost', function () {
                 isVisible = false;
                 console.log(`Marker lost: ${el.id}`);
+            });
+        }
+    });
+  </script>
+  <script>
+   // 重复代码，保持与原版完全一致
+   document.addEventListener('DOMContentLoaded', function () {
+        var audioElements = document.querySelectorAll('audio');
+        var playbackRate = 1.0;
+
+        audioElements.forEach(function (audio) {
+            audio.addEventListener('ratechange', function () {
+                console.log(`播放速率调整为: ${audio.playbackRate}`);
+            });
+
+            audio.addEventListener('play', function () {
+                console.log('音频开始播放');
+            });
+            audio.addEventListener('pause', function () {
+                console.log('音频已暂停');
+            });
+
+            if (audio.duration > 60) {
+                playbackRate = 1.5;
+                audio.playbackRate = playbackRate;
+                console.log(`长音频检测到，播放速率已调整为: ${playbackRate}`);
+            }
+        });
+    });
+
+    AFRAME.registerComponent('dynamic-model', {
+        init: function () {
+            var el = this.el;
+            var colorIndex = 0;
+            var colors = ['#FF5733', '#33FF57', '#3357FF'];
+            setInterval(function () {
+                colorIndex = (colorIndex + 1) % colors.length;
+                el.setAttribute('material', 'color', colors[colorIndex]);
+                console.log(`模型颜色已切换至: ${colors[colorIndex]}`);
+            }, 10000);
+        }
+    });
+
+    AFRAME.registerComponent('dynamic-light', {
+        schema: {
+            intensity: { type: 'number', default: 1 }
+        },
+        init: function () {
+            var light = this.el.getOrCreateObject3D('light', THREE.PointLight);
+            light.intensity = this.data.intensity;
+        },
+        update: function () {
+            var light = this.el.getObject3D('light');
+            light.intensity = this.data.intensity;
+        }
+    });
+
+    AFRAME.registerComponent('visibility-tracker', {
+        init: function () {
+            var el = this.el;
+            var isVisible = false;
+
+            this.el.addEventListener('markerFound', function () {
+                isVisible = true;
+                console.log(`标记被发现: ${el.id}`);
+            });
+
+            this.el.addEventListener('markerLost', function () {
+                isVisible = false;
+                console.log(`标记丢失: ${el.id}`);
             });
         }
     });

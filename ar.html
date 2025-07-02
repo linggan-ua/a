@@ -34,62 +34,94 @@
             z-index: 10;
         }
         
-        /* 简单的帮助按钮 */
-        .help-button {
-            position: absolute;
-            top: 120px;
-            left: 20px;
-            padding: 8px 15px;
-            background-color: #FF6B6B;
+        /* 启动覆盖层 */
+        .start-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
             color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 12px;
-            cursor: pointer;
-            z-index: 15;
-            display: none;
+            text-align: center;
         }
         
-        .help-panel {
+        .start-button {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .start-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.4);
+        }
+        
+        .start-title {
+            font-size: 2em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .start-subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+        
+        /* 白屏检测提示 */
+        .white-screen-hint {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: white;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
             padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            z-index: 1000;
-            max-width: 90%;
             text-align: center;
+            z-index: 999;
             display: none;
         }
         
-        .help-panel button {
-            margin: 10px 5px;
-            padding: 10px 20px;
+        .hint-button {
+            background: #007BFF;
+            color: white;
             border: none;
+            padding: 10px 20px;
             border-radius: 5px;
+            margin: 10px 5px;
             cursor: pointer;
         }
         
-        .refresh-btn {
-            background: #007BFF;
-            color: white;
-        }
-        
-        .close-btn {
-            background: #6C757D;
-            color: white;
+        .hidden {
+            display: none !important;
         }
   </style>
   <script>
 /**
- * 简单稳定的iOS修复方案
- * 原则：不破坏原有功能，只做必要的iOS兼容性修复
+ * 用户手势触发的AR方案
+ * 解决浏览器安全策略要求用户交互才能访问摄像头的问题
  */
 
-// 简单的环境检测
+let isARStarted = false;
+let startOverlay;
+let whiteScreenHint;
+
+// 环境检测
 function getDeviceInfo() {
     const ua = navigator.userAgent;
     return {
@@ -99,20 +131,140 @@ function getDeviceInfo() {
     };
 }
 
-// 简单的iOS视频修复（只在iOS设备上运行）
+// 创建启动覆盖层
+function createStartOverlay() {
+    startOverlay = document.createElement('div');
+    startOverlay.className = 'start-overlay';
+    startOverlay.id = 'start-overlay';
+    
+    startOverlay.innerHTML = `
+        <div class="start-title">🎵 岭南乐器AR体验</div>
+        <div class="start-subtitle">点击下方按钮启动摄像头和AR功能</div>
+        <button class="start-button" onclick="startAR()">
+            📱 启动AR体验
+        </button>
+        <div style="font-size: 0.9em; opacity: 0.8; margin-top: 20px;">
+            为了保护您的隐私，需要您的授权才能访问摄像头
+        </div>
+    `;
+    
+    document.body.appendChild(startOverlay);
+}
+
+// 创建白屏提示
+function createWhiteScreenHint() {
+    whiteScreenHint = document.createElement('div');
+    whiteScreenHint.className = 'white-screen-hint';
+    whiteScreenHint.id = 'white-screen-hint';
+    
+    whiteScreenHint.innerHTML = `
+        <h3>🤔 摄像头启动中...</h3>
+        <p>如果看到空白屏幕，请：</p>
+        <button class="hint-button" onclick="clickToActivate()">点击激活摄像头</button>
+        <button class="hint-button" onclick="refreshPage()">刷新页面</button>
+        <div style="font-size: 12px; margin-top: 10px; opacity: 0.8;">
+            iOS用户建议在Safari中打开
+        </div>
+    `;
+    
+    document.body.appendChild(whiteScreenHint);
+}
+
+// 启动AR
+async function startAR() {
+    if (isARStarted) return;
+    
+    isARStarted = true;
+    
+    try {
+        // 隐藏启动覆盖层
+        startOverlay.classList.add('hidden');
+        
+        // 更新提示信息
+        document.getElementById('b2').textContent = '正在启动摄像头，请允许权限...';
+        
+        // 应用iOS视频修复
+        applyIOSVideoFix();
+        
+        // 5秒后检查是否有白屏问题
+        setTimeout(() => {
+            checkForWhiteScreen();
+        }, 5000);
+        
+        console.log('AR启动成功，用户手势已触发');
+        
+    } catch (error) {
+        console.error('AR启动失败:', error);
+        alert('AR启动失败，请刷新页面重试');
+    }
+}
+
+// 检查白屏问题
+function checkForWhiteScreen() {
+    const videos = document.querySelectorAll('video');
+    const canvas = document.querySelector('canvas');
+    
+    let hasWorkingVideo = false;
+    
+    videos.forEach(video => {
+        if (video.videoWidth > 0 && video.videoHeight > 0) {
+            hasWorkingVideo = true;
+        }
+    });
+    
+    // 如果没有工作的视频或canvas无内容，显示提示
+    if (!hasWorkingVideo || (canvas && canvas.width === 0)) {
+        whiteScreenHint.style.display = 'block';
+        document.getElementById('b2').textContent = '摄像头启动遇到问题，请点击下方按钮';
+    } else {
+        document.getElementById('b2').textContent = '请用摄像头对准"岭南乐器码"';
+        whiteScreenHint.style.display = 'none';
+    }
+}
+
+// 点击激活摄像头
+function clickToActivate() {
+    whiteScreenHint.style.display = 'none';
+    
+    // 模拟点击AR场景来触发用户手势
+    const scene = document.querySelector('a-scene');
+    if (scene) {
+        const clickEvent = new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window
+        });
+        scene.dispatchEvent(clickEvent);
+    }
+    
+    // 重新应用视频修复
+    setTimeout(() => {
+        applyIOSVideoFix();
+        // 再次检查
+        setTimeout(checkForWhiteScreen, 3000);
+    }, 500);
+    
+    document.getElementById('b2').textContent = '正在重新激活摄像头...';
+}
+
+// 刷新页面
+function refreshPage() {
+    window.location.reload();
+}
+
+// iOS视频修复（与之前相同，但在用户手势后执行）
 function applyIOSVideoFix() {
     const device = getDeviceInfo();
     
-    // 只对iOS设备应用修复
     if (!device.isIOS) {
         console.log('非iOS设备，跳过视频修复');
         return;
     }
     
-    console.log('iOS设备检测到，应用视频兼容性修复');
+    console.log('在用户手势后应用iOS视频修复');
     
     let fixAttempts = 0;
-    const maxAttempts = 25; // 5秒内检查
+    const maxAttempts = 20;
     
     const fixVideoElements = () => {
         fixAttempts++;
@@ -120,7 +272,6 @@ function applyIOSVideoFix() {
         
         if (videos.length > 0) {
             videos.forEach(video => {
-                // 只修复未处理过的video
                 if (!video.hasAttribute('data-ios-fixed')) {
                     video.setAttribute('playsinline', '');
                     video.setAttribute('webkit-playsinline', 'true');
@@ -129,70 +280,30 @@ function applyIOSVideoFix() {
                     console.log('iOS视频属性修复完成');
                 }
             });
-            return; // 修复完成，停止检查
+            return;
         }
         
-        // 如果还没找到video元素，继续检查
         if (fixAttempts < maxAttempts) {
             setTimeout(fixVideoElements, 200);
-        } else {
-            console.log('未检测到video元素，可能AR尚未初始化');
-            showHelpButton(); // 显示帮助按钮
         }
     };
     
-    // 页面加载完成后开始检查
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(fixVideoElements, 1000); // 延迟1秒开始检查
-        });
-    } else {
-        setTimeout(fixVideoElements, 1000);
-    }
+    fixVideoElements();
 }
 
-// 显示帮助按钮
-function showHelpButton() {
-    const helpBtn = document.getElementById('help-button');
-    if (helpBtn) {
-        helpBtn.style.display = 'block';
-        
-        // 10秒后如果AR正常工作，隐藏帮助按钮
-        setTimeout(() => {
-            const videos = document.querySelectorAll('video');
-            if (videos.length > 0 && videos[0].videoWidth > 0) {
-                helpBtn.style.display = 'none';
-            }
-        }, 10000);
-    }
-}
+// 页面加载完成后显示启动覆盖层
+document.addEventListener('DOMContentLoaded', function() {
+    createStartOverlay();
+    createWhiteScreenHint();
+});
 
-// 显示帮助面板
-function showHelpPanel() {
-    document.getElementById('help-panel').style.display = 'block';
-}
-
-// 关闭帮助面板
-function closeHelpPanel() {
-    document.getElementById('help-panel').style.display = 'none';
-}
-
-// 刷新页面
-function refreshPage() {
-    window.location.reload();
-}
-
-// 检测是否在微信浏览器中打开
+// 检测是否在微信浏览器中打开（原有代码保持不变）
 function c3() {
     return /MicroMessenger/i.test(navigator.userAgent);
 }
 
-// 原有代码保持不变
 var d4 = c3();
 if (d4) {
-    // 应用iOS修复（不影响其他逻辑）
-    applyIOSVideoFix();
-
     // 原有的音频系统代码完全保持不变
     var e5 = null;
     var f6 = {};
@@ -332,7 +443,10 @@ if (d4) {
     });
 } else {
     // 非微信环境也应用iOS修复（如果是iOS设备）
-    applyIOSVideoFix();
+    document.addEventListener('DOMContentLoaded', function() {
+        createStartOverlay();
+        createWhiteScreenHint();
+    });
 }
 
   </script>
@@ -342,25 +456,7 @@ if (d4) {
    播放
   </button>
   <div id="b2">
-   请用摄像头对准"岭南乐器码"
-  </div>
-  
-  <!-- 帮助按钮 -->
-  <button id="help-button" class="help-button" onclick="showHelpPanel()">
-   遇到问题?
-  </button>
-  
-  <!-- 帮助面板 -->
-  <div id="help-panel" class="help-panel">
-    <h3>📱 AR加载问题</h3>
-    <p>如果摄像头无法启动或出现白屏：</p>
-    <div>
-      <button class="refresh-btn" onclick="refreshPage()">🔄 刷新页面</button>
-      <button class="close-btn" onclick="closeHelpPanel()">❌ 关闭</button>
-    </div>
-    <p style="font-size: 12px; color: #666; margin-top: 15px;">
-      iOS用户建议在Safari浏览器中打开以获得最佳体验
-    </p>
+   准备启动AR体验...
   </div>
   
   <a-scene arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false" embedded="" vr-mode-ui="enabled: false">
@@ -377,7 +473,7 @@ if (d4) {
   </a-scene>
   
   <script>
-   // 保留原有的所有增强功能，完全不修改
+   // 保留原有的所有增强功能
    document.addEventListener('DOMContentLoaded', function () {
         var audioElements = document.querySelectorAll('audio');
         var playbackRate = 1.0;
@@ -458,7 +554,7 @@ if (d4) {
     });
   </script>
   <script>
-   // 重复代码，保持与原版完全一致
+   // 重复代码保持与原版一致
    document.addEventListener('DOMContentLoaded', function () {
         var audioElements = document.querySelectorAll('audio');
         var playbackRate = 1.0;

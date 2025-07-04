@@ -9,8 +9,8 @@
   </script>
   <script src="aframe-ar.js">
   </script>
-  <!-- 添加marked.js用于markdown渲染 -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.2/marked.min.js"></script>
+  <!-- 添加marked.js用于markdown渲染（本地引用） -->
+  <script src="marked.min.js"></script>
   <style>
         /* 启动覆盖层 */
         .start-overlay {
@@ -1241,7 +1241,6 @@ if (d4) {
             var markerId = markerElement.getAttribute('id');
             var audioFile = '';
             var markdownFile = '';
-            var wasVisible = false;
             
             // 根据marker ID确定对应的文件
             if (markerId === 'marker1') {
@@ -1261,44 +1260,43 @@ if (d4) {
                 audioElement.audio.load();
             }
             
-            this.tick = AFRAME.utils.throttleTick(function () {
-                var isVisible = markerElement.object3D.visible;
+            // 使用AR.js的事件系统检测marker
+            markerElement.addEventListener('markerFound', function () {
+                console.log('Marker found: ' + markerId);
                 
-                if (isVisible !== wasVisible) {
-                    wasVisible = isVisible;
-                    
-                    if (isVisible) {
-                        // 停止之前的音频
-                        if (currentAudioManager && currentAudioManager.audio && !currentAudioManager.audio.paused) {
-                            currentAudioManager.audio.pause();
-                        }
-                        
-                        // 设置当前音频管理器
-                        currentAudioManager = {
-                            markerId: markerId,
-                            audio: audioElement.audio,
-                            markdownFile: markdownFile,
-                            isPlaying: false
-                        };
-                        
-                        // 更新dock栏按钮状态
-                        updateDockButtons();
-                        
-                        // 显示通知
-                        showNotification(`🎯 检测到${markerId === 'marker1' ? '琵琶' : '葫芦丝'}`);
-                        
-                    } else {
-                        // marker丢失时的处理
-                        if (currentAudioManager && currentAudioManager.markerId === markerId) {
-                            if (currentAudioManager.audio && !currentAudioManager.audio.paused) {
-                                currentAudioManager.audio.pause();
-                            }
-                            currentAudioManager = null;
-                            updateDockButtons();
-                        }
-                    }
+                // 停止之前的音频
+                if (currentAudioManager && currentAudioManager.audio && !currentAudioManager.audio.paused) {
+                    currentAudioManager.audio.pause();
                 }
-            }, 100);
+                
+                // 设置当前音频管理器
+                currentAudioManager = {
+                    markerId: markerId,
+                    audio: audioElement.audio,
+                    markdownFile: markdownFile,
+                    isPlaying: false
+                };
+                
+                // 更新dock栏按钮状态
+                updateDockButtons();
+                
+                // 显示通知
+                showNotification(`🎯 检测到${markerId === 'marker1' ? '琵琶' : '葫芦丝'}`);
+            });
+            
+            markerElement.addEventListener('markerLost', function () {
+                console.log('Marker lost: ' + markerId);
+                
+                // marker丢失时的处理
+                if (currentAudioManager && currentAudioManager.markerId === markerId) {
+                    if (currentAudioManager.audio && !currentAudioManager.audio.paused) {
+                        currentAudioManager.audio.pause();
+                    }
+                    currentAudioManager = null;
+                    updateDockButtons();
+                    showNotification('📱 请重新对准乐器码');
+                }
+            });
         }
     });
 }

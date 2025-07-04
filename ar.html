@@ -644,7 +644,47 @@
             border-radius: 0 8px 8px 0;
         }
         
-        /* =============== 设置面板样式 =============== */
+        /* =============== 新增：信息显示框样式 =============== */
+        .info-display {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: calc(100% - 40px);
+            min-width: 280px;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+            z-index: 150;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            line-height: 1.4;
+        }
+        
+        .info-display.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .info-display .instrument-name {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 4px;
+            color: #FFE082;
+        }
+        
+        .info-display .instrument-desc {
+            font-size: 14px;
+            opacity: 0.9;
+        }
         .settings-grid {
             display: grid;
             gap: 16px;
@@ -679,6 +719,22 @@
                 padding: 12px;
                 margin: 12px 0;
                 max-width: 98%;
+            }
+            
+            .info-display {
+                top: 15px;
+                max-width: calc(100% - 30px);
+                min-width: 250px;
+                padding: 10px 16px;
+                font-size: 13px;
+            }
+            
+            .info-display .instrument-name {
+                font-size: 15px;
+            }
+            
+            .info-display .instrument-desc {
+                font-size: 13px;
             }
             
             .dock-bar {
@@ -805,6 +861,22 @@ AFRAME.registerComponent('s19', {
             audioCache[audioFile] = audioElement;
         }
         
+        // 加载对应的信息文本
+        var infoText = '';
+        var infoFile = markerId === 'marker1' ? 'info1.txt' : 'info2.txt';
+        
+        fetch(infoFile)
+            .then(function (response) {
+                return response.ok ? response.text() : '';
+            })
+            .then(function (text) {
+                infoText = text;
+            })
+            .catch(function (error) {
+                console.error('Error loading info text:', error);
+                infoText = markerId === 'marker1' ? '岭南乐器：琵琶' : '岭南乐器：葫芦丝';
+            });
+        
         // 使用原来简单高效的检测逻辑 - 直接检查3D对象可见性
         var wasVisible = false;
         
@@ -829,9 +901,13 @@ AFRAME.registerComponent('s19', {
                     markerId: markerId,
                     audio: audioElement.audio,
                     markdownFile: markdownFile,
+                    infoText: infoText,
                     isPlaying: currentAudioManager && currentAudioManager.markerId === markerId ? 
                               currentAudioManager.isPlaying : false
                 };
+                
+                // 更新信息显示框
+                updateInfoDisplay();
                 
                 // 立即更新UI状态
                 updateDockButtons();
@@ -916,6 +992,7 @@ function showSettings() {
                 </div>
             </div>
             
+    
         </div>
     `;
     
@@ -1003,6 +1080,27 @@ function showNotification(message) {
     setTimeout(() => {
         notification.remove();
     }, 2000);
+}
+
+// 更新信息显示框
+function updateInfoDisplay() {
+    const infoDisplay = document.getElementById('info-display');
+    const instrumentName = infoDisplay.querySelector('.instrument-name');
+    const instrumentDesc = infoDisplay.querySelector('.instrument-desc');
+    
+    if (currentAudioManager && currentAudioManager.infoText) {
+        // 解析info.txt内容
+        const lines = currentAudioManager.infoText.split('\n');
+        const nameMatch = lines[0] || '';
+        const descMatch = lines[1] || '';
+        
+        instrumentName.textContent = nameMatch;
+        instrumentDesc.textContent = descMatch;
+        
+        infoDisplay.classList.add('active');
+    } else {
+        infoDisplay.classList.remove('active');
+    }
 }
 
 // 更新dock按钮状态
@@ -1312,6 +1410,12 @@ document.addEventListener('DOMContentLoaded', function() {
   </script>
  </head>
  <body style="margin: 0; overflow: hidden;">
+  
+  <!-- 新增：信息显示框 -->
+  <div id="info-display" class="info-display">
+    <div class="instrument-name"></div>
+    <div class="instrument-desc"></div>
+  </div>
   
   <!-- 新增：Dock栏 -->
   <div id="dock-container" class="dock-container">

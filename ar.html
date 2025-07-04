@@ -413,47 +413,77 @@
         .dock-bar {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(20px);
-            border-radius: 25px;
-            padding: 8px 15px;
+            border-radius: 35px;
+            padding: 12px 20px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.2);
             display: flex;
-            gap: 8px;
+            gap: 16px;
             align-items: center;
         }
         
         .dock-button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
-            border-radius: 18px;
-            padding: 12px 16px;
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
             color: white;
-            font-size: 14px;
+            font-size: 24px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
-            gap: 6px;
-            min-width: 80px;
             justify-content: center;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
         
         .dock-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
         }
         
         .dock-button:active {
-            transform: translateY(0);
+            transform: translateY(-1px);
         }
         
-        .dock-button.playing {
+        /* 播放按钮 - 绿色 */
+        #play-btn {
             background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
         }
         
+        #play-btn:hover {
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
+        }
+        
+        /* 播放中状态 - 红色 */
+        #play-btn.playing {
+            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+        }
+        
+        #play-btn.playing:hover {
+            box-shadow: 0 8px 25px rgba(244, 67, 54, 0.4);
+        }
+        
+        /* 介绍按钮 - 蓝色 */
+        #info-btn {
+            background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+        }
+        
+        #info-btn:hover {
+            box-shadow: 0 8px 25px rgba(33, 150, 243, 0.4);
+        }
+        
+        /* 设置按钮 - 紫色 */
+        #settings-btn {
+            background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
+        }
+        
+        #settings-btn:hover {
+            box-shadow: 0 8px 25px rgba(156, 39, 176, 0.4);
+        }
+        
+        /* 禁用状态 - 灰色 */
         .dock-button.disabled {
             background: linear-gradient(135deg, #9E9E9E 0%, #757575 100%);
             cursor: not-allowed;
@@ -466,7 +496,7 @@
         }
         
         .emoji {
-            font-size: 16px;
+            font-size: 28px;
         }
         
         /* =============== 新增：半屏信息窗口样式 =============== */
@@ -652,18 +682,17 @@
             }
             
             .dock-bar {
-                padding: 6px 12px;
-                gap: 6px;
+                padding: 10px 16px;
+                gap: 12px;
             }
             
             .dock-button {
-                padding: 10px 12px;
-                font-size: 12px;
-                min-width: 70px;
+                width: 48px;
+                height: 48px;
             }
             
             .emoji {
-                font-size: 14px;
+                font-size: 24px;
             }
             
             .info-content {
@@ -869,7 +898,7 @@ function toggleAudio() {
     
     if (audio.paused) {
         audio.play().then(() => {
-            playBtn.innerHTML = '<span class="emoji">⏸️</span>暂停';
+            playBtn.innerHTML = '<span class="emoji">⏸️</span>';
             playBtn.classList.add('playing');
             currentAudioManager.isPlaying = true;
         }).catch(error => {
@@ -878,7 +907,7 @@ function toggleAudio() {
         });
     } else {
         audio.pause();
-        playBtn.innerHTML = '<span class="emoji">🎵</span>播放';
+        playBtn.innerHTML = '<span class="emoji">🎵</span>';
         playBtn.classList.remove('playing');
         currentAudioManager.isPlaying = false;
     }
@@ -914,10 +943,11 @@ function showSettings() {
                     <p style="margin: 6px 0;">• 将摄像头对准乐器码以识别乐器</p>
                     <p style="margin: 6px 0;">• 点击"播放"按钮聆听乐器音乐</p>
                     <p style="margin: 6px 0;">• 点击"介绍"按钮查看详细信息</p>
+                    <p style="margin: 6px 0;">• 支持琵琶和葫芦丝两种乐器</p>
                 </div>
             </div>
             
-           
+    
         </div>
     `;
     
@@ -1021,16 +1051,16 @@ function updateDockButtons() {
         infoBtn.classList.remove('disabled');
         
         if (currentAudioManager.isPlaying) {
-            playBtn.innerHTML = '<span class="emoji">⏸️</span>暂停';
+            playBtn.innerHTML = '<span class="emoji">⏸️</span>';
             playBtn.classList.add('playing');
         } else {
-            playBtn.innerHTML = '<span class="emoji">🎵</span>播放';
+            playBtn.innerHTML = '<span class="emoji">🎵</span>';
             playBtn.classList.remove('playing');
         }
     } else {
         playBtn.classList.add('disabled');
         infoBtn.classList.add('disabled');
-        playBtn.innerHTML = '<span class="emoji">🎵</span>播放';
+        playBtn.innerHTML = '<span class="emoji">🎵</span>';
         playBtn.classList.remove('playing');
     }
 }
@@ -1151,7 +1181,7 @@ function startAR() {
     // 应用iOS视频修复（如果需要）
     applyIOSVideoFix();
 }
-
+}
 
 // iOS视频修复
 function applyIOSVideoFix() {
@@ -1319,13 +1349,13 @@ document.addEventListener('DOMContentLoaded', function() {
   <div id="dock-container" class="dock-container">
     <div class="dock-bar">
       <button id="play-btn" class="dock-button disabled" onclick="toggleAudio()">
-        <span class="emoji">🎵</span>播放
+        <span class="emoji">🎵</span>
       </button>
       <button id="info-btn" class="dock-button disabled" onclick="showInfo()">
-        <span class="emoji">📖</span>介绍
+        <span class="emoji">📖</span>
       </button>
       <button id="settings-btn" class="dock-button" onclick="showSettings()">
-        <span class="emoji">⚙️</span>设置
+        <span class="emoji">⚙️</span>
       </button>
     </div>
   </div>

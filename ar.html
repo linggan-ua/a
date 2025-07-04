@@ -413,20 +413,20 @@
         .dock-bar {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(20px);
-            border-radius: 35px;
-            padding: 12px 20px;
+            border-radius: 45px;
+            padding: 16px 28px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.2);
             display: flex;
-            gap: 16px;
+            gap: 20px;
             align-items: center;
         }
         
         .dock-button {
             border: none;
             border-radius: 50%;
-            width: 56px;
-            height: 56px;
+            width: 68px;
+            height: 68px;
             color: white;
             font-size: 24px;
             font-weight: 600;
@@ -439,12 +439,12 @@
         }
         
         .dock-button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         }
         
         .dock-button:active {
-            transform: translateY(-1px);
+            transform: translateY(-2px);
         }
         
         /* 播放按钮 - 绿色 */
@@ -453,7 +453,7 @@
         }
         
         #play-btn:hover {
-            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
+            box-shadow: 0 10px 30px rgba(76, 175, 80, 0.4);
         }
         
         /* 播放中状态 - 红色 */
@@ -462,7 +462,7 @@
         }
         
         #play-btn.playing:hover {
-            box-shadow: 0 8px 25px rgba(244, 67, 54, 0.4);
+            box-shadow: 0 10px 30px rgba(244, 67, 54, 0.4);
         }
         
         /* 介绍按钮 - 蓝色 */
@@ -471,7 +471,7 @@
         }
         
         #info-btn:hover {
-            box-shadow: 0 8px 25px rgba(33, 150, 243, 0.4);
+            box-shadow: 0 10px 30px rgba(33, 150, 243, 0.4);
         }
         
         /* 设置按钮 - 紫色 */
@@ -480,23 +480,23 @@
         }
         
         #settings-btn:hover {
-            box-shadow: 0 8px 25px rgba(156, 39, 176, 0.4);
+            box-shadow: 0 10px 30px rgba(156, 39, 176, 0.4);
         }
         
         /* 禁用状态 - 灰色 */
         .dock-button.disabled {
             background: linear-gradient(135deg, #9E9E9E 0%, #757575 100%);
             cursor: not-allowed;
-            box-shadow: 0 2px 8px rgba(158, 158, 158, 0.3);
+            box-shadow: 0 4px 15px rgba(158, 158, 158, 0.3);
         }
         
         .dock-button.disabled:hover {
             transform: none;
-            box-shadow: 0 2px 8px rgba(158, 158, 158, 0.3);
+            box-shadow: 0 4px 15px rgba(158, 158, 158, 0.3);
         }
         
         .emoji {
-            font-size: 28px;
+            font-size: 34px;
         }
         
         /* =============== 新增：半屏信息窗口样式 =============== */
@@ -682,17 +682,18 @@
             }
             
             .dock-bar {
-                padding: 10px 16px;
-                gap: 12px;
+                padding: 14px 24px;
+                gap: 16px;
+                border-radius: 40px;
             }
             
             .dock-button {
-                width: 48px;
-                height: 48px;
+                width: 60px;
+                height: 60px;
             }
             
             .emoji {
-                font-size: 24px;
+                font-size: 30px;
             }
             
             .info-content {
@@ -943,11 +944,11 @@ function showSettings() {
                     <p style="margin: 6px 0;">• 将摄像头对准乐器码以识别乐器</p>
                     <p style="margin: 6px 0;">• 点击"播放"按钮聆听乐器音乐</p>
                     <p style="margin: 6px 0;">• 点击"介绍"按钮查看详细信息</p>
-                    <p style="margin: 6px 0;">• 支持琵琶和葫芦丝两种乐器</p>
+                  
                 </div>
             </div>
             
-    
+            
         </div>
     `;
     

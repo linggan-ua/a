@@ -811,43 +811,36 @@ AFRAME.registerComponent('s19', {
         this.tick = AFRAME.utils.throttleTick(function () {
             var isVisible = markerElement.object3D.visible;
             
-            if (isVisible !== wasVisible) {
-                wasVisible = isVisible;
+            // 只在marker从不可见变为可见时处理（激活状态）
+            if (isVisible && !wasVisible) {
+                wasVisible = true;
                 
-                if (isVisible) {
-                    // marker被发现 - 立即响应
-                    console.log('Marker发现: ' + markerId);
-                    
-                    // 停止之前的音频
-                    if (currentAudioManager && currentAudioManager.audio && !currentAudioManager.audio.paused) {
-                        currentAudioManager.audio.pause();
-                    }
-                    
-                    // 设置当前音频管理器
-                    currentAudioManager = {
-                        markerId: markerId,
-                        audio: audioElement.audio,
-                        markdownFile: markdownFile,
-                        isPlaying: false
-                    };
-                    
-                    // 立即更新UI状态
-                    updateDockButtons();
-                    showNotification(`🎯 检测到${markerId === 'marker1' ? '琵琶' : '葫芦丝'}`);
-                    
-                } else {
-                    // marker丢失
-                    console.log('Marker丢失: ' + markerId);
-                    
-                    if (currentAudioManager && currentAudioManager.markerId === markerId) {
-                        if (currentAudioManager.audio && !currentAudioManager.audio.paused) {
-                            currentAudioManager.audio.pause();
-                        }
-                        currentAudioManager = null;
-                        updateDockButtons();
-                        showNotification('📱 请重新对准乐器码');
-                    }
+                // marker被发现 - 立即响应
+                console.log('Marker发现: ' + markerId);
+                
+                // 如果有其他乐器在播放，先停止
+                if (currentAudioManager && currentAudioManager.markerId !== markerId && 
+                    currentAudioManager.audio && !currentAudioManager.audio.paused) {
+                    currentAudioManager.audio.pause();
                 }
+                
+                // 设置当前音频管理器
+                currentAudioManager = {
+                    markerId: markerId,
+                    audio: audioElement.audio,
+                    markdownFile: markdownFile,
+                    isPlaying: currentAudioManager && currentAudioManager.markerId === markerId ? 
+                              currentAudioManager.isPlaying : false
+                };
+                
+                // 立即更新UI状态
+                updateDockButtons();
+                showNotification(`🎯 检测到${markerId === 'marker1' ? '琵琶' : '葫芦丝'}`);
+                
+            } else if (!isVisible && wasVisible) {
+                wasVisible = false;
+                console.log('Marker丢失: ' + markerId + ' (状态保持)');
+                // 不清除状态，用户可以继续播放音乐和查看介绍
             }
         }, 100); // 每100ms检查一次 - 快速响应
         

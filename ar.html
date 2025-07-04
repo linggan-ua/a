@@ -813,6 +813,36 @@ AFRAME.registerComponent('s19', {
                 }
             });
             
+            // 轻量级备用检测 - 仅在需要时触发，频率很低
+            var backupCheckCount = 0;
+            var backupCheck = function() {
+                backupCheckCount++;
+                var isVisible = markerElement.object3D.visible;
+                
+                // 只在模型可见但按钮未激活时才处理
+                if (isVisible && (!currentAudioManager || currentAudioManager.markerId !== markerId)) {
+                    console.log('备用检测触发: ' + markerId);
+                    
+                    currentAudioManager = {
+                        markerId: markerId,
+                        audio: audioElement.audio,
+                        markdownFile: markdownFile,
+                        isPlaying: false
+                    };
+                    
+                    updateDockButtons();
+                    showNotification(`🎯 检测到${markerId === 'marker1' ? '琵琶' : '葫芦丝'}`);
+                }
+                
+                // 每20次输出一次状态（1分钟一次）
+                if (backupCheckCount % 20 === 0) {
+                    console.log('备用检测状态 - ' + markerId + ': 可见=' + isVisible + ', 管理器=' + (currentAudioManager ? currentAudioManager.markerId : 'null'));
+                }
+            };
+            
+            // 每3秒低频检查一次 - 性能影响最小
+            setInterval(backupCheck, 3000);
+            
         }, 1000); // 确保AR.js加载完成
         
         console.log('=== s19组件初始化完成 ===');
@@ -873,7 +903,7 @@ function showSettings() {
                 <p style="margin: 8px 0; color: #666; font-size: 14px;">
                     <strong>岭南乐器增强现实视听工具</strong><br>
                     版本：1.0.0<br>
-                    技术支持：A-Frame AR<br>
+                    <br>
                     浏览器：${c3() ? '微信浏览器' : '标准浏览器'}
                 </p>
             </div>
@@ -884,19 +914,10 @@ function showSettings() {
                     <p style="margin: 6px 0;">• 将摄像头对准乐器码以识别乐器</p>
                     <p style="margin: 6px 0;">• 点击"播放"按钮聆听乐器音乐</p>
                     <p style="margin: 6px 0;">• 点击"介绍"按钮查看详细信息</p>
-                    <p style="margin: 6px 0;">• 支持琵琶和葫芦丝两种乐器</p>
                 </div>
             </div>
             
-            <div class="setting-item">
-                <label class="setting-label">🔗 技术栈</label>
-                <div style="color: #666; font-size: 14px;">
-                    <p style="margin: 4px 0;">• A-Frame 1.2.0 - WebXR框架</p>
-                    <p style="margin: 4px 0;">• AR.js 1.5.1 - AR标记识别</p>
-                    <p style="margin: 4px 0;">• Marked.js - Markdown渲染</p>
-                    <p style="margin: 4px 0;">• THREE.js - 3D图形引擎</p>
-                </div>
-            </div>
+           
         </div>
     `;
     
@@ -1130,7 +1151,7 @@ function startAR() {
     // 应用iOS视频修复（如果需要）
     applyIOSVideoFix();
 }
-
+}
 
 // iOS视频修复
 function applyIOSVideoFix() {

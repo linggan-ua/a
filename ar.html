@@ -713,11 +713,12 @@
   </style>
   <script>
 
-
+// =============== 全局变量和工具函数 - 所有浏览器可用 ===============
 let isARStarted = false;
 let startOverlay;
+let currentAudioManager = null;
 
-// 环境检测
+// 环境检测（仅用于显示，不影响功能）
 function getDeviceInfo() {
     const ua = navigator.userAgent;
     return {
@@ -727,6 +728,443 @@ function getDeviceInfo() {
         isDesktop: !/iPhone|iPad|iPod|Android/i.test(ua)
     };
 }
+
+function c3() {
+    return /MicroMessenger/i.test(navigator.userAgent);
+}
+
+// =============== 音频系统初始化 - 所有浏览器可用 ===============
+var audioCache = {};
+
+document.addEventListener('DOMContentLoaded', function () {
+    console.log('🎵 开始初始化音频系统 - 适用于所有浏览器');
+    
+    var audioFiles = ['audio1.mp3', 'audio2.mp3'];
+    audioFiles.forEach(function (filename) {
+        var audio = new Audio();
+        audio.src = filename;
+        audio.preload = 'auto';
+        audio.load();
+        audioCache[filename] = { audio: audio };
+        console.log('✅ 音频文件已加载: ' + filename);
+    });
+});
+
+// =============== A-Frame组件注册 - 所有浏览器可用 ===============
+
+// 旋转组件 - 所有浏览器可用
+AFRAME.registerComponent('o15', {
+    schema: {
+        x: { type: 'number', default: 0 },
+        y: { type: 'number', default: 0 },
+        z: { type: 'number', default: 0 }
+    },
+    init: function () {
+        console.log('🔄 o15 旋转组件初始化');
+        var element = this.el;
+        var rotationData = this.data;
+        element.addEventListener('model-loaded', function () {
+            var mesh = element.getObject3D('mesh');
+            if (!mesh) return;
+            mesh.rotation.set(
+                THREE.Math.degToRad(rotationData.x),
+                THREE.Math.degToRad(rotationData.y),
+                THREE.Math.degToRad(rotationData.z)
+            );
+            console.log('✅ 模型旋转已应用');
+        });
+    }
+});
+
+// Marker检测组件 - 所有浏览器可用
+AFRAME.registerComponent('s19', {
+    init: function () {
+        var markerElement = this.el;
+        var markerId = markerElement.getAttribute('id');
+        var audioFile = '';
+        var markdownFile = '';
+        
+        console.log('=== 🎯 s19组件初始化开始 ===');
+        console.log('Marker ID: ' + markerId);
+        console.log('浏览器类型: ' + (c3() ? '微信' : '标准浏览器'));
+        
+        // 根据marker ID确定对应的文件
+        if (markerId === 'marker1') {
+            audioFile = 'audio1.mp3';
+            markdownFile = 'instrument1.md';
+        } else if (markerId === 'marker2') {
+            audioFile = 'audio2.mp3';
+            markdownFile = 'instrument2.md';
+        }
+        
+        console.log('🎵 音频文件: ' + audioFile);
+        console.log('📖 Markdown文件: ' + markdownFile);
+        
+        // 获取或创建音频元素
+        var audioElement = audioCache[audioFile];
+        if (!audioElement) {
+            console.warn('⚠️ 从缓存中未找到音频 ' + audioFile + '，正在创建新的音频对象');
+            audioElement = { audio: new Audio() };
+            audioElement.audio.src = audioFile;
+            audioElement.audio.preload = 'auto';
+            audioElement.audio.load();
+            audioCache[audioFile] = audioElement;
+        } else {
+            console.log('✅ 从缓存中成功获取音频: ' + audioFile);
+        }
+        
+        // 延迟添加事件监听器，确保AR.js完全初始化
+        setTimeout(function() {
+            console.log('🔗 开始注册Marker事件监听器');
+            
+            // AR.js标准事件监听
+            markerElement.addEventListener('markerFound', function () {
+                console.log('🟢 markerFound 事件触发: ' + markerId);
+                
+                // 停止之前的音频
+                if (currentAudioManager && currentAudioManager.audio && !currentAudioManager.audio.paused) {
+                    currentAudioManager.audio.pause();
+                    console.log('⏸️ 停止之前的音频播放');
+                }
+                
+                // 设置当前音频管理器
+                currentAudioManager = {
+                    markerId: markerId,
+                    audio: audioElement.audio,
+                    markdownFile: markdownFile,
+                    isPlaying: false
+                };
+                
+                console.log('✅ 音频管理器已设置:', currentAudioManager);
+                
+                // 更新dock栏按钮状态
+                if (typeof updateDockButtons === 'function') {
+                    updateDockButtons();
+                    console.log('🔄 Dock按钮状态已更新');
+                } else {
+                    console.error('❌ updateDockButtons 函数未定义');
+                }
+                
+                // 显示通知
+                if (typeof showNotification === 'function') {
+                    showNotification(`🎯 检测到${markerId === 'marker1' ? '琵琶' : '葫芦丝'}`);
+                } else {
+                    console.error('❌ showNotification 函数未定义');
+                }
+            });
+            
+            markerElement.addEventListener('markerLost', function () {
+                console.log('🔴 markerLost 事件触发: ' + markerId);
+                
+                // marker丢失时的处理
+                if (currentAudioManager && currentAudioManager.markerId === markerId) {
+                    if (currentAudioManager.audio && !currentAudioManager.audio.paused) {
+                        currentAudioManager.audio.pause();
+                        console.log('⏸️ 因marker丢失，停止音频播放');
+                    }
+                    currentAudioManager = null;
+                    
+                    if (typeof updateDockButtons === 'function') {
+                        updateDockButtons();
+                    }
+                    if (typeof showNotification === 'function') {
+                        showNotification('📱 请重新对准乐器码');
+                    }
+                }
+            });
+            
+            console.log('✅ Marker事件监听器注册完成');
+            
+            // 备用检测机制 - 用于调试和兜底
+            var checkCount = 0;
+            var checkVisible = function() {
+                checkCount++;
+                var isVisible = markerElement.object3D.visible;
+                
+                if (checkCount % 10 === 0) { // 每5秒输出一次状态
+                    console.log('🔍 定期检查 - Marker ' + markerId + ' 可见性: ' + isVisible);
+                }
+                
+                // 如果3D对象可见但没有音频管理器，手动触发
+                if (isVisible && (!currentAudioManager || currentAudioManager.markerId !== markerId)) {
+                    console.log('🔧 检测到可见但未激活，手动触发激活: ' + markerId);
+                    
+                    currentAudioManager = {
+                        markerId: markerId,
+                        audio: audioElement.audio,
+                        markdownFile: markdownFile,
+                        isPlaying: false
+                    };
+                    
+                    if (typeof updateDockButtons === 'function') {
+                        updateDockButtons();
+                    }
+                    if (typeof showNotification === 'function') {
+                        showNotification(`🎯 检测到${markerId === 'marker1' ? '琵琶' : '葫芦丝'}`);
+                    }
+                }
+            };
+            
+            // 每500ms检查一次
+            setInterval(checkVisible, 500);
+            console.log('🔄 定期检查机制已启动');
+            
+        }, 2000); // 延迟2秒确保AR.js完全加载
+        
+        console.log('=== ✅ s19组件初始化完成 ===');
+    }
+});
+
+// =============== Dock栏功能 - 所有浏览器可用 ===============
+
+// 音频播放控制
+function toggleAudio() {
+    console.log('🎵 toggleAudio 被调用');
+    const playBtn = document.getElementById('play-btn');
+    
+    if (!currentAudioManager || !currentAudioManager.audio) {
+        console.log('⚠️ 没有当前音频管理器');
+        showNotification('⚠️ 请先对准乐器码');
+        return;
+    }
+    
+    const audio = currentAudioManager.audio;
+    
+    if (audio.readyState < 2) {
+        console.log('⏳ 音频未准备就绪');
+        showNotification('🔄 音频加载中...');
+        return;
+    }
+    
+    if (audio.paused) {
+        console.log('▶️ 开始播放音频');
+        audio.play().then(() => {
+            playBtn.innerHTML = '<span class="emoji">⏸️</span>暂停';
+            playBtn.classList.add('playing');
+            currentAudioManager.isPlaying = true;
+        }).catch(error => {
+            console.error('❌ Audio playback failed:', error);
+            showNotification('❌ 播放失败');
+        });
+    } else {
+        console.log('⏸️ 暂停音频');
+        audio.pause();
+        playBtn.innerHTML = '<span class="emoji">🎵</span>播放';
+        playBtn.classList.remove('playing');
+        currentAudioManager.isPlaying = false;
+    }
+}
+
+// 显示信息面板
+function showInfo() {
+    console.log('📖 showInfo 被调用');
+    if (!currentAudioManager || !currentAudioManager.markdownFile) {
+        console.log('⚠️ 没有当前markdown文件');
+        showNotification('⚠️ 请先对准乐器码');
+        return;
+    }
+    
+    loadMarkdownContent(currentAudioManager.markdownFile);
+}
+
+// 显示设置面板
+function showSettings() {
+    console.log('⚙️ showSettings 被调用');
+    const settingsContent = `
+        <div class="settings-grid">
+            <div class="setting-item">
+                <label class="setting-label">🔊 音量控制</label>
+                <div class="volume-control">
+                    <span>🔇</span>
+                    <input type="range" min="0" max="100" value="70" class="volume-slider" id="volume-slider">
+                    <span>🔊</span>
+                    <span class="volume-value" id="volume-value">70%</span>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <label class="setting-label">🎯 AR设置</label>
+                <select class="setting-control">
+                    <option>标准识别精度</option>
+                    <option>高精度识别</option>
+                    <option>快速识别</option>
+                </select>
+            </div>
+            
+            <div class="setting-item">
+                <label class="setting-label">🌟 体验模式</label>
+                <select class="setting-control">
+                    <option>完整体验</option>
+                    <option>静音模式</option>
+                    <option>展示模式</option>
+                </select>
+            </div>
+            
+            <div class="setting-item">
+                <label class="setting-label">ℹ️ 关于</label>
+                <p style="margin: 8px 0; color: #666; font-size: 14px;">
+                    岭南乐器增强现实视听工具<br>
+                    版本：1.0.0<br>
+                    技术支持：A-Frame AR<br>
+                    浏览器：${c3() ? '微信浏览器' : '标准浏览器'}
+                </p>
+            </div>
+        </div>
+    `;
+    
+    showInfoPanel('⚙️ 设置', settingsContent);
+    
+    // 绑定音量控制事件
+    setTimeout(() => {
+        const volumeSlider = document.getElementById('volume-slider');
+        const volumeValue = document.getElementById('volume-value');
+        
+        if (volumeSlider && volumeValue) {
+            volumeSlider.addEventListener('input', function() {
+                const volume = this.value / 100;
+                volumeValue.textContent = this.value + '%';
+                
+                // 应用音量到所有音频
+                document.querySelectorAll('audio').forEach(audio => {
+                    audio.volume = volume;
+                });
+                
+                // 应用到缓存的音频
+                Object.values(audioCache).forEach(item => {
+                    if (item.audio) {
+                        item.audio.volume = volume;
+                    }
+                });
+                
+                console.log('🔊 音量调整为: ' + this.value + '%');
+            });
+        }
+    }, 100);
+}
+
+// 加载Markdown内容
+async function loadMarkdownContent(filename) {
+    console.log('📄 加载Markdown文件: ' + filename);
+    try {
+        const response = await fetch(filename);
+        if (!response.ok) {
+            throw new Error('无法加载内容：' + response.status);
+        }
+        
+        const markdownText = await response.text();
+        console.log('✅ Markdown内容加载成功，长度：' + markdownText.length);
+        
+        // 检查marked是否可用
+        if (typeof marked === 'undefined') {
+            console.error('❌ marked.js 未加载');
+            showNotification('❌ Markdown渲染器未加载');
+            return;
+        }
+        
+        const htmlContent = marked.parse(markdownText);
+        console.log('✅ Markdown渲染完成');
+        
+        showInfoPanel('📖 乐器介绍', `<div class="markdown-content">${htmlContent}</div>`);
+        
+    } catch (error) {
+        console.error('❌ 加载Markdown失败:', error);
+        showNotification('❌ 加载介绍失败：' + error.message);
+    }
+}
+
+// 显示信息面板
+function showInfoPanel(title, content) {
+    console.log('📋 显示信息面板: ' + title);
+    let infoPanel = document.getElementById('info-panel');
+    
+    if (!infoPanel) {
+        infoPanel = document.createElement('div');
+        infoPanel.id = 'info-panel';
+        infoPanel.className = 'info-panel';
+        infoPanel.innerHTML = `
+            <div class="info-panel-header">
+                <h3 class="info-title"></h3>
+                <button class="close-btn" onclick="hideInfoPanel()">×</button>
+            </div>
+            <div class="info-content"></div>
+        `;
+        document.body.appendChild(infoPanel);
+    }
+    
+    infoPanel.querySelector('.info-title').textContent = title;
+    infoPanel.querySelector('.info-content').innerHTML = content;
+    infoPanel.classList.add('active');
+}
+
+// 隐藏信息面板
+function hideInfoPanel() {
+    console.log('❌ 隐藏信息面板');
+    const infoPanel = document.getElementById('info-panel');
+    if (infoPanel) {
+        infoPanel.classList.remove('active');
+    }
+}
+
+// 显示通知
+function showNotification(message) {
+    console.log('📢 显示通知: ' + message);
+    // 创建临时通知元素
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 25px;
+        font-size: 14px;
+        z-index: 1000;
+        pointer-events: none;
+    `;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 2000);
+}
+
+// 更新dock按钮状态
+function updateDockButtons() {
+    console.log('🔄 updateDockButtons 被调用');
+    const playBtn = document.getElementById('play-btn');
+    const infoBtn = document.getElementById('info-btn');
+    
+    if (!playBtn || !infoBtn) {
+        console.error('❌ Dock按钮未找到');
+        return;
+    }
+    
+    if (currentAudioManager) {
+        console.log('✅ 激活dock按钮');
+        playBtn.classList.remove('disabled');
+        infoBtn.classList.remove('disabled');
+        
+        if (currentAudioManager.isPlaying) {
+            playBtn.innerHTML = '<span class="emoji">⏸️</span>暂停';
+            playBtn.classList.add('playing');
+        } else {
+            playBtn.innerHTML = '<span class="emoji">🎵</span>播放';
+            playBtn.classList.remove('playing');
+        }
+    } else {
+        console.log('🚫 禁用dock按钮');
+        playBtn.classList.add('disabled');
+        infoBtn.classList.add('disabled');
+        playBtn.innerHTML = '<span class="emoji">🎵</span>播放';
+        playBtn.classList.remove('playing');
+    }
+}
+
+// =============== 启动系统 - 所有浏览器可用 ===============
 
 // 创建启动覆盖层
 function createStartOverlay() {
@@ -823,7 +1261,7 @@ function createStartOverlay() {
 function startAR() {
     if (isARStarted) return;
     
-    console.log('用户点击启动AR');
+    console.log('🚀 用户点击启动AR');
     isARStarted = true;
     
     // 隐藏启动覆盖层
@@ -837,12 +1275,13 @@ function startAR() {
     const dockContainer = document.getElementById('dock-container');
     if (dockContainer) {
         dockContainer.classList.add('active');
+        console.log('✅ Dock栏已显示');
     }
     
     // 应用iOS视频修复（如果需要）
     applyIOSVideoFix();
     
-    console.log('AR启动完成');
+    console.log('✅ AR启动完成');
 }
 
 // iOS视频修复
@@ -867,7 +1306,7 @@ function applyIOSVideoFix() {
                     video.setAttribute('webkit-playsinline', 'true');
                     video.setAttribute('muted', '');
                     video.setAttribute('data-ios-fixed', 'true');
-                    console.log('iOS视频属性修复完成');
+                    console.log('📱 iOS视频属性修复完成');
                 }
             });
             return;
@@ -883,7 +1322,7 @@ function applyIOSVideoFix() {
 
 // 处理权限被拒绝
 function handlePermissionDenied() {
-    console.log('检测到权限被拒绝');
+    console.log('❌ 检测到权限被拒绝');
     
     const device = getDeviceInfo();
     
@@ -987,197 +1426,9 @@ function backToStart() {
     isARStarted = false;
 }
 
-// =============== 新增：Dock栏功能 ===============
-
-// 全局音频管理器
-let currentAudioManager = null;
-
-// 音频播放控制
-function toggleAudio() {
-    const playBtn = document.getElementById('play-btn');
-    
-    if (!currentAudioManager || !currentAudioManager.audio) {
-        showNotification('⚠️ 请先对准乐器码');
-        return;
-    }
-    
-    const audio = currentAudioManager.audio;
-    
-    if (audio.readyState < 2) {
-        showNotification('🔄 音频加载中...');
-        return;
-    }
-    
-    if (audio.paused) {
-        audio.play().then(() => {
-            playBtn.innerHTML = '<span class="emoji">⏸️</span>暂停';
-            playBtn.classList.add('playing');
-            currentAudioManager.isPlaying = true;
-        }).catch(error => {
-            console.error('Audio playback failed:', error);
-            showNotification('❌ 播放失败');
-        });
-    } else {
-        audio.pause();
-        playBtn.innerHTML = '<span class="emoji">🎵</span>播放';
-        playBtn.classList.remove('playing');
-        currentAudioManager.isPlaying = false;
-    }
-}
-
-// 显示信息面板
-function showInfo() {
-    if (!currentAudioManager || !currentAudioManager.markdownFile) {
-        showNotification('⚠️ 请先对准乐器码');
-        return;
-    }
-    
-    loadMarkdownContent(currentAudioManager.markdownFile);
-}
-
-// 显示设置面板
-function showSettings() {
-    const settingsContent = `
-        <div class="settings-grid">
-            <div class="setting-item">
-                <label class="setting-label">🔊 音量控制</label>
-                <div class="volume-control">
-                    <span>🔇</span>
-                    <input type="range" min="0" max="100" value="70" class="volume-slider" id="volume-slider">
-                    <span>🔊</span>
-                    <span class="volume-value" id="volume-value">70%</span>
-                </div>
-            </div>
-            
-            <div class="setting-item">
-                <label class="setting-label">🎯 AR设置</label>
-                <select class="setting-control">
-                    <option>标准识别精度</option>
-                    <option>高精度识别</option>
-                    <option>快速识别</option>
-                </select>
-            </div>
-            
-            <div class="setting-item">
-                <label class="setting-label">🌟 体验模式</label>
-                <select class="setting-control">
-                    <option>完整体验</option>
-                    <option>静音模式</option>
-                    <option>展示模式</option>
-                </select>
-            </div>
-            
-            <div class="setting-item">
-                <label class="setting-label">ℹ️ 关于</label>
-                <p style="margin: 8px 0; color: #666; font-size: 14px;">
-                    岭南乐器增强现实视听工具<br>
-                    版本：1.0.0<br>
-                    技术支持：A-Frame AR
-                </p>
-            </div>
-        </div>
-    `;
-    
-    showInfoPanel('⚙️ 设置', settingsContent);
-    
-    // 绑定音量控制事件
-    setTimeout(() => {
-        const volumeSlider = document.getElementById('volume-slider');
-        const volumeValue = document.getElementById('volume-value');
-        
-        if (volumeSlider && volumeValue) {
-            volumeSlider.addEventListener('input', function() {
-                const volume = this.value / 100;
-                volumeValue.textContent = this.value + '%';
-                
-                // 应用音量到所有音频
-                document.querySelectorAll('audio').forEach(audio => {
-                    audio.volume = volume;
-                });
-            });
-        }
-    }, 100);
-}
-
-// 加载Markdown内容
-async function loadMarkdownContent(filename) {
-    try {
-        const response = await fetch(filename);
-        if (!response.ok) {
-            throw new Error('无法加载内容');
-        }
-        
-        const markdownText = await response.text();
-        const htmlContent = marked.parse(markdownText);
-        
-        showInfoPanel('📖 乐器介绍', `<div class="markdown-content">${htmlContent}</div>`);
-        
-    } catch (error) {
-        console.error('加载Markdown失败:', error);
-        showNotification('❌ 加载介绍失败');
-    }
-}
-
-// 显示信息面板
-function showInfoPanel(title, content) {
-    let infoPanel = document.getElementById('info-panel');
-    
-    if (!infoPanel) {
-        infoPanel = document.createElement('div');
-        infoPanel.id = 'info-panel';
-        infoPanel.className = 'info-panel';
-        infoPanel.innerHTML = `
-            <div class="info-panel-header">
-                <h3 class="info-title"></h3>
-                <button class="close-btn" onclick="hideInfoPanel()">×</button>
-            </div>
-            <div class="info-content"></div>
-        `;
-        document.body.appendChild(infoPanel);
-    }
-    
-    infoPanel.querySelector('.info-title').textContent = title;
-    infoPanel.querySelector('.info-content').innerHTML = content;
-    infoPanel.classList.add('active');
-}
-
-// 隐藏信息面板
-function hideInfoPanel() {
-    const infoPanel = document.getElementById('info-panel');
-    if (infoPanel) {
-        infoPanel.classList.remove('active');
-    }
-}
-
-// 显示通知
-function showNotification(message) {
-    // 创建临时通知元素
-    const notification = document.createElement('div');
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 12px 20px;
-        border-radius: 25px;
-        font-size: 14px;
-        z-index: 1000;
-        pointer-events: none;
-    `;
-    notification.textContent = message;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.remove();
-    }, 2000);
-}
-
 // 页面加载完成后显示启动覆盖层
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('页面加载完成，显示启动界面');
+    console.log('🎬 页面加载完成，显示启动界面');
     createStartOverlay();
     
     // 监听权限被拒绝错误
@@ -1185,183 +1436,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isARStarted && event.reason && 
             (event.reason.name === 'NotAllowedError' || 
              event.reason.message && event.reason.message.includes('not allowed'))) {
-            console.log('捕获到权限拒绝错误');
+            console.log('❌ 捕获到权限拒绝错误');
             event.preventDefault();
             setTimeout(handlePermissionDenied, 500);
         }
     });
 });
-
-// 检测是否在微信浏览器中打开
-function c3() {
-    return /MicroMessenger/i.test(navigator.userAgent);
-}
-
-var d4 = c3();
-if (d4) {
-    // 更新的音频系统代码
-    var audioCache = {};
-    
-    document.addEventListener('DOMContentLoaded', function () {
-        var audioFiles = ['audio1.mp3', 'audio2.mp3'];
-        audioFiles.forEach(function (filename) {
-            var audio = new Audio();
-            audio.src = filename;
-            audio.preload = 'auto';
-            audio.load();
-            audioCache[filename] = { audio: audio };
-        });
-    });
-
-    // 更新的AFRAME组件代码
-    AFRAME.registerComponent('o15', {
-        schema: {
-            x: { type: 'number', default: 0 },
-            y: { type: 'number', default: 0 },
-            z: { type: 'number', default: 0 }
-        },
-        init: function () {
-            var element = this.el;
-            var rotationData = this.data;
-            element.addEventListener('model-loaded', function () {
-                var mesh = element.getObject3D('mesh');
-                if (!mesh) return;
-                mesh.rotation.set(
-                    THREE.Math.degToRad(rotationData.x),
-                    THREE.Math.degToRad(rotationData.y),
-                    THREE.Math.degToRad(rotationData.z)
-                );
-            });
-        }
-    });
-
-    AFRAME.registerComponent('s19', {
-        init: function () {
-            var markerElement = this.el;
-            var markerId = markerElement.getAttribute('id');
-            var audioFile = '';
-            var markdownFile = '';
-            
-            console.log('Initializing marker component for: ' + markerId);
-            
-            // 根据marker ID确定对应的文件
-            if (markerId === 'marker1') {
-                audioFile = 'audio1.mp3';
-                markdownFile = 'instrument1.md';
-            } else if (markerId === 'marker2') {
-                audioFile = 'audio2.mp3';
-                markdownFile = 'instrument2.md';
-            }
-            
-            console.log('Audio file: ' + audioFile + ', Markdown file: ' + markdownFile);
-            
-            var audioElement = audioCache[audioFile];
-            if (!audioElement) {
-                console.error('Audio not found for ' + audioFile);
-                audioElement = { audio: new Audio() };
-                audioElement.audio.src = audioFile;
-                audioElement.audio.preload = 'auto';
-                audioElement.audio.load();
-                audioCache[audioFile] = audioElement;
-            }
-            
-            // 确保事件监听器在场景准备就绪后添加
-            var self = this;
-            setTimeout(function() {
-                console.log('Adding event listeners for marker: ' + markerId);
-                
-                // 使用AR.js的事件系统检测marker
-                markerElement.addEventListener('markerFound', function () {
-                    console.log('✅ Marker found event triggered: ' + markerId);
-                    
-                    // 停止之前的音频
-                    if (currentAudioManager && currentAudioManager.audio && !currentAudioManager.audio.paused) {
-                        currentAudioManager.audio.pause();
-                    }
-                    
-                    // 设置当前音频管理器
-                    currentAudioManager = {
-                        markerId: markerId,
-                        audio: audioElement.audio,
-                        markdownFile: markdownFile,
-                        isPlaying: false
-                    };
-                    
-                    console.log('Current audio manager set:', currentAudioManager);
-                    
-                    // 更新dock栏按钮状态
-                    updateDockButtons();
-                    
-                    // 显示通知
-                    showNotification(`🎯 检测到${markerId === 'marker1' ? '琵琶' : '葫芦丝'}`);
-                });
-                
-                markerElement.addEventListener('markerLost', function () {
-                    console.log('❌ Marker lost event triggered: ' + markerId);
-                    
-                    // marker丢失时的处理
-                    if (currentAudioManager && currentAudioManager.markerId === markerId) {
-                        if (currentAudioManager.audio && !currentAudioManager.audio.paused) {
-                            currentAudioManager.audio.pause();
-                        }
-                        currentAudioManager = null;
-                        updateDockButtons();
-                        showNotification('📱 请重新对准乐器码');
-                    }
-                });
-                
-                // 添加一个检测机制，定期检查marker状态
-                var checkVisible = function() {
-                    var isVisible = markerElement.object3D.visible;
-                    console.log('Marker ' + markerId + ' visible: ' + isVisible);
-                    
-                    // 如果3D对象可见但没有音频管理器，手动触发
-                    if (isVisible && (!currentAudioManager || currentAudioManager.markerId !== markerId)) {
-                        console.log('🔧 Manually triggering marker found for: ' + markerId);
-                        
-                        currentAudioManager = {
-                            markerId: markerId,
-                            audio: audioElement.audio,
-                            markdownFile: markdownFile,
-                            isPlaying: false
-                        };
-                        
-                        updateDockButtons();
-                        showNotification(`🎯 检测到${markerId === 'marker1' ? '琵琶' : '葫芦丝'}`);
-                    }
-                };
-                
-                // 每500ms检查一次
-                setInterval(checkVisible, 500);
-                
-            }, 1000);
-        }
-    });
-}
-
-// 更新dock按钮状态
-function updateDockButtons() {
-    const playBtn = document.getElementById('play-btn');
-    const infoBtn = document.getElementById('info-btn');
-    
-    if (currentAudioManager) {
-        playBtn.classList.remove('disabled');
-        infoBtn.classList.remove('disabled');
-        
-        if (currentAudioManager.isPlaying) {
-            playBtn.innerHTML = '<span class="emoji">⏸️</span>暂停';
-            playBtn.classList.add('playing');
-        } else {
-            playBtn.innerHTML = '<span class="emoji">🎵</span>播放';
-            playBtn.classList.remove('playing');
-        }
-    } else {
-        playBtn.classList.add('disabled');
-        infoBtn.classList.add('disabled');
-        playBtn.innerHTML = '<span class="emoji">🎵</span>播放';
-        playBtn.classList.remove('playing');
-    }
-}
 
   </script>
  </head>

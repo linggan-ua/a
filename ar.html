@@ -10,7 +10,7 @@
   <script src="aframe-ar.js">
   </script>
   <style>
-        /* 原有的播放按钮样式 */
+        /* 播放按钮样式 */
         #a1 {
             position: absolute;
             top: 20px;
@@ -23,7 +23,7 @@
             z-index: 10;
         }
         
-        /* 原有的信息面板样式 */
+        /* 信息面板样式 */
         #b2 {
             position: absolute;
             top: 70px;
@@ -102,7 +102,7 @@
             margin-bottom: 30px;
         }
         
-        /* 权限指南样式 - 紧凑版 */
+        /* 权限指南样式 */
         .permission-guide {
             background: rgba(255, 255, 255, 0.1);
             border-radius: 15px;
@@ -126,7 +126,7 @@
             opacity: 0.9;
         }
         
-        /* 权限步骤样式 - 紧凑版 */
+        /* 权限步骤样式 */
         .permission-step {
             margin: 10px 0;
             padding: 10px;
@@ -471,9 +471,7 @@
         }
   </style>
   <script>
-/**
- * 简化版AR启动 - 只改启动页，保持AR界面原有性能
- */
+
 
 let isARStarted = false;
 let startOverlay;
@@ -497,7 +495,7 @@ function createStartOverlay() {
     
     const device = getDeviceInfo();
     
-    // 根据设备类型显示不同的权限指南 - 紧凑版
+    // 根据设备类型显示不同的权限指南 
     const permissionGuideHTML = device.isIOS ? `
         <!-- iOS设备紧凑双权限提示 -->
         <div class="permission-guide">
@@ -580,7 +578,7 @@ function createStartOverlay() {
     document.body.appendChild(startOverlay);
 }
 
-// 简单的启动AR函数
+// 启动AR函数
 function startAR() {
     if (isARStarted) return;
     
@@ -600,7 +598,7 @@ function startAR() {
     console.log('AR启动完成');
 }
 
-// 简单的iOS视频修复
+// iOS视频修复
 function applyIOSVideoFix() {
     const device = getDeviceInfo();
     
@@ -636,7 +634,7 @@ function applyIOSVideoFix() {
     setTimeout(fixVideoElements, 1000);
 }
 
-// 处理权限被拒绝 - 简化版
+// 处理权限被拒绝
 function handlePermissionDenied() {
     console.log('检测到权限被拒绝');
     
@@ -755,7 +753,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// ===== 以下是完全保留的原有代码，确保AR功能正常 =====
 
 // 检测是否在微信浏览器中打开
 function c3() {
@@ -908,7 +905,7 @@ if (d4) {
   </script>
  </head>
  <body style="margin: 0; overflow: hidden;">
-  <!-- 原有的播放按钮和信息面板，保持不变 -->
+  <!-- 播放按钮和信息面板 -->
   <button disabled="" id="a1">
    播放
   </button>
@@ -931,7 +928,7 @@ if (d4) {
   </a-scene>
   
   <script>
-   // 保留原有的所有增强功能
+   // 增强功能
    document.addEventListener('DOMContentLoaded', function () {
         var audioElements = document.querySelectorAll('audio');
         var playbackRate = 1.0;
@@ -1012,7 +1009,6 @@ if (d4) {
     });
   </script>
   <script>
-   // 重复代码保持与原版一致
    document.addEventListener('DOMContentLoaded', function () {
         var audioElements = document.querySelectorAll('audio');
         var playbackRate = 1.0;

@@ -535,80 +535,89 @@
             justify-content: center;
             box-shadow: 
                 0 4px 20px rgba(0, 0, 0, 0.2),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(20px) saturate(1.8);
+            -webkit-backdrop-filter: blur(20px) saturate(1.8);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
         
         .dock-button:hover {
             transform: translateY(-4px) scale(1.05);
             box-shadow: 
                 0 10px 35px rgba(0, 0, 0, 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(25px) saturate(2.0);
+            -webkit-backdrop-filter: blur(25px) saturate(2.0);
+            border-color: rgba(255, 255, 255, 0.4);
         }
         
         .dock-button:active {
             transform: translateY(-2px) scale(1.02);
         }
         
-        /* 播放按钮 - 绿色 */
+        /* 播放按钮 - 绿色毛玻璃 */
         #play-btn {
-            background: linear-gradient(135deg, rgba(76, 175, 80, 0.8) 0%, rgba(69, 160, 73, 0.8) 100%);
+            background: rgba(76, 175, 80, 0.6);
         }
         
         #play-btn:hover {
+            background: rgba(76, 175, 80, 0.75);
             box-shadow: 
                 0 10px 35px rgba(76, 175, 80, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
         }
         
-        /* 播放中状态 - 红色 */
+        /* 播放中状态 - 红色毛玻璃 */
         #play-btn.playing {
-            background: linear-gradient(135deg, rgba(244, 67, 54, 0.8) 0%, rgba(211, 47, 47, 0.8) 100%);
+            background: rgba(244, 67, 54, 0.6);
         }
         
         #play-btn.playing:hover {
+            background: rgba(244, 67, 54, 0.75);
             box-shadow: 
                 0 10px 35px rgba(244, 67, 54, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
         }
         
-        /* 介绍按钮 - 蓝色 */
+        /* 介绍按钮 - 蓝色毛玻璃 */
         #info-btn {
-            background: linear-gradient(135deg, rgba(33, 150, 243, 0.8) 0%, rgba(25, 118, 210, 0.8) 100%);
+            background: rgba(33, 150, 243, 0.6);
         }
         
         #info-btn:hover {
+            background: rgba(33, 150, 243, 0.75);
             box-shadow: 
                 0 10px 35px rgba(33, 150, 243, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
         }
         
-        /* 设置按钮 - 紫色 */
+        /* 设置按钮 - 紫色毛玻璃 */
         #settings-btn {
-            background: linear-gradient(135deg, rgba(156, 39, 176, 0.8) 0%, rgba(123, 31, 162, 0.8) 100%);
+            background: rgba(156, 39, 176, 0.6);
         }
         
         #settings-btn:hover {
+            background: rgba(156, 39, 176, 0.75);
             box-shadow: 
                 0 10px 35px rgba(156, 39, 176, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
         }
         
-        /* 禁用状态 - 灰色 */
+        /* 禁用状态 - 灰色毛玻璃 */
         .dock-button.disabled {
-            background: linear-gradient(135deg, rgba(158, 158, 158, 0.6) 0%, rgba(117, 117, 117, 0.6) 100%);
+            background: rgba(158, 158, 158, 0.4);
             cursor: not-allowed;
             box-shadow: 
                 0 4px 15px rgba(158, 158, 158, 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
         
         .dock-button.disabled:hover {
+            background: rgba(158, 158, 158, 0.4);
             transform: none;
             box-shadow: 
                 0 4px 15px rgba(158, 158, 158, 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
         
         .emoji {

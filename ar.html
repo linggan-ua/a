@@ -494,8 +494,10 @@
          * 1. 移除了backdrop-filter（性能杀手）
          * 2. 使用多层渐变叠加模拟毛玻璃效果
          * 3. 启用硬件加速（translateZ(0)）
-         * 4. 这种方案性能提升80%+，特别适合移动设备
-         * 5. 视觉效果接近真实毛玻璃，但CPU消耗极低
+         * 4. 提高不透明度增强可读性（75%-95%范围）
+         * 5. 这种方案性能提升80%+，特别适合移动设备
+         * 6. 视觉效果接近真实毛玻璃，但CPU消耗极低
+         * 7. 顶部信息框也使用相同的高性能方案
          */
         .dock-container {
             position: fixed;
@@ -514,26 +516,26 @@
         }
         
         .dock-bar {
-            /* 高性能伪毛玻璃方案 - 分层渐变叠加 */
+            /* 高性能伪毛玻璃方案 - 提高不透明度增强可读性 */
             background: 
                 linear-gradient(135deg, 
-                    rgba(255, 255, 255, 0.15) 0%, 
-                    rgba(255, 255, 255, 0.08) 25%,
-                    rgba(255, 255, 255, 0.12) 50%,
-                    rgba(255, 255, 255, 0.06) 75%,
-                    rgba(255, 255, 255, 0.18) 100%),
+                    rgba(255, 255, 255, 0.25) 0%, 
+                    rgba(255, 255, 255, 0.15) 25%,
+                    rgba(255, 255, 255, 0.22) 50%,
+                    rgba(255, 255, 255, 0.12) 75%,
+                    rgba(255, 255, 255, 0.28) 100%),
                 linear-gradient(45deg, 
-                    rgba(255, 255, 255, 0.1),
-                    rgba(255, 255, 255, 0.05)),
-                rgba(255, 255, 255, 0.08);
+                    rgba(255, 255, 255, 0.18),
+                    rgba(255, 255, 255, 0.12)),
+                rgba(255, 255, 255, 0.16);
             border-radius: 45px;
             padding: 16px 28px;
             box-shadow: 
                 0 8px 40px rgba(0, 0, 0, 0.25),
                 0 2px 16px rgba(0, 0, 0, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.3),
-                inset 0 -1px 0 rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+                inset 0 1px 0 rgba(255, 255, 255, 0.4),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
             display: flex;
             gap: 20px;
             align-items: center;
@@ -555,16 +557,16 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            /* 高性能伪毛玻璃效果 - 多层叠加方案 */
+            /* 高性能伪毛玻璃效果 - 提高不透明度增强可读性 */
             background: linear-gradient(135deg, 
-                rgba(255, 255, 255, 0.1) 0%, 
-                rgba(255, 255, 255, 0.05) 50%, 
-                rgba(255, 255, 255, 0.15) 100%);
+                rgba(255, 255, 255, 0.2) 0%, 
+                rgba(255, 255, 255, 0.12) 50%, 
+                rgba(255, 255, 255, 0.25) 100%);
             box-shadow: 
                 0 4px 20px rgba(0, 0, 0, 0.15),
-                inset 0 1px 0 rgba(255, 255, 255, 0.4),
-                inset 0 -1px 0 rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+                inset 0 1px 0 rgba(255, 255, 255, 0.5),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
             /* 启用硬件加速，但移除backdrop-filter */
             transform: translateZ(0);
             will-change: transform;
@@ -573,149 +575,149 @@
         .dock-button:hover {
             transform: translateY(-4px) scale(1.05) translateZ(0);
             background: linear-gradient(135deg, 
-                rgba(255, 255, 255, 0.2) 0%, 
-                rgba(255, 255, 255, 0.1) 50%, 
-                rgba(255, 255, 255, 0.25) 100%);
+                rgba(255, 255, 255, 0.3) 0%, 
+                rgba(255, 255, 255, 0.18) 50%, 
+                rgba(255, 255, 255, 0.35) 100%);
             box-shadow: 
                 0 10px 35px rgba(0, 0, 0, 0.25),
-                inset 0 1px 0 rgba(255, 255, 255, 0.5),
-                inset 0 -1px 0 rgba(255, 255, 255, 0.2);
-            border-color: rgba(255, 255, 255, 0.4);
+                inset 0 1px 0 rgba(255, 255, 255, 0.6),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.5);
         }
         
         .dock-button:active {
             transform: translateY(-2px) scale(1.02);
         }
         
-        /* 播放按钮 - 紫色伪毛玻璃 */
+        /* 播放按钮 - 紫色伪毛玻璃（提高不透明度） */
         #play-btn {
-            background: linear-gradient(135deg, 
-                rgba(156, 39, 176, 0.6) 0%,
-                rgba(156, 39, 176, 0.3) 50%,
-                rgba(156, 39, 176, 0.7) 100%),
-                linear-gradient(45deg, 
-                rgba(255, 255, 255, 0.1),
-                rgba(255, 255, 255, 0.05));
-        }
-        
-        #play-btn:hover {
             background: linear-gradient(135deg, 
                 rgba(156, 39, 176, 0.75) 0%,
                 rgba(156, 39, 176, 0.5) 50%,
                 rgba(156, 39, 176, 0.85) 100%),
                 linear-gradient(45deg, 
-                rgba(255, 255, 255, 0.2),
-                rgba(255, 255, 255, 0.1));
+                rgba(255, 255, 255, 0.15),
+                rgba(255, 255, 255, 0.08));
+        }
+        
+        #play-btn:hover {
+            background: linear-gradient(135deg, 
+                rgba(156, 39, 176, 0.9) 0%,
+                rgba(156, 39, 176, 0.7) 50%,
+                rgba(156, 39, 176, 0.95) 100%),
+                linear-gradient(45deg, 
+                rgba(255, 255, 255, 0.25),
+                rgba(255, 255, 255, 0.15));
             box-shadow: 
                 0 10px 35px rgba(156, 39, 176, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.5),
-                inset 0 -1px 0 rgba(255, 255, 255, 0.2);
+                inset 0 1px 0 rgba(255, 255, 255, 0.6),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.25);
         }
         
-        /* 播放中状态 - 深紫色伪毛玻璃 */
+        /* 播放中状态 - 深紫色伪毛玻璃（提高不透明度） */
         #play-btn.playing {
-            background: linear-gradient(135deg, 
-                rgba(123, 31, 162, 0.65) 0%,
-                rgba(123, 31, 162, 0.35) 50%,
-                rgba(123, 31, 162, 0.75) 100%),
-                linear-gradient(45deg, 
-                rgba(255, 255, 255, 0.1),
-                rgba(255, 255, 255, 0.05));
-        }
-        
-        #play-btn.playing:hover {
             background: linear-gradient(135deg, 
                 rgba(123, 31, 162, 0.8) 0%,
                 rgba(123, 31, 162, 0.55) 50%,
                 rgba(123, 31, 162, 0.9) 100%),
                 linear-gradient(45deg, 
-                rgba(255, 255, 255, 0.2),
-                rgba(255, 255, 255, 0.1));
+                rgba(255, 255, 255, 0.15),
+                rgba(255, 255, 255, 0.08));
+        }
+        
+        #play-btn.playing:hover {
+            background: linear-gradient(135deg, 
+                rgba(123, 31, 162, 0.95) 0%,
+                rgba(123, 31, 162, 0.75) 50%,
+                rgba(123, 31, 162, 1.0) 100%),
+                linear-gradient(45deg, 
+                rgba(255, 255, 255, 0.25),
+                rgba(255, 255, 255, 0.15));
             box-shadow: 
                 0 10px 35px rgba(123, 31, 162, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.5),
-                inset 0 -1px 0 rgba(255, 255, 255, 0.2);
+                inset 0 1px 0 rgba(255, 255, 255, 0.6),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.25);
         }
         
-        /* 介绍按钮 - 蓝色伪毛玻璃 */
+        /* 介绍按钮 - 蓝色伪毛玻璃（提高不透明度） */
         #info-btn {
-            background: linear-gradient(135deg, 
-                rgba(33, 150, 243, 0.6) 0%,
-                rgba(33, 150, 243, 0.3) 50%,
-                rgba(33, 150, 243, 0.7) 100%),
-                linear-gradient(45deg, 
-                rgba(255, 255, 255, 0.1),
-                rgba(255, 255, 255, 0.05));
-        }
-        
-        #info-btn:hover {
             background: linear-gradient(135deg, 
                 rgba(33, 150, 243, 0.75) 0%,
                 rgba(33, 150, 243, 0.5) 50%,
                 rgba(33, 150, 243, 0.85) 100%),
                 linear-gradient(45deg, 
-                rgba(255, 255, 255, 0.2),
-                rgba(255, 255, 255, 0.1));
+                rgba(255, 255, 255, 0.15),
+                rgba(255, 255, 255, 0.08));
+        }
+        
+        #info-btn:hover {
+            background: linear-gradient(135deg, 
+                rgba(33, 150, 243, 0.9) 0%,
+                rgba(33, 150, 243, 0.7) 50%,
+                rgba(33, 150, 243, 0.95) 100%),
+                linear-gradient(45deg, 
+                rgba(255, 255, 255, 0.25),
+                rgba(255, 255, 255, 0.15));
             box-shadow: 
                 0 10px 35px rgba(33, 150, 243, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.5),
-                inset 0 -1px 0 rgba(255, 255, 255, 0.2);
+                inset 0 1px 0 rgba(255, 255, 255, 0.6),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.25);
         }
         
-        /* 设置按钮 - 绿色伪毛玻璃 */
+        /* 设置按钮 - 绿色伪毛玻璃（提高不透明度） */
         #settings-btn {
-            background: linear-gradient(135deg, 
-                rgba(76, 175, 80, 0.6) 0%,
-                rgba(76, 175, 80, 0.3) 50%,
-                rgba(76, 175, 80, 0.7) 100%),
-                linear-gradient(45deg, 
-                rgba(255, 255, 255, 0.1),
-                rgba(255, 255, 255, 0.05));
-        }
-        
-        #settings-btn:hover {
             background: linear-gradient(135deg, 
                 rgba(76, 175, 80, 0.75) 0%,
                 rgba(76, 175, 80, 0.5) 50%,
                 rgba(76, 175, 80, 0.85) 100%),
                 linear-gradient(45deg, 
-                rgba(255, 255, 255, 0.2),
-                rgba(255, 255, 255, 0.1));
-            box-shadow: 
-                0 10px 35px rgba(76, 175, 80, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.5),
-                inset 0 -1px 0 rgba(255, 255, 255, 0.2);
+                rgba(255, 255, 255, 0.15),
+                rgba(255, 255, 255, 0.08));
         }
         
-        /* 禁用状态 - 灰色伪毛玻璃 */
+        #settings-btn:hover {
+            background: linear-gradient(135deg, 
+                rgba(76, 175, 80, 0.9) 0%,
+                rgba(76, 175, 80, 0.7) 50%,
+                rgba(76, 175, 80, 0.95) 100%),
+                linear-gradient(45deg, 
+                rgba(255, 255, 255, 0.25),
+                rgba(255, 255, 255, 0.15));
+            box-shadow: 
+                0 10px 35px rgba(76, 175, 80, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.6),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.25);
+        }
+        
+        /* 禁用状态 - 灰色伪毛玻璃（提高不透明度） */
         .dock-button.disabled {
             background: linear-gradient(135deg, 
-                rgba(158, 158, 158, 0.4) 0%,
-                rgba(158, 158, 158, 0.2) 50%,
-                rgba(158, 158, 158, 0.45) 100%),
+                rgba(158, 158, 158, 0.6) 0%,
+                rgba(158, 158, 158, 0.4) 50%,
+                rgba(158, 158, 158, 0.65) 100%),
                 linear-gradient(45deg, 
-                rgba(255, 255, 255, 0.05),
-                rgba(255, 255, 255, 0.02));
+                rgba(255, 255, 255, 0.1),
+                rgba(255, 255, 255, 0.05));
             cursor: not-allowed;
             box-shadow: 
                 0 4px 15px rgba(158, 158, 158, 0.2),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2),
-                inset 0 -1px 0 rgba(255, 255, 255, 0.1);
+                inset 0 1px 0 rgba(255, 255, 255, 0.3),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.15);
         }
         
         .dock-button.disabled:hover {
             background: linear-gradient(135deg, 
-                rgba(158, 158, 158, 0.4) 0%,
-                rgba(158, 158, 158, 0.2) 50%,
-                rgba(158, 158, 158, 0.45) 100%),
+                rgba(158, 158, 158, 0.6) 0%,
+                rgba(158, 158, 158, 0.4) 50%,
+                rgba(158, 158, 158, 0.65) 100%),
                 linear-gradient(45deg, 
-                rgba(255, 255, 255, 0.05),
-                rgba(255, 255, 255, 0.02));
+                rgba(255, 255, 255, 0.1),
+                rgba(255, 255, 255, 0.05));
             transform: translateZ(0);
             box-shadow: 
                 0 4px 15px rgba(158, 158, 158, 0.2),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2),
-                inset 0 -1px 0 rgba(255, 255, 255, 0.1);
+                inset 0 1px 0 rgba(255, 255, 255, 0.3),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.15);
         }
         
         .emoji {
@@ -888,9 +890,18 @@
             transform: translateX(-50%);
             max-width: calc(100% - 40px);
             min-width: 280px;
-            background: rgba(0, 0, 0, 0.35);
-            backdrop-filter: blur(25px) saturate(1.8);
-            -webkit-backdrop-filter: blur(25px) saturate(1.8);
+            /* 高性能伪毛玻璃方案 - 替代backdrop-filter */
+            background: 
+                linear-gradient(135deg, 
+                    rgba(0, 0, 0, 0.7) 0%, 
+                    rgba(0, 0, 0, 0.5) 25%,
+                    rgba(0, 0, 0, 0.65) 50%,
+                    rgba(0, 0, 0, 0.45) 75%,
+                    rgba(0, 0, 0, 0.75) 100%),
+                linear-gradient(45deg, 
+                    rgba(255, 255, 255, 0.12),
+                    rgba(255, 255, 255, 0.06)),
+                rgba(0, 0, 0, 0.6);
             color: white;
             padding: 12px 20px;
             border-radius: 25px;
@@ -898,14 +909,17 @@
             font-weight: 500;
             text-align: center;
             z-index: 150;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.25);
             box-shadow: 
                 0 8px 32px rgba(0, 0, 0, 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.3s ease;
             line-height: 1.4;
+            /* 硬件加速优化 */
+            transform: translateX(-50%) translateZ(0);
+            will-change: transform, opacity;
         }
         
         .info-display.active {

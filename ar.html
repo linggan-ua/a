@@ -2,8 +2,8 @@
 <html lang="en">
  <head>
   <meta charset="utf-8"/>
-  <!-- 修复Android竖屏位置偏移：基于Issue #299，简化viewport设置 -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <!-- 保持最简单的viewport设置，避免冲突 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
   <title>
    岭南乐器增强现实视听工具
   </title>
@@ -32,13 +32,13 @@
          * 参考：GitHub Issue #331 + #299 + #439的综合解决方案
          */
         
-        /* 启动覆盖层 - iOS/HyperOS风格高斯模糊 */
+        /* 启动覆盖层 - 确保不会变小 */
         .start-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
             background: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(25px) saturate(1.8);
             -webkit-backdrop-filter: blur(25px) saturate(1.8);
@@ -49,6 +49,8 @@
             z-index: 1000;
             color: white;
             text-align: center;
+            transform: none !important;
+            transition: none !important;
         }
         
         /* 为了更好的模糊效果，添加一个背景层 */
@@ -339,35 +341,18 @@
             51%, 100% { opacity: 0.7; }
         }
         
-        /* AR场景隐藏直到启动 */
+        /* AR场景样式 - 保持简单 */
         #ar-scene {
             display: none;
-            position: relative;
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
-            height: 100vh;
+            height: 100%;
         }
         
         #ar-scene.active {
             display: block;
-        }
-        
-        /* 确保AR场景中的视频元素正常显示 */
-        #ar-scene video {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            object-fit: cover !important;
-            z-index: -1 !important;
-        }
-        
-        /* 确保AR场景的canvas层级正确 */
-        #ar-scene canvas {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            z-index: 1 !important;
         }
         
         .hidden {
@@ -1435,83 +1420,38 @@ function updateDockButtons() {
     }
 }
 
-// =============== AR.js竖屏位置标定综合修复方案 ===============
+// =============== AR.js简化竖屏修复方案 ===============
 
-// 基于GitHub Issue #331 + #299 + #439的综合解决方案
-function fixARjsPositionTracking() {
-    console.log('🎯 应用AR.js竖屏位置标定综合修复');
+// 基于GitHub Issue #331的最简化解决方案
+function fixARjsPortraitStretching() {
+    console.log('🎯 应用AR.js简化竖屏修复');
     
     // 等待ARjs加载完成
     const checkARjs = setInterval(() => {
         if (typeof ARjs !== 'undefined' && ARjs.Source && ARjs.Source.prototype) {
             clearInterval(checkARjs);
             
-            // 1. 重写copyElementSizeTo函数来修复宽高比和位置对齐问题
+            // 只修复最关键的宽高比问题，不干预其他渲染逻辑
             ARjs.Source.prototype.copyElementSizeTo = function(otherElement) {
-                console.log('🔧 修复AR.js宽高比和位置对齐');
+                console.log('🔧 应用简化的宽高比修复');
                 
-                const sourceElement = this.domElement;
-                const sourceWidth = parseInt(sourceElement.style.width) || sourceElement.clientWidth;
-                const sourceHeight = parseInt(sourceElement.style.height) || sourceElement.clientHeight;
-                
-                // 重要：不要修改视频元素的position属性，只修改尺寸
                 if (window.innerWidth > window.innerHeight) {
-                    // 横屏模式 - 保持AR.js原有逻辑，避免影响视频显示
+                    // 横屏模式 - 保持AR.js原有逻辑
                     otherElement.style.width = this.domElement.style.width;
                     const height = parseInt(otherElement.style.width) * 3/4;
                     otherElement.style.height = height + 'px';
-                    otherElement.style.marginLeft = ((window.innerWidth - parseInt(otherElement.style.width)) / 2) + 'px';
-                    otherElement.style.marginTop = ((window.innerHeight - height) / 2) + 'px';
                 } else {
-                    // 竖屏模式 - 修复拉伸问题，但保持视频元素的正常显示
+                    // 竖屏模式 - 只修复基本的宽高比，不改变position
                     otherElement.style.height = this.domElement.style.height;
                     const width = parseInt(otherElement.style.height) * 4/3;
                     otherElement.style.width = width + 'px';
-                    
-                    // 精确的位置计算，但不改变position属性
-                    const leftOffset = (window.innerWidth - width) / 2;
-                    otherElement.style.marginLeft = leftOffset + 'px';
-                    otherElement.style.marginTop = '0px';
-                    
-                    // 强制滚动位置到顶部（基于Issue #299的解决方案）
-                    setTimeout(() => {
-                        window.scrollTo(0, 0);
-                        document.body.scrollTop = 0;
-                        document.documentElement.scrollTop = 0;
-                    }, 50);
+                    otherElement.style.marginLeft = ((window.innerWidth - width) / 2) + 'px';
                 }
                 
-                console.log(`✅ AR画面已重新调整: ${otherElement.style.width} × ${otherElement.style.height}`);
-                console.log(`✅ 位置: left=${otherElement.style.left}, top=${otherElement.style.top}`);
-                
-                // 修复后强制重新计算场景边界（基于Issue #439）
-                setTimeout(() => {
-                    if (window.AFRAME && window.AFRAME.scenes && window.AFRAME.scenes[0]) {
-                        const scene = window.AFRAME.scenes[0];
-                        const camera = scene.camera;
-                        
-                        if (camera && scene.canvas) {
-                            console.log('🔄 重新计算场景边界和raycaster');
-                            
-                            // 强制重新计算canvas边界
-                            const event = new Event('resize');
-                            window.dispatchEvent(event);
-                            
-                            // 重新设置raycaster（修复点击位置偏移 - Issue #439）
-                            if (scene.systems.raycaster) {
-                                scene.systems.raycaster.refreshObjects();
-                            }
-                            
-                            // 强制更新相机投影矩阵
-                            if (camera.updateProjectionMatrix) {
-                                camera.updateProjectionMatrix();
-                            }
-                        }
-                    }
-                }, 100);
+                console.log(`✅ 宽高比已调整: ${otherElement.style.width} × ${otherElement.style.height}`);
             };
             
-            console.log('✅ AR.js位置标定综合修复已应用');
+            console.log('✅ AR.js简化修复已应用');
         }
     }, 100);
     
@@ -1662,14 +1602,14 @@ function createStartOverlay() {
     document.body.appendChild(startOverlay);
 }
 
-// 启动AR函数
+// 启动AR函数 - 简化版本
 function startAR() {
     if (isARStarted) return;
     
     console.log('🚀 启动AR体验');
     isARStarted = true;
     
-    // 立即隐藏启动覆盖层，避免延迟导致的界面变小问题
+    // 立即隐藏启动覆盖层，避免任何动画效果
     if (startOverlay) {
         startOverlay.style.display = 'none';
     }
@@ -1684,24 +1624,10 @@ function startAR() {
         dockContainer.classList.add('active');
     }
     
-    // 确保body样式正确，避免影响AR显示
-    document.body.style.margin = '0';
-    document.body.style.padding = '0';
-    document.body.style.overflow = 'hidden';
+    // 只应用最基本的竖屏修复
+    fixARjsPortraitStretching();
     
-    // 应用AR.js竖屏位置标定综合修复
-    fixARjsPositionTracking();
-    
-    // 设置屏幕方向变化监听
-    setupOrientationFix();
-    
-    // 修复视频显示问题
-    fixVideoDisplay();
-    
-    // 应用iOS视频修复（如果需要）
-    applyIOSVideoFix();
-    
-    console.log('✅ AR体验启动完成，已应用竖屏位置标定综合修复');
+    console.log('✅ AR体验启动完成');
 }
 
 // 修复视频显示问题

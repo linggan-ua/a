@@ -2,7 +2,8 @@
 <html lang="en">
  <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"/>
+  <!-- 修复Android竖屏位置偏移：基于Issue #299，简化viewport设置 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>
    岭南乐器增强现实视听工具
   </title>
@@ -15,10 +16,10 @@
   <style>
         /* =============== AR竖屏拉伸修复方案 =============== */
         /* 
-         * 问题：手机竖屏模式下AR模型被拉伸
-         * 原因：AR.js对宽高比的假设导致在竖屏时拉伸
+         * 问题：手机竖屏模式下AR模型被拉伸和位置偏移
+         * 原因：AR.js对宽高比的假设导致在竖屏时拉伸和定位错误
          * 解决：重写ARjs.Source.prototype.copyElementSizeTo函数
-         * 参考：GitHub Issue #331的解决方案
+         * 参考：GitHub Issue #331 + #299 + #439的综合解决方案
          */
         
         /* 启动覆盖层 - iOS/HyperOS风格高斯模糊 */
@@ -509,7 +510,7 @@
          * 7. 顶部信息框也使用相同的高性能方案
          * 8. iOS风格胶囊圆角设计（56px圆角，接近高度一半）
          * 9. 符合Apple Human Interface Guidelines的圆角策略
-         * 10. 竖屏拉伸问题通过重写AR.js函数解决
+         * 10. 竖屏拉伸和位置偏移问题已通过综合修复方案解决
          */
         .dock-container {
             position: fixed;
@@ -1402,49 +1403,151 @@ function updateDockButtons() {
     }
 }
 
-// =============== AR竖屏拉伸修复方案 ===============
+// =============== AR.js竖屏位置标定综合修复方案 ===============
 
-// 基于GitHub Issue #331的解决方案
-// 重写ARjs.Source.prototype.copyElementSizeTo来修复竖屏拉伸问题
-function fixARjsPortraitStretching() {
-    console.log('应用AR.js竖屏拉伸修复');
+// 基于GitHub Issue #331 + #299 + #439的综合解决方案
+function fixARjsPositionTracking() {
+    console.log('🎯 应用AR.js竖屏位置标定综合修复');
     
     // 等待ARjs加载完成
     const checkARjs = setInterval(() => {
         if (typeof ARjs !== 'undefined' && ARjs.Source && ARjs.Source.prototype) {
             clearInterval(checkARjs);
             
-            // 重写copyElementSizeTo函数来修复宽高比问题
+            // 1. 重写copyElementSizeTo函数来修复宽高比和位置对齐问题
             ARjs.Source.prototype.copyElementSizeTo = function(otherElement) {
-                console.log('修复AR.js宽高比');
+                console.log('🔧 修复AR.js宽高比和位置对齐');
+                
+                const sourceElement = this.domElement;
+                const sourceWidth = parseInt(sourceElement.style.width) || sourceElement.clientWidth;
+                const sourceHeight = parseInt(sourceElement.style.height) || sourceElement.clientHeight;
                 
                 if (window.innerWidth > window.innerHeight) {
-                    // 横屏模式 - 保持原有逻辑
-                    otherElement.style.width = this.domElement.style.width;
-                    const height = parseInt(otherElement.style.width) * 3/4;
-                    otherElement.style.height = height + 'px';
-                    otherElement.style.marginLeft = '0px';
-                    otherElement.style.marginTop = ((window.innerHeight - height) / 2) + 'px';
-                } else {
-                    // 竖屏模式 - 修复拉伸问题
-                    otherElement.style.height = this.domElement.style.height;
-                    const width = parseInt(otherElement.style.height) * 4/3;
+                    // 横屏模式 - 使用优化的逻辑
+                    const width = Math.min(window.innerWidth, sourceWidth);
+                    const height = width * 3/4;
+                    
                     otherElement.style.width = width + 'px';
+                    otherElement.style.height = height + 'px';
                     otherElement.style.marginLeft = ((window.innerWidth - width) / 2) + 'px';
+                    otherElement.style.marginTop = ((window.innerHeight - height) / 2) + 'px';
+                    
+                    // 确保正确的定位
+                    otherElement.style.position = 'absolute';
+                    otherElement.style.top = ((window.innerHeight - height) / 2) + 'px';
+                    otherElement.style.left = ((window.innerWidth - width) / 2) + 'px';
+                    otherElement.style.transform = 'none';
+                } else {
+                    // 竖屏模式 - 修复拉伸和位置偏移问题
+                    const height = Math.min(window.innerHeight, sourceHeight);
+                    const width = height * 4/3;
+                    
+                    otherElement.style.height = height + 'px';
+                    otherElement.style.width = width + 'px';
+                    
+                    // 关键修复：精确的位置计算（基于Issue #299和#439）
+                    const leftOffset = (window.innerWidth - width) / 2;
+                    otherElement.style.marginLeft = leftOffset + 'px';
                     otherElement.style.marginTop = '0px';
+                    
+                    // 额外的位置校正（基于Issue #299的发现）
+                    otherElement.style.position = 'absolute';
+                    otherElement.style.top = '0px';
+                    otherElement.style.left = leftOffset + 'px';
+                    otherElement.style.transform = 'none';
+                    
+                    // 强制滚动位置到顶部（基于Issue #299的解决方案）
+                    window.scrollTo(0, 0);
+                    document.body.scrollTop = 0;
+                    document.documentElement.scrollTop = 0;
                 }
                 
-                console.log(`AR画面尺寸已调整: ${otherElement.style.width} × ${otherElement.style.height}`);
+                console.log(`✅ AR画面已重新调整: ${otherElement.style.width} × ${otherElement.style.height}`);
+                console.log(`✅ 位置: left=${otherElement.style.left}, top=${otherElement.style.top}`);
+                
+                // 修复后强制重新计算场景边界（基于Issue #439）
+                setTimeout(() => {
+                    if (window.AFRAME && window.AFRAME.scenes && window.AFRAME.scenes[0]) {
+                        const scene = window.AFRAME.scenes[0];
+                        const camera = scene.camera;
+                        
+                        if (camera && scene.canvas) {
+                            console.log('🔄 重新计算场景边界和raycaster');
+                            
+                            // 强制重新计算canvas边界
+                            const event = new Event('resize');
+                            window.dispatchEvent(event);
+                            
+                            // 重新设置raycaster（修复点击位置偏移 - Issue #439）
+                            if (scene.systems.raycaster) {
+                                scene.systems.raycaster.refreshObjects();
+                            }
+                            
+                            // 强制更新相机投影矩阵
+                            if (camera.updateProjectionMatrix) {
+                                camera.updateProjectionMatrix();
+                            }
+                        }
+                    }
+                }, 100);
             };
             
-            console.log('✅ AR.js竖屏拉伸修复已应用');
+            console.log('✅ AR.js位置标定综合修复已应用');
         }
     }, 100);
     
-    // 5秒后停止检查（防止无限循环）
+    // 5秒后停止检查
     setTimeout(() => {
         clearInterval(checkARjs);
     }, 5000);
+}
+
+// 监听窗口大小变化，重新校正位置
+function setupOrientationFix() {
+    let orientationChangeTimeout;
+    
+    function handleOrientationChange() {
+        console.log('📱 检测到屏幕方向变化');
+        
+        // 清除之前的定时器
+        if (orientationChangeTimeout) {
+            clearTimeout(orientationChangeTimeout);
+        }
+        
+        // 延迟处理，等待浏览器完成方向切换
+        orientationChangeTimeout = setTimeout(() => {
+            console.log(`📐 新的屏幕尺寸: ${window.innerWidth}x${window.innerHeight}`);
+            console.log(`📱 当前方向: ${window.innerHeight > window.innerWidth ? '竖屏' : '横屏'}`);
+            
+            // 强制重新应用位置修复
+            fixARjsPositionTracking();
+            
+            // 额外的滚动位置修复（特别重要的补充）
+            setTimeout(() => {
+                window.scrollTo(0, 0);
+                document.body.scrollTop = 0;
+                document.documentElement.scrollTop = 0;
+                
+                // 通知AR系统重新调整
+                if (window.AFRAME && window.AFRAME.scenes[0]) {
+                    const resizeEvent = new Event('resize');
+                    window.dispatchEvent(resizeEvent);
+                }
+            }, 200);
+            
+        }, 500); // 等待500ms确保方向切换完成
+    }
+    
+    // 监听各种方向变化事件
+    window.addEventListener('orientationchange', handleOrientationChange);
+    window.addEventListener('resize', handleOrientationChange);
+    
+    // 现代浏览器的屏幕方向API
+    if (screen && screen.orientation) {
+        screen.orientation.addEventListener('change', handleOrientationChange);
+    }
+    
+    console.log('✅ 屏幕方向监听器已设置');
 }
 
 // =============== 启动系统 - 所有浏览器可用 ===============
@@ -1544,7 +1647,7 @@ function createStartOverlay() {
 function startAR() {
     if (isARStarted) return;
     
-    console.log('启动AR体验');
+    console.log('🚀 启动AR体验');
     isARStarted = true;
     
     // 隐藏启动覆盖层
@@ -1560,15 +1663,17 @@ function startAR() {
         dockContainer.classList.add('active');
     }
     
-    // 应用AR.js竖屏拉伸修复
-    fixARjsPortraitStretching();
+    // 应用AR.js竖屏位置标定综合修复
+    fixARjsPositionTracking();
+    
+    // 设置屏幕方向变化监听
+    setupOrientationFix();
     
     // 应用iOS视频修复（如果需要）
     applyIOSVideoFix();
     
-    console.log('AR体验启动完成，已应用竖屏拉伸修复');
+    console.log('✅ AR体验启动完成，已应用竖屏位置标定综合修复');
 }
-
 
 // iOS视频修复
 function applyIOSVideoFix() {
@@ -1713,7 +1818,7 @@ function backToStart() {
 
 // 页面加载完成后显示启动覆盖层
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('页面加载完成，准备AR竖屏拉伸修复');
+    console.log('📱 页面加载完成，准备AR竖屏位置标定综合修复');
     createStartOverlay();
     
     // 监听权限被拒绝错误
@@ -1727,8 +1832,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    console.log(`设备信息: 屏幕尺寸 ${window.innerWidth}x${window.innerHeight}`);
-    console.log(`设备方向: ${window.innerHeight > window.innerWidth ? '竖屏' : '横屏'}`);
+    console.log(`📐 设备信息: 屏幕尺寸 ${window.innerWidth}x${window.innerHeight}`);
+    console.log(`📱 设备方向: ${window.innerHeight > window.innerWidth ? '竖屏' : '横屏'}`);
 });
 
   </script>

@@ -1077,15 +1077,17 @@ AFRAME.registerComponent('o15', {
     }
 });
 
-// Marker检测组件 - 所有浏览器可用
+// ====================================================================
+// =============== 优化点: Marker检测组件 (Event-Driven) ===============
+// ====================================================================
 AFRAME.registerComponent('s19', {
     init: function () {
-        var markerElement = this.el;
-        var markerId = markerElement.getAttribute('id');
-        var audioFile = '';
-        var markdownFile = '';
+        const markerElement = this.el;
+        const markerId = markerElement.getAttribute('id');
+        let audioFile = '';
+        let markdownFile = '';
         
-        console.log('=== s19组件初始化: ' + markerId + ' ===');
+        console.log(`=== s19组件初始化: ${markerId} (事件驱动模式) ===`);
         
         // 根据marker ID确定对应的文件
         if (markerId === 'marker1') {
@@ -1097,77 +1099,71 @@ AFRAME.registerComponent('s19', {
         }
         
         // 获取或创建音频元素
-        var audioElement = audioCache[audioFile];
+        const audioElement = audioCache[audioFile];
         if (!audioElement) {
-            audioElement = { audio: new Audio() };
-            audioElement.audio.src = audioFile;
-            audioElement.audio.preload = 'auto';
-            audioElement.audio.load();
-            audioCache[audioFile] = audioElement;
+            console.error(`音频文件 ${audioFile} 未在缓存中找到!`);
+            return;
         }
         
         // 加载对应的信息文本
-        var infoText = '';
-        var infoFile = markerId === 'marker1' ? 'info1.txt' : 'info2.txt';
+        let infoText = '';
+        const infoFile = markerId === 'marker1' ? 'info1.txt' : 'info2.txt';
         
         fetch(infoFile)
-            .then(function (response) {
-                return response.ok ? response.text() : '';
-            })
-            .then(function (text) {
-                infoText = text;
-            })
-            .catch(function (error) {
-                console.error('Error loading info text:', error);
+            .then(response => response.ok ? response.text() : '')
+            .then(text => { infoText = text; })
+            .catch(error => {
+                console.error('加载信息文本失败:', error);
                 infoText = markerId === 'marker1' ? '岭南乐器：琵琶' : '岭南乐器：葫芦丝';
             });
         
-        // 使用原来简单高效的检测逻辑 - 直接检查3D对象可见性
-        var wasVisible = false;
-        
-        this.tick = AFRAME.utils.throttleTick(function () {
-            var isVisible = markerElement.object3D.visible;
+        // --- 核心修改：使用事件监听器替代tick函数 ---
+
+        // 监听 'markerFound' 事件
+        markerElement.addEventListener('markerFound', () => {
+            console.log(`Marker event "markerFound": ${markerId}`);
             
-            // 只在marker从不可见变为可见时处理（激活状态）
-            if (isVisible && !wasVisible) {
-                wasVisible = true;
-                
-                // marker被发现 - 立即响应
-                console.log('Marker发现: ' + markerId);
-                
-                // 如果有其他乐器在播放，先停止
-                if (currentAudioManager && currentAudioManager.markerId !== markerId && 
-                    currentAudioManager.audio && !currentAudioManager.audio.paused) {
-                    currentAudioManager.audio.pause();
+            // 如果有其他乐器在播放，先停止
+            if (currentAudioManager && currentAudioManager.markerId !== markerId && 
+                currentAudioManager.audio && !currentAudioManager.audio.paused) {
+                currentAudioManager.audio.pause();
+                // 更新旧乐器的UI状态
+                const oldPlayBtn = document.getElementById('play-btn');
+                if(oldPlayBtn) {
+                    oldPlayBtn.innerHTML = '<span class="emoji">🎵</span>';
+                    oldPlayBtn.classList.remove('playing');
                 }
-                
-                // 设置当前音频管理器
-                currentAudioManager = {
-                    markerId: markerId,
-                    audio: audioElement.audio,
-                    markdownFile: markdownFile,
-                    infoText: infoText,
-                    isPlaying: currentAudioManager && currentAudioManager.markerId === markerId ? 
-                              currentAudioManager.isPlaying : false
-                };
-                
-                // 更新信息显示框
-                updateInfoDisplay();
-                
-                // 立即更新UI状态
-                updateDockButtons();
-                showNotification(`🎯 检测到${markerId === 'marker1' ? '琵琶' : '葫芦丝'}`);
-                
-            } else if (!isVisible && wasVisible) {
-                wasVisible = false;
-                console.log('Marker丢失: ' + markerId + ' (状态保持)');
-                // 不清除状态，用户可以继续播放音乐和查看介绍
             }
-        }, 100); // 每100ms检查一次 - 快速响应
+            
+            // 设置当前音频管理器
+            currentAudioManager = {
+                markerId: markerId,
+                audio: audioElement.audio,
+                markdownFile: markdownFile,
+                infoText: infoText,
+                // 保留当前marker之前的播放状态
+                isPlaying: currentAudioManager && currentAudioManager.markerId === markerId ? 
+                              currentAudioManager.isPlaying : false
+            };
+            
+            // 更新UI
+            updateInfoDisplay();
+            updateDockButtons();
+            showNotification(`🎯 检测到${markerId === 'marker1' ? '琵琶' : '葫芦丝'}`);
+        });
+
+        // 监听 'markerLost' 事件
+        markerElement.addEventListener('markerLost', () => {
+            console.log(`Marker event "markerLost": ${markerId} (状态保持)`);
+            // 根据您的需求，当marker丢失时，我们不清除 currentAudioManager，
+            // 这样用户仍然可以操作上一个识别到的乐器的控件。
+            // 模型的显示/隐藏由AR.js自动处理。
+        });
         
-        console.log('=== s19组件初始化完成 ===');
+        console.log(`=== s19组件事件监听器已为 ${markerId} 设置 ===`);
     }
 });
+
 
 // ====================================================================
 // =============== 模型触摸交互组件 (Touch Handler) ===============
@@ -1335,7 +1331,7 @@ function showInfo() {
 }
 
 // ====================================================================
-// =============== 新增功能: 复位模型函数 ===============
+// =============== 复位模型函数 ===============
 // ====================================================================
 function resetModel() {
     // 检查是否有活动的乐器
@@ -1872,7 +1868,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </a-entity>
    </a-marker>
    <a-marker id="marker2" preset="custom" s19="" url="pattern2.patt">
-    <a-entity gltf-model="model2.gltf" id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler>
+    <a-entity gltf-model="model2.gltf" id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>
    <a-entity camera="">

@@ -1408,91 +1408,41 @@ function updateDockButtons() {
     }
 }
 
-// =============== 完整的AR竖屏修复方案 ===============
+// =============== 简化的AR竖屏修复方案 ===============
 
-// 基于AR.js GitHub Issue #331、#678等的综合解决方案
-function applyComprehensivePortraitFix() {
-    console.log('🔧 应用完整的AR竖屏修复方案');
+// 基于GitHub Issue #331的简化解决方案
+function applySimplePortraitFix() {
+    console.log('🔧 应用简化的AR竖屏修复方案');
     
     // 等待AR.js加载完成
     const checkARjs = setInterval(() => {
         if (typeof ARjs !== 'undefined' && ARjs.Source && ARjs.Source.prototype) {
             clearInterval(checkARjs);
             
-            // 保存原始函数
-            const originalCopyElementSizeTo = ARjs.Source.prototype.copyElementSizeTo;
-            const originalOnResize = ARjs.Source.prototype.onResize;
-            
-            // 1. 增强的copyElementSizeTo - 修复投影矩阵和坐标系统
+            // 简化的copyElementSizeTo修复 - 只修复显示问题，不调整模型
             ARjs.Source.prototype.copyElementSizeTo = function(otherElement) {
-                console.log('🔧 执行增强的AR竖屏修复');
+                console.log('🔧 执行简化的AR竖屏修复');
                 
-                const isPortrait = window.innerHeight > window.innerWidth;
-                const aspectRatio = isPortrait ? 
-                    window.innerWidth / window.innerHeight : 
-                    window.innerHeight / window.innerWidth;
-                
-                if (isPortrait) {
-                    // 竖屏模式 - 完整修复
-                    const videoHeight = this.domElement.videoHeight || 480;
-                    const videoWidth = this.domElement.videoWidth || 640;
-                    
-                    // 计算正确的显示尺寸
-                    const displayHeight = window.innerHeight;
-                    const displayWidth = Math.min(
-                        displayHeight * (videoWidth / videoHeight),
-                        window.innerWidth
-                    );
-                    
-                    otherElement.style.width = displayWidth + 'px';
-                    otherElement.style.height = displayHeight + 'px';
-                    otherElement.style.marginLeft = ((window.innerWidth - displayWidth) / 2) + 'px';
-                    otherElement.style.marginTop = '0px';
-                    
-                    // 应用竖屏缩放修正
-                    const scaleFactor = Math.min(
-                        window.innerWidth / 640,
-                        window.innerHeight / 480
-                    ) * 0.8; // 竖屏下适当缩小
-                    
-                    // 修正模型缩放
-                    setTimeout(() => {
-                        applyPortraitModelFix(scaleFactor);
-                    }, 100);
-                    
-                } else {
+                if (window.innerWidth > window.innerHeight) {
                     // 横屏模式 - 保持原有逻辑
-                    const displayWidth = window.innerWidth;
-                    const displayHeight = Math.min(
-                        displayWidth * 0.75,
-                        window.innerHeight
-                    );
-                    
-                    otherElement.style.width = displayWidth + 'px';
-                    otherElement.style.height = displayHeight + 'px';
+                    otherElement.style.width = this.domElement.style.width;
+                    const height = parseInt(otherElement.style.width) * 3/4;
+                    otherElement.style.height = height + 'px';
                     otherElement.style.marginLeft = '0px';
-                    otherElement.style.marginTop = ((window.innerHeight - displayHeight) / 2) + 'px';
+                    otherElement.style.marginTop = ((window.innerHeight - height) / 2) + 'px';
+                } else {
+                    // 竖屏模式 - 简化修复
+                    otherElement.style.height = this.domElement.style.height;
+                    const width = parseInt(otherElement.style.height) * 4/3;
+                    otherElement.style.width = width + 'px';
+                    otherElement.style.marginLeft = ((window.innerWidth - width) / 2) + 'px';
+                    otherElement.style.marginTop = '0px';
                 }
                 
-                console.log(`✅ AR画面已修复: ${otherElement.style.width} × ${otherElement.style.height}, 方向: ${isPortrait ? '竖屏' : '横屏'}`);
+                console.log(`✅ AR画面已修复: ${otherElement.style.width} × ${otherElement.style.height}`);
             };
             
-            // 2. 增强的onResize - 处理方向变化
-            ARjs.Source.prototype.onResize = function() {
-                console.log('🔧 执行AR尺寸调整');
-                
-                // 调用原始函数
-                if (originalOnResize) {
-                    originalOnResize.call(this);
-                }
-                
-                // 应用方向修正
-                setTimeout(() => {
-                    handleOrientationChange();
-                }, 200);
-            };
-            
-            console.log('✅ AR.js竖屏修复已应用');
+            console.log('✅ 简化AR.js竖屏修复已应用');
         }
     }, 100);
     
@@ -1502,42 +1452,17 @@ function applyComprehensivePortraitFix() {
     }, 5000);
 }
 
-// 应用竖屏模型修正
-function applyPortraitModelFix(scaleFactor) {
-    console.log('🔧 应用竖屏模型修正, 缩放因子:', scaleFactor);
-    
-    // 修正所有marker的模型缩放
-    const markers = document.querySelectorAll('a-marker');
-    markers.forEach(marker => {
-        const entities = marker.querySelectorAll('a-entity[gltf-model]');
-        entities.forEach(entity => {
-            const currentScale = entity.getAttribute('scale');
-            if (currentScale) {
-                // 竖屏模式下适当调整模型大小
-                const adjustedScale = {
-                    x: currentScale.x * scaleFactor,
-                    y: currentScale.y * scaleFactor,
-                    z: currentScale.z * scaleFactor
-                };
-                entity.setAttribute('scale', adjustedScale);
-                console.log(`模型缩放已调整: ${entity.id}`, adjustedScale);
-            }
-        });
-    });
-}
-
-// 处理方向变化
+// 简化的方向变化处理
 function handleOrientationChange() {
     console.log('🔧 处理设备方向变化');
     
     const isPortrait = window.innerHeight > window.innerWidth;
     console.log(`当前方向: ${isPortrait ? '竖屏' : '横屏'}`);
     
-    // 重新应用AR修复
+    // 简单的重新计算
     setTimeout(() => {
         const arScene = document.querySelector('a-scene');
         if (arScene && arScene.systems.arjs) {
-            // 触发AR.js重新计算
             window.dispatchEvent(new Event('resize'));
         }
     }, 300);
@@ -1659,7 +1584,7 @@ function createStartOverlay() {
         </button>
         <div style="font-size: 0.9em; opacity: 0.8; margin-top: 15px;">
             💡 为了保护隐私，需要您的授权才能访问相应功能<br>
-            🔧 已优化竖屏模式体验
+            🔧 已修复竖屏显示问题
         </div>
     `;
     
@@ -1686,8 +1611,8 @@ function startAR() {
         dockContainer.classList.add('active');
     }
     
-    // 应用完整的AR竖屏修复
-    applyComprehensivePortraitFix();
+    // 应用简化的AR竖屏修复
+    applySimplePortraitFix();
     
     // 设置方向变化监听器
     setupOrientationListener();
@@ -1695,7 +1620,7 @@ function startAR() {
     // 应用iOS视频修复（如果需要）
     applyIOSVideoFix();
     
-    console.log('✅ AR体验启动完成，已应用完整竖屏修复');
+    console.log('✅ AR体验启动完成，已应用简化竖屏修复');
 }
 
 // iOS视频修复
@@ -1847,7 +1772,7 @@ function backToStart() {
 
 // 页面加载完成后显示启动覆盖层
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('📱 页面加载完成，准备完整AR竖屏修复');
+    console.log('📱 页面加载完成，准备简化AR竖屏修复');
     createStartOverlay();
     
     // 监听权限被拒绝错误

@@ -1402,42 +1402,70 @@ function updateDockButtons() {
     }
 }
 
-// =============== AR竖屏拉伸修复方案 ===============
+// =============== AR竖屏拉伸修复方案 (已更新) ===============
 
-// 基于GitHub Issue #331的解决方案
-// 重写ARjs.Source.prototype.copyElementSizeTo来修复竖屏拉伸问题
+// 基于GitHub Issue #331的解决方案，并增加了相机投影修复
+// 重写ARjs.Source.prototype.copyElementSizeTo来修复竖屏拉伸和模型定位问题
 function fixARjsPortraitStretching() {
-    console.log('应用AR.js竖屏拉伸修复');
+    console.log('应用AR.js竖屏拉伸及相机修复');
     
+    const sceneEl = document.querySelector('a-scene');
+    if (!sceneEl) {
+        console.error("无法找到a-scene元素!");
+        return;
+    }
+
     // 等待ARjs加载完成
     const checkARjs = setInterval(() => {
         if (typeof ARjs !== 'undefined' && ARjs.Source && ARjs.Source.prototype) {
             clearInterval(checkARjs);
             
-            // 重写copyElementSizeTo函数来修复宽高比问题
+            // 重写copyElementSizeTo函数来修复宽高比和相机投影问题
             ARjs.Source.prototype.copyElementSizeTo = function(otherElement) {
-                console.log('修复AR.js宽高比');
-                
-                if (window.innerWidth > window.innerHeight) {
-                    // 横屏模式 - 保持原有逻辑
+                const screenWidth = window.innerWidth;
+                const screenHeight = window.innerHeight;
+
+                // 修复渲染画布的尺寸和位置（这是您已有的修复方案）
+                if (screenWidth > screenHeight) {
+                    // 横屏模式
                     otherElement.style.width = this.domElement.style.width;
                     const height = parseInt(otherElement.style.width) * 3/4;
                     otherElement.style.height = height + 'px';
                     otherElement.style.marginLeft = '0px';
-                    otherElement.style.marginTop = ((window.innerHeight - height) / 2) + 'px';
+                    otherElement.style.marginTop = ((screenHeight - height) / 2) + 'px';
                 } else {
-                    // 竖屏模式 - 修复拉伸问题
+                    // 竖屏模式
                     otherElement.style.height = this.domElement.style.height;
                     const width = parseInt(otherElement.style.height) * 4/3;
                     otherElement.style.width = width + 'px';
-                    otherElement.style.marginLeft = ((window.innerWidth - width) / 2) + 'px';
+                    otherElement.style.marginLeft = ((screenWidth - width) / 2) + 'px';
                     otherElement.style.marginTop = '0px';
                 }
                 
-                console.log(`AR画面尺寸已调整: ${otherElement.style.width} × ${otherElement.style.height}`);
+                // --- 新增的核心修复逻辑 ---
+                // 无论横屏还是竖屏，都必须同步更新相机和渲染器
+                const camera = sceneEl.camera;
+                if (camera) {
+                    // 将相机的宽高比设置为屏幕的宽高比
+                    camera.aspect = screenWidth / screenHeight;
+                    // 更新相机的投影矩阵以应用新的宽高比
+                    camera.updateProjectionMatrix();
+                }
+
+                const renderer = sceneEl.renderer;
+                if (renderer) {
+                    // 确保渲染器尺寸也与屏幕匹配
+                    renderer.setSize(screenWidth, screenHeight);
+                }
+                // --- 修复逻辑结束 ---
+
+                // 添加日志，方便调试
+                if(camera && renderer) {
+                    console.log(`AR画面尺寸已调整: ${otherElement.style.width} × ${otherElement.style.height}, 相机宽高比: ${camera.aspect.toFixed(2)}`);
+                }
             };
             
-            console.log('✅ AR.js竖屏拉伸修复已应用');
+            console.log('✅ AR.js竖屏拉伸及相机修复已应用');
         }
     }, 100);
     

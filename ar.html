@@ -1043,7 +1043,30 @@ var audioCache = {};
 document.addEventListener('DOMContentLoaded', function () {
     console.log('🎵 音频系统初始化');
     
-    var audioFiles = ['audio1.mp3', 'audio2.mp3'];
+    var audioFiles = [
+        'pipa.mp3',             // 琵琶
+        'hulusi.mp3',           // 葫芦丝
+        'dongbei_dagu.mp3',     // 东北大鼓
+        'dongbula.mp3',         // 冬不拉
+        'gaohu.mp3',            // 高胡
+        'huagu.mp3',            // 花鼓
+        'huobusi.mp3',          // 火不思
+        'matouqin.mp3',         // 马头琴
+        'niujiaoqin.mp3',       // 牛角琴
+        'suona.mp3',            // 唢呐
+        'yueqin.mp3',           // 月琴
+        'chaozhou_suona.mp3',   // 潮州唢呐
+        'chaozhou_zheng.mp3',   // 潮州筝
+        'dongxiao.mp3',         // 洞箫
+        'houguan.mp3',          // 喉管
+        'muyu.mp3',             // 木鱼
+        'niujiaohao.mp3',       // 牛角号
+        'qinqin.mp3',           // 秦琴
+        'yehu.mp3',             // 椰胡
+        'yugu.mp3',             // 渔鼓
+        'zhuban.mp3',           // 竹板
+        'huagudatong.mp3'      // 花鼓大筒
+    ]; 
     audioFiles.forEach(function (filename) {
         var audio = new Audio();
         audio.src = filename;
@@ -1082,41 +1105,52 @@ AFRAME.registerComponent('s19', {
     init: function () {
         var markerElement = this.el;
         var markerId = markerElement.getAttribute('id');
-        var audioFile = '';
-        var markdownFile = '';
         
-        // ====================================================================
-        // =============== 创建乐器名称映射表 ===============
-        // ====================================================================
+        // ================== 乐器信息配置中心 ==================
+        // 未来添加新乐器，主要修改这里即可
+        const instrumentConfig = {
+            'marker1':  { name: '琵琶',       audio: 'pipa.mp3',             markdown: 'pipa.md',             info: 'pipa.txt' },
+            'marker2':  { name: '葫芦丝',     audio: 'hulusi.mp3',           markdown: 'hulusi.md',           info: 'hulusi.txt' },
+            'marker3':  { name: '东北大鼓',   audio: 'dongbei_dagu.mp3',     markdown: 'dongbei_dagu.md',     info: 'dongbei_dagu.txt' },
+            'marker4':  { name: '冬不拉',     audio: 'dongbula.mp3',         markdown: 'dongbula.md',         info: 'dongbula.txt' },
+            'marker5':  { name: '高胡',       audio: 'gaohu.mp3',            markdown: 'gaohu.md',            info: 'gaohu.txt' },
+            'marker6':  { name: '花鼓',       audio: 'huagu.mp3',            markdown: 'huagu.md',            info: 'huagu.txt' },
+            'marker7':  { name: '火不思',     audio: 'huobusi.mp3',          markdown: 'huobusi.md',          info: 'huobusi.txt' },
+            'marker8':  { name: '马头琴',     audio: 'matouqin.mp3',         markdown: 'matouqin.md',         info: 'matouqin.txt' },
+            'marker9':  { name: '牛角琴',     audio: 'niujiaoqin.mp3',       markdown: 'niujiaoqin.md',       info: 'niujiaoqin.txt' },
+            'marker10': { name: '唢呐',       audio: 'suona.mp3',            markdown: 'suona.md',            info: 'suona.txt' },
+            'marker11': { name: '月琴',       audio: 'yueqin.mp3',           markdown: 'yueqin.md',           info: 'yueqin.txt' },
+            'marker12': { name: '潮州唢呐',   audio: 'chaozhou_suona.mp3',   markdown: 'chaozhou_suona.md',   info: 'chaozhou_suona.txt' },
+            'marker13': { name: '潮州筝',     audio: 'chaozhou_zheng.mp3',   markdown: 'chaozhou_zheng.md',   info: 'chaozhou_zheng.txt' },
+            'marker14': { name: '洞箫',       audio: 'dongxiao.mp3',         markdown: 'dongxiao.md',         info: 'dongxiao.txt' },
+            'marker15': { name: '喉管',       audio: 'houguan.mp3',          markdown: 'houguan.md',          info: 'houguan.txt' },
+            'marker16': { name: '木鱼',       audio: 'muyu.mp3',             markdown: 'muyu.md',             info: 'muyu.txt' },
+            'marker17': { name: '牛角号',     audio: 'niujiaohao.mp3',       markdown: 'niujiaohao.md',       info: 'niujiaohao.txt' },
+            'marker18': { name: '秦琴',       audio: 'qinqin.mp3',           markdown: 'qinqin.md',           info: 'qinqin.txt' },
+            'marker19': { name: '椰胡',       audio: 'yehu.mp3',             markdown: 'yehu.md',             info: 'yehu.txt' },
+            'marker20': { name: '渔鼓',       audio: 'yugu.mp3',             markdown: 'yugu.md',             info: 'yugu.txt' },
+            'marker21': { name: '竹板',       audio: 'zhuban.mp3',           markdown: 'zhuban.md',           info: 'zhuban.txt' },
+            'marker22': { name: '花鼓大筒',   audio: 'huagudatong.mp3',      markdown: 'huagudatong.md',      info: 'huagudatong.txt' }
         
-        const instrumentNames = {
-            'marker1': '琵琶',
-            'marker2': '葫芦丝',
-            'marker3': '大筒', 
-            'marker4': '东北大鼓'  
-            
         };
-        
-        console.log('=== s19组件初始化: ' + markerId + ' ===');
-        
-        // 根据marker ID确定对应的文件
-        if (markerId === 'marker1') {
-            audioFile = 'audio1.mp3';
-            markdownFile = 'instrument1.md';
-        } else if (markerId === 'marker2') {
-            audioFile = 'audio2.mp3';
-            markdownFile = 'instrument2.md';
-        } else if (markerId === 'marker3') {
-            audioFile = 'audio3.mp3';
-            markdownFile = 'instrument3.md';
-        } else if (markerId === 'marker4') {
-            audioFile = 'audio4.mp3';
-            markdownFile = 'instrument4.md';
+        // =======================================================
+
+        const config = instrumentConfig[markerId];
+        if (!config) {
+            console.error(`未找到 markerId "${markerId}" 的配置信息`);
+            return;
         }
+
+        const audioFile = config.audio;
+        const markdownFile = config.markdown;
+        
+        console.log(`=== s19组件初始化: ${markerId} (${config.name}) ===`);
         
         // 获取或创建音频元素
         var audioElement = audioCache[audioFile];
         if (!audioElement) {
+            console.error(`音频文件 ${audioFile} 未在缓存中找到!`);
+            // 即使未预加载，也尝试创建一个
             audioElement = { audio: new Audio() };
             audioElement.audio.src = audioFile;
             audioElement.audio.preload = 'auto';
@@ -1126,8 +1160,7 @@ AFRAME.registerComponent('s19', {
         
         // 加载对应的信息文本
         var infoText = '';
-        // 逻辑简化：直接使用markerId构建文件名
-        var infoFile = `info${markerId.replace('marker', '')}.txt`;
+        var infoFile = config.info;
         
         fetch(infoFile)
             .then(function (response) {
@@ -1138,8 +1171,7 @@ AFRAME.registerComponent('s19', {
             })
             .catch(function (error) {
                 console.error('Error loading info text:', error);
-                // 如果加载失败，也从映射表里获取名字作为备用
-                infoText = `岭南乐器：${instrumentNames[markerId] || '未知乐器'}`;
+                infoText = `岭南乐器：${config.name || '未知乐器'}`;
             });
         
         // 使用原来简单高效的检测逻辑 - 直接检查3D对象可见性
@@ -1177,10 +1209,7 @@ AFRAME.registerComponent('s19', {
                 // 立即更新UI状态
                 updateDockButtons();
                 
-                // ====================================================================
-                // =============== 使用映射表来显示通知 ===============
-                // ====================================================================
-                const instrumentName = instrumentNames[markerId] || '未知乐器'; // 从映射表中获取名字
+                const instrumentName = config.name || '未知乐器';
                 showNotification(`🎯 检测到${instrumentName}`);
                 
             } else if (!isVisible && wasVisible) {
@@ -1193,7 +1222,6 @@ AFRAME.registerComponent('s19', {
         console.log('=== s19组件初始化完成 ===');
     }
 });
-
 // ====================================================================
 // =============== 模型触摸交互组件 (Touch Handler) ===============
 // ====================================================================
@@ -1892,16 +1920,92 @@ document.addEventListener('DOMContentLoaded', function() {
     embedded="" 
     vr-mode-ui="enabled: false">
 
-   <a-marker id="marker1" preset="custom" s19="" url="pattern1.patt">
-    <a-entity gltf-model="model1.gltf" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler>
+   <a-marker id="marker1" preset="custom" s19="" url="pipa.patt">
+    <a-entity gltf-model="url(pipa.gltf)" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>
-   <a-marker id="marker2" preset="custom" s19="" url="pattern2.patt">
-    <a-entity gltf-model="model2.gltf" id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler>
+   <a-marker id="marker2" preset="custom" s19="" url="hulusi.patt">
+    <a-entity gltf-model="url(hulusi.gltf)" id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.010 0.010 0.010" touch-handler>
     </a-entity>
    </a-marker>
-    <a-marker id="marker3" preset="custom" s19="" url="pattern3.patt">
-    <a-entity gltf-model="model3.gltf" id="model3" o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler>
+   <a-marker id="marker3" preset="custom" s19="" url="dongbei_dagu.patt">
+    <a-entity gltf-model="url(dongbei_dagu.gltf)" id="model3" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    </a-entity>
+   </a-marker>
+   <a-marker id="marker4" preset="custom" s19="" url="dongbula.patt">
+    <a-entity gltf-model="url(dongbula.gltf)" id="model4" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    </a-entity>
+   </a-marker>
+   <a-marker id="marker5" preset="custom" s19="" url="gaohu.patt">
+    <a-entity gltf-model="url(gaohu.gltf)" id="model5" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    </a-entity>
+   </a-marker>
+   <a-marker id="marker6" preset="custom" s19="" url="huagu.patt">
+    <a-entity gltf-model="url(huagu.gltf)" id="model6" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    </a-entity>
+   </a-marker>
+   <a-marker id="marker7" preset="custom" s19="" url="huobusi.patt">
+    <a-entity gltf-model="url(huobusi.gltf)" id="model7" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    </a-entity>
+   </a-marker>
+   <a-marker id="marker8" preset="custom" s19="" url="matouqin.patt">
+    <a-entity gltf-model="url(matouqin.gltf)" id="model8" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    </a-entity>
+   </a-marker>
+   <a-marker id="marker9" preset="custom" s19="" url="niujiaoqin.patt">
+    <a-entity gltf-model="url(niujiaoqin.gltf)" id="model9" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    </a-entity>
+   </a-marker>
+   <a-marker id="marker10" preset="custom" s19="" url="suona.patt">
+    <a-entity gltf-model="url(suona.gltf)" id="model10" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    </a-entity>
+   </a-marker>
+   <a-marker id="marker11" preset="custom" s19="" url="yueqin.patt">
+    <a-entity gltf-model="url(yueqin.gltf)" id="model11" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    </a-entity>
+   </a-marker>
+   <a-marker id="marker12" preset="custom" s19="" url="chaozhou_suona.patt">
+    <a-entity gltf-model="url(chaozhou_suona.gltf)" id="model12" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    </a-entity>
+   </a-marker>
+   <a-marker id="marker13" preset="custom" s19="" url="chaozhou_zheng.patt">
+    <a-entity gltf-model="url(chaozhou_zheng.gltf)" id="model13" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    </a-entity>
+   </a-marker>
+   <a-marker id="marker14" preset="custom" s19="" url="dongxiao.patt">
+    <a-entity gltf-model="url(dongxiao.gltf)" id="model14" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    </a-entity>
+   </a-marker>
+   <a-marker id="marker15" preset="custom" s19="" url="houguan.patt">
+    <a-entity gltf-model="url(houguan.gltf)" id="model15" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    </a-entity>
+   </a-marker>
+   <a-marker id="marker16" preset="custom" s19="" url="muyu.patt">
+    <a-entity gltf-model="url(muyu.gltf)" id="model16" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    </a-entity>
+   </a-marker>
+   <a-marker id="marker17" preset="custom" s19="" url="niujiaohao.patt">
+    <a-entity gltf-model="url(niujiaohao.gltf)" id="model17" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    </a-entity>
+   </a-marker>
+   <a-marker id="marker18" preset="custom" s19="" url="qinqin.patt">
+    <a-entity gltf-model="url(qinqin.gltf)" id="model18" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    </a-entity>
+   </a-marker>
+   <a-marker id="marker19" preset="custom" s19="" url="yehu.patt">
+    <a-entity gltf-model="url(yehu.gltf)" id="model19" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    </a-entity>
+   </a-marker>
+   <a-marker id="marker20" preset="custom" s19="" url="yugu.patt">
+    <a-entity gltf-model="url(yugu.gltf)" id="model20" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    </a-entity>
+   </a-marker>
+   <a-marker id="marker21" preset="custom" s19="" url="zhuban.patt">
+    <a-entity gltf-model="url(zhuban.gltf)" id="model21" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    </a-entity>
+   </a-marker>
+    <a-marker id="marker22" preset="custom" s19="" url="huagudatong.patt">
+    <a-entity gltf-model="url(huagudatong.gltf)" id="model22" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>
    <a-entity camera="">

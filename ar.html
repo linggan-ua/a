@@ -5,11 +5,12 @@
   <title>
    岭南乐器增强现实视听工具
   </title>
-  <!-- 按顺序加载必要的库 -->
-  <script src="aframe.min.js"></script>
-  <script src="aframe-ar.js"></script>
-  <!-- 可选：markdown渲染器 -->
-  <script src="marked.min.js" onerror="console.warn('marked.js加载失败，markdown功能将不可用')"></script>
+  <script src="aframe.min.js">
+  </script>
+  <script src="aframe-ar.js">
+  </script>
+  <!-- 添加marked.js用于markdown渲染（本地引用） -->
+  <script src="marked.min.js"></script>
   <style>
         /* 启动覆盖层 - iOS/HyperOS风格高斯模糊 */
         .start-overlay {
@@ -325,6 +326,34 @@
         
         #ar-scene.active {
             display: block;
+        }
+        
+        /* =============== AR.js竖屏模式修复样式 =============== */
+        /* 确保AR画面在竖屏下正确显示 */
+        @media screen and (orientation: portrait) {
+            #ar-scene canvas,
+            #ar-scene video {
+                object-fit: cover !important;
+                width: auto !important;
+                height: 100vh !important;
+                max-width: none !important;
+            }
+            
+            /* 修复AR画面的容器样式 */
+            #ar-scene .a-canvas {
+                width: 100vw !important;
+                height: 100vh !important;
+            }
+        }
+        
+        /* 横屏模式保持默认 */
+        @media screen and (orientation: landscape) {
+            #ar-scene canvas,
+            #ar-scene video {
+                width: 100vw !important;
+                height: 100vh !important;
+                object-fit: cover !important;
+            }
         }
         
         .hidden {
@@ -1070,7 +1099,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // =============== A-Frame组件注册 - 所有浏览器可用 ===============
 
-// 旋转组件 - 所有浏览器可用
+// 旋转组件 - 所有浏览器可用（增强竖屏支持）
 AFRAME.registerComponent('o15', {
     schema: {
         x: { type: 'number', default: 0 },
@@ -1080,14 +1109,33 @@ AFRAME.registerComponent('o15', {
     init: function () {
         var element = this.el;
         var rotationData = this.data;
+        
         element.addEventListener('model-loaded', function () {
             var mesh = element.getObject3D('mesh');
             if (!mesh) return;
+            
             mesh.rotation.set(
                 THREE.Math.degToRad(rotationData.x),
                 THREE.Math.degToRad(rotationData.y),
                 THREE.Math.degToRad(rotationData.z)
             );
+            
+            // 竖屏模式下的额外优化
+            if (window.innerHeight > window.innerWidth) {
+                console.log('竖屏模式：应用模型显示优化');
+                // 确保模型在竖屏下正确显示
+                mesh.matrixAutoUpdate = true;
+                mesh.updateMatrixWorld(true);
+            }
+        });
+        
+        // 监听屏幕方向变化
+        this.el.sceneEl.addEventListener('ar-orientationchange', function() {
+            console.log('AR方向变化：重新调整模型');
+            var mesh = element.getObject3D('mesh');
+            if (mesh) {
+                mesh.updateMatrixWorld(true);
+            }
         });
     }
 });
@@ -1476,9 +1524,6 @@ function createStartOverlay() {
         <button class="start-button" onclick="startAR()">
             ✨ 启动AR体验
         </button>
-        <button class="start-button" onclick="testButtonClick()" style="background: rgba(255, 255, 255, 0.1); margin-top: 10px;">
-            🧪 测试按钮响应
-        </button>
         <div style="font-size: 0.9em; opacity: 0.8; margin-top: 15px;">
             💡 为了保护隐私，需要您的授权才能访问相应功能
         </div>
@@ -1487,108 +1532,28 @@ function createStartOverlay() {
     document.body.appendChild(startOverlay);
 }
 
-// 检查必要的库是否加载完成
-function checkLibrariesLoaded() {
-    console.log('🔍 检查库加载状态...');
-    
-    const checks = {
-        'A-Frame': typeof AFRAME !== 'undefined',
-        'THREE.js': typeof THREE !== 'undefined'
-    };
-    
-    const optionalChecks = {
-        'marked.js': typeof marked !== 'undefined'
-    };
-    
-    console.log('📚 必要库加载状态:', checks);
-    console.log('📚 可选库加载状态:', optionalChecks);
-    
-    const allLoaded = Object.values(checks).every(loaded => loaded);
-    if (allLoaded) {
-        console.log('✅ 所有必要的库都已加载完成');
-    } else {
-        console.warn('⚠️ 部分必要库未加载完成:', checks);
-    }
-    
-    return allLoaded;
-}
-
 // 启动AR函数
 function startAR() {
-    console.log('🚀 启动AR按钮被点击');
+    if (isARStarted) return;
     
-    if (isARStarted) {
-        console.log('⚠️ AR已经启动过了');
-        return;
-    }
-    
-    // 检查必要的库是否加载
-    if (!checkLibrariesLoaded()) {
-        console.error('❌ 必要的库未完全加载，请稍后再试');
-        alert('正在加载必要组件，请稍后再试...');
-        return;
-    }
-    
-    console.log('开始启动AR体验');
+    console.log('启动AR体验');
     isARStarted = true;
     
-    try {
-        // 隐藏启动覆盖层
-        if (startOverlay) {
-            startOverlay.classList.add('hidden');
-            console.log('✅ 启动页面已隐藏');
-        }
-        
-        // 显示AR场景
-        const arScene = document.getElementById('ar-scene');
-        if (arScene) {
-            // 先设置AR参数
-            const setupSuccess = setupARScene();
-            if (!setupSuccess) {
-                console.error('❌ AR参数设置失败');
-                alert('AR设置失败，请刷新页面重试');
-                return;
-            }
-            
-            // 延迟显示场景，确保参数设置完成
-            setTimeout(() => {
-                arScene.classList.add('active');
-                console.log('✅ AR场景已激活');
-                
-                // 显示dock栏
-                const dockContainer = document.getElementById('dock-container');
-                if (dockContainer) {
-                    dockContainer.classList.add('active');
-                    console.log('✅ Dock栏已显示');
-                }
-                
-                // 应用iOS视频修复（如果需要）
-                applyIOSVideoFix();
-                
-                console.log('🎉 AR启动完成！');
-                
-            }, 1000); // 给A-Frame一些时间来初始化
-        } else {
-            console.error('❌ 找不到AR场景元素');
-            alert('AR场景初始化失败，请刷新页面重试');
-        }
-        
-    } catch (error) {
-        console.error('❌ 启动AR时发生错误:', error);
-        // 显示错误提示
-        alert('启动AR时发生错误：' + error.message + '\n请刷新页面重试');
-        // 重置状态
-        isARStarted = false;
-        if (startOverlay) {
-            startOverlay.classList.remove('hidden');
-        }
+    // 隐藏启动覆盖层
+    startOverlay.classList.add('hidden');
+    
+    // 显示AR场景
+    const arScene = document.getElementById('ar-scene');
+    arScene.classList.add('active');
+    
+    // 显示dock栏
+    const dockContainer = document.getElementById('dock-container');
+    if (dockContainer) {
+        dockContainer.classList.add('active');
     }
-}
-
-// 测试函数 - 帮助调试按钮点击问题
-function testButtonClick() {
-    console.log('🧪 测试按钮点击功能');
-    alert('按钮点击功能正常！');
+    
+    // 应用iOS视频修复（如果需要）
+    applyIOSVideoFix();
 }
 
 
@@ -1735,44 +1700,8 @@ function backToStart() {
 
 // 页面加载完成后显示启动覆盖层
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('📄 页面DOM加载完成');
-    
-    // 延迟检查，确保所有脚本都加载完成
-    setTimeout(() => {
-        console.log('🔍 检查页面初始化状态...');
-        
-        // 检查库加载状态
-        const librariesLoaded = checkLibrariesLoaded();
-        
-        // 创建启动界面
-        createStartOverlay();
-        console.log('✅ 启动界面已创建');
-        
-        if (!librariesLoaded) {
-            console.warn('⚠️ 部分库未加载，可能会影响AR功能');
-        }
-        
-    }, 500); // 给其他脚本一些加载时间
-    
-    // 监听设备方向变化
-    window.addEventListener('orientationchange', function() {
-        if (isARStarted) {
-            console.log('🔄 设备方向改变，重新设置AR参数');
-            setTimeout(() => {
-                setupARScene();
-            }, 500); // 延迟确保方向变化完成
-        }
-    });
-    
-    // 监听窗口大小变化（用于桌面端测试）
-    window.addEventListener('resize', function() {
-        if (isARStarted) {
-            console.log('🔄 窗口大小改变，重新设置AR参数');
-            setTimeout(() => {
-                setupARScene();
-            }, 300);
-        }
-    });
+    console.log('页面加载完成');
+    createStartOverlay();
     
     // 监听权限被拒绝错误
     window.addEventListener('unhandledrejection', function(event) {
@@ -1783,11 +1712,6 @@ document.addEventListener('DOMContentLoaded', function() {
             event.preventDefault();
             setTimeout(handlePermissionDenied, 500);
         }
-    });
-    
-    // 全局错误处理
-    window.addEventListener('error', function(event) {
-        console.error('❌ 页面发生错误:', event.error);
     });
 });
 
@@ -1816,8 +1740,8 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
   </div>
   
-  <!-- AR场景：初始隐藏，用户点击启动后才显示，AR参数将动态设置 -->
-  <a-scene id="ar-scene" embedded="" vr-mode-ui="enabled: false">
+  <!-- AR场景：初始隐藏，用户点击启动后才显示 -->
+  <a-scene id="ar-scene" arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;" embedded="" vr-mode-ui="enabled: false" renderer="antialias: true; alpha: true; precision: medium;" stats="false">
    <a-marker id="marker1" preset="custom" s19="" url="pattern1.patt">
     <a-entity gltf-model="model1.gltf" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02">
     </a-entity>
@@ -1831,6 +1755,76 @@ document.addEventListener('DOMContentLoaded', function() {
   </a-scene>
   
   <script>
+   // =============== AR.js竖屏模式修复方案 ===============
+   // 解决竖屏模式下模型拉伸和标定问题
+   document.addEventListener('DOMContentLoaded', function() {
+       // 等待AR.js加载完成后再应用修复
+       setTimeout(function() {
+           if (typeof ARjs !== 'undefined' && ARjs.Source && ARjs.Source.prototype) {
+               console.log('应用AR.js竖屏修复方案');
+               
+               // 重写ARjs.Source.prototype.copyElementSizeTo方法来修复纵横比问题
+               ARjs.Source.prototype.copyElementSizeTo = function(otherElement) {
+                   const isPortrait = window.innerHeight > window.innerWidth;
+                   
+                   if (isPortrait) {
+                       // 竖屏模式：优化for手机竖屏使用
+                       otherElement.style.height = this.domElement.style.height;
+                       const width = parseInt(otherElement.style.height) * (4/3);
+                       otherElement.style.width = width + 'px';
+                       otherElement.style.marginLeft = ((window.innerWidth - width) / 2) + 'px';
+                       otherElement.style.marginTop = '0';
+                       console.log('竖屏模式AR画面修复已应用');
+                   } else {
+                       // 横屏模式：保持原有逻辑
+                       otherElement.style.width = this.domElement.style.width;
+                       const height = parseInt(otherElement.style.width) * (3/4);
+                       otherElement.style.height = height + 'px';
+                       otherElement.style.marginLeft = '0';
+                       otherElement.style.marginTop = ((window.innerHeight - height) / 2) + 'px';
+                   }
+               };
+               
+               // 监听屏幕方向变化，重新应用修复
+               let orientationChangeTimeout;
+               window.addEventListener('orientationchange', function() {
+                   clearTimeout(orientationChangeTimeout);
+                   orientationChangeTimeout = setTimeout(function() {
+                       console.log('屏幕方向变化，重新应用AR修复');
+                       // 触发重新渲染
+                       if (window.AFRAME && window.AFRAME.scenes[0]) {
+                           const scene = window.AFRAME.scenes[0];
+                           scene.emit('ar-orientationchange');
+                       }
+                   }, 500);
+               });
+               
+               // 额外的竖屏优化：调整摄像头约束
+               if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                   const originalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+                   navigator.mediaDevices.getUserMedia = function(constraints) {
+                       if (constraints.video && window.innerHeight > window.innerWidth) {
+                           // 竖屏模式下优化摄像头约束
+                           if (typeof constraints.video === 'object') {
+                               constraints.video.aspectRatio = window.innerWidth / window.innerHeight;
+                           } else {
+                               constraints.video = {
+                                   aspectRatio: window.innerWidth / window.innerHeight,
+                                   facingMode: 'environment'
+                               };
+                           }
+                           console.log('竖屏摄像头约束已优化');
+                       }
+                       return originalGetUserMedia(constraints);
+                   };
+               }
+           } else {
+               console.log('ARjs未加载，延迟重试');
+               setTimeout(arguments.callee, 1000);
+           }
+       }, 2000);
+   });
+
    // 页面增强功能
    document.addEventListener('DOMContentLoaded', function () {
         var audioElements = document.querySelectorAll('audio');

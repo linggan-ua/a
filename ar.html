@@ -328,43 +328,6 @@
             display: block;
         }
         
-        /* =============== AR.js标准竖屏修复样式 =============== */
-        /* 确保AR画面正确显示，解决竖屏拉伸问题 */
-        #ar-scene {
-            width: 100vw !important;
-            height: 100vh !important;
-            position: relative !important;
-            overflow: hidden;
-        }
-        
-        /* 摄像头video画面 - 按ChatGPT建议设置 */
-        #ar-scene video {
-            object-fit: cover !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            z-index: -1 !important;
-        }
-        
-        /* WebGL canvas渲染层 */
-        #ar-scene canvas {
-            width: 100vw !important;
-            height: 100vh !important;
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            pointer-events: auto !important;
-        }
-        
-        /* A-Frame容器 */
-        #ar-scene .a-canvas {
-            width: 100vw !important;
-            height: 100vh !important;
-            position: relative !important;
-        }
-        
         .hidden {
             display: none !important;
         }
@@ -1118,18 +1081,14 @@ AFRAME.registerComponent('o15', {
     init: function () {
         var element = this.el;
         var rotationData = this.data;
-        
         element.addEventListener('model-loaded', function () {
             var mesh = element.getObject3D('mesh');
             if (!mesh) return;
-            
             mesh.rotation.set(
                 THREE.Math.degToRad(rotationData.x),
                 THREE.Math.degToRad(rotationData.y),
                 THREE.Math.degToRad(rotationData.z)
             );
-            
-            console.log('3D模型旋转已应用');
         });
     }
 });
@@ -1548,12 +1507,6 @@ function startAR() {
     
     // 应用iOS视频修复（如果需要）
     applyIOSVideoFix();
-    
-    // AR启动后应用标准摄像机修复
-    setTimeout(function() {
-        console.log('AR启动完成，应用摄像机投影修复');
-        updateCameraProjection();
-    }, 2000);
 }
 
 
@@ -1740,13 +1693,8 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
   </div>
   
-  <!-- AR场景：使用embedded模式并添加标准AR配置 -->
-  <a-scene id="ar-scene" 
-           embedded
-           arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;" 
-           vr-mode-ui="enabled: false" 
-           renderer="logarithmicDepthBuffer: true; antialias: true; alpha: true; precision: medium;" 
-           stats="false">
+  <!-- AR场景：初始隐藏，用户点击启动后才显示 -->
+  <a-scene id="ar-scene" arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false" embedded="" vr-mode-ui="enabled: false">
    <a-marker id="marker1" preset="custom" s19="" url="pattern1.patt">
     <a-entity gltf-model="model1.gltf" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02">
     </a-entity>
@@ -1760,63 +1708,6 @@ document.addEventListener('DOMContentLoaded', function() {
   </a-scene>
   
   <script>
-   // =============== AR.js标准竖屏修复方案 ===============
-   // 按照ChatGPT建议：解决竖屏下摄像头画面比例与WebGL渲染视口不一致问题
-   
-   // 1. 同步摄像机投影比例：自动根据屏幕尺寸更新camera.aspect
-   function updateCameraProjection() {
-       // 等待A-Frame场景加载完成
-       if (window.AFRAME && window.AFRAME.scenes[0]) {
-           const scene = window.AFRAME.scenes[0];
-           const camera = scene.camera;
-           
-           if (camera && camera.el && camera.el.getObject3D('camera')) {
-               const threeCamera = camera.el.getObject3D('camera');
-               // 更新摄像机纵横比
-               threeCamera.aspect = window.innerWidth / window.innerHeight;
-               threeCamera.updateProjectionMatrix();
-               console.log('摄像机投影已更新:', threeCamera.aspect);
-           }
-           
-           // 更新渲染器尺寸
-           const renderer = scene.renderer;
-           if (renderer) {
-               renderer.setSize(window.innerWidth, window.innerHeight);
-               console.log('渲染器尺寸已更新:', window.innerWidth, 'x', window.innerHeight);
-           }
-       }
-   }
-   
-   // 2. 屏幕尺寸变化监听器
-   function onResize() {
-       updateCameraProjection();
-   }
-   
-   // 3. 方向变化监听器
-   function onOrientationChange() {
-       setTimeout(function() {
-           console.log('屏幕方向变化，更新摄像机投影');
-           updateCameraProjection();
-       }, 500);
-   }
-   
-   document.addEventListener('DOMContentLoaded', function() {
-       // 页面加载时执行一次
-       setTimeout(updateCameraProjection, 3000);
-       
-       // 监听窗口大小变化
-       window.addEventListener('resize', onResize);
-       window.addEventListener('orientationchange', onOrientationChange);
-       
-       // 4. 竖屏体验提醒（可选）
-       if (window.innerHeight > window.innerWidth) {
-           console.log('检测到竖屏模式，已启用竖屏优化');
-           // 可以在这里添加提醒用户横屏的逻辑
-       }
-       
-       console.log('AR.js标准修复方案已初始化');
-   });
-
    // 页面增强功能
    document.addEventListener('DOMContentLoaded', function () {
         var audioElements = document.querySelectorAll('audio');

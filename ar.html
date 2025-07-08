@@ -5,12 +5,11 @@
   <title>
    岭南乐器增强现实视听工具
   </title>
-  <script src="aframe.min.js">
-  </script>
-  <script src="aframe-ar.js">
-  </script>
-  <!-- 添加marked.js用于markdown渲染（本地引用） -->
-  <script src="marked.min.js"></script>
+  <!-- 按顺序加载必要的库 -->
+  <script src="aframe.min.js"></script>
+  <script src="aframe-ar.js"></script>
+  <!-- 可选：markdown渲染器 -->
+  <script src="marked.min.js" onerror="console.warn('marked.js加载失败，markdown功能将不可用')"></script>
   <style>
         /* 启动覆盖层 - iOS/HyperOS风格高斯模糊 */
         .start-overlay {
@@ -1477,6 +1476,9 @@ function createStartOverlay() {
         <button class="start-button" onclick="startAR()">
             ✨ 启动AR体验
         </button>
+        <button class="start-button" onclick="testButtonClick()" style="background: rgba(255, 255, 255, 0.1); margin-top: 10px;">
+            🧪 测试按钮响应
+        </button>
         <div style="font-size: 0.9em; opacity: 0.8; margin-top: 15px;">
             💡 为了保护隐私，需要您的授权才能访问相应功能
         </div>
@@ -1485,31 +1487,108 @@ function createStartOverlay() {
     document.body.appendChild(startOverlay);
 }
 
-// 启动AR函数
-function startAR() {
-    if (isARStarted) return;
+// 检查必要的库是否加载完成
+function checkLibrariesLoaded() {
+    console.log('🔍 检查库加载状态...');
     
-    console.log('启动AR体验');
-    isARStarted = true;
+    const checks = {
+        'A-Frame': typeof AFRAME !== 'undefined',
+        'THREE.js': typeof THREE !== 'undefined'
+    };
     
-    // 在启动AR前设置最优参数
-    setupARScene();
+    const optionalChecks = {
+        'marked.js': typeof marked !== 'undefined'
+    };
     
-    // 隐藏启动覆盖层
-    startOverlay.classList.add('hidden');
+    console.log('📚 必要库加载状态:', checks);
+    console.log('📚 可选库加载状态:', optionalChecks);
     
-    // 显示AR场景
-    const arScene = document.getElementById('ar-scene');
-    arScene.classList.add('active');
-    
-    // 显示dock栏
-    const dockContainer = document.getElementById('dock-container');
-    if (dockContainer) {
-        dockContainer.classList.add('active');
+    const allLoaded = Object.values(checks).every(loaded => loaded);
+    if (allLoaded) {
+        console.log('✅ 所有必要的库都已加载完成');
+    } else {
+        console.warn('⚠️ 部分必要库未加载完成:', checks);
     }
     
-    // 应用iOS视频修复（如果需要）
-    applyIOSVideoFix();
+    return allLoaded;
+}
+
+// 启动AR函数
+function startAR() {
+    console.log('🚀 启动AR按钮被点击');
+    
+    if (isARStarted) {
+        console.log('⚠️ AR已经启动过了');
+        return;
+    }
+    
+    // 检查必要的库是否加载
+    if (!checkLibrariesLoaded()) {
+        console.error('❌ 必要的库未完全加载，请稍后再试');
+        alert('正在加载必要组件，请稍后再试...');
+        return;
+    }
+    
+    console.log('开始启动AR体验');
+    isARStarted = true;
+    
+    try {
+        // 隐藏启动覆盖层
+        if (startOverlay) {
+            startOverlay.classList.add('hidden');
+            console.log('✅ 启动页面已隐藏');
+        }
+        
+        // 显示AR场景
+        const arScene = document.getElementById('ar-scene');
+        if (arScene) {
+            // 先设置AR参数
+            const setupSuccess = setupARScene();
+            if (!setupSuccess) {
+                console.error('❌ AR参数设置失败');
+                alert('AR设置失败，请刷新页面重试');
+                return;
+            }
+            
+            // 延迟显示场景，确保参数设置完成
+            setTimeout(() => {
+                arScene.classList.add('active');
+                console.log('✅ AR场景已激活');
+                
+                // 显示dock栏
+                const dockContainer = document.getElementById('dock-container');
+                if (dockContainer) {
+                    dockContainer.classList.add('active');
+                    console.log('✅ Dock栏已显示');
+                }
+                
+                // 应用iOS视频修复（如果需要）
+                applyIOSVideoFix();
+                
+                console.log('🎉 AR启动完成！');
+                
+            }, 1000); // 给A-Frame一些时间来初始化
+        } else {
+            console.error('❌ 找不到AR场景元素');
+            alert('AR场景初始化失败，请刷新页面重试');
+        }
+        
+    } catch (error) {
+        console.error('❌ 启动AR时发生错误:', error);
+        // 显示错误提示
+        alert('启动AR时发生错误：' + error.message + '\n请刷新页面重试');
+        // 重置状态
+        isARStarted = false;
+        if (startOverlay) {
+            startOverlay.classList.remove('hidden');
+        }
+    }
+}
+
+// 测试函数 - 帮助调试按钮点击问题
+function testButtonClick() {
+    console.log('🧪 测试按钮点击功能');
+    alert('按钮点击功能正常！');
 }
 
 
@@ -1656,8 +1735,24 @@ function backToStart() {
 
 // 页面加载完成后显示启动覆盖层
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('页面加载完成');
-    createStartOverlay();
+    console.log('📄 页面DOM加载完成');
+    
+    // 延迟检查，确保所有脚本都加载完成
+    setTimeout(() => {
+        console.log('🔍 检查页面初始化状态...');
+        
+        // 检查库加载状态
+        const librariesLoaded = checkLibrariesLoaded();
+        
+        // 创建启动界面
+        createStartOverlay();
+        console.log('✅ 启动界面已创建');
+        
+        if (!librariesLoaded) {
+            console.warn('⚠️ 部分库未加载，可能会影响AR功能');
+        }
+        
+    }, 500); // 给其他脚本一些加载时间
     
     // 监听设备方向变化
     window.addEventListener('orientationchange', function() {
@@ -1688,6 +1783,11 @@ document.addEventListener('DOMContentLoaded', function() {
             event.preventDefault();
             setTimeout(handlePermissionDenied, 500);
         }
+    });
+    
+    // 全局错误处理
+    window.addEventListener('error', function(event) {
+        console.error('❌ 页面发生错误:', event.error);
     });
 });
 

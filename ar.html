@@ -1693,7 +1693,8 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
   
   <!-- AR场景：初始隐藏，用户点击启动后才显示 -->
-  <a-scene id="ar-scene" arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false" embedded="" vr-mode-ui="enabled: false">
+  <!-- 关键修改：优化arjs参数，移除videoTexture -->
+  <a-scene id="ar-scene" arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false" embedded="" vr-mode-ui="enabled: false">
    <a-marker id="marker1" preset="custom" s19="" url="pattern1.patt">
     <a-entity gltf-model="model1.gltf" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02">
     </a-entity>
@@ -1702,7 +1703,8 @@ document.addEventListener('DOMContentLoaded', function() {
     <a-entity gltf-model="model2.gltf" id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03">
     </a-entity>
    </a-marker>
-   <a-entity camera="">
+   <!-- 关键修改：为摄像头添加arjs-camera-updater组件 -->
+   <a-entity camera arjs-camera-updater>
    </a-entity>
   </a-scene>
   
@@ -1731,63 +1733,45 @@ document.addEventListener('DOMContentLoaded', function() {
     };
   </script>
 
-  <!-- START: 屏幕方向与尺寸自适应修复脚本 (V2 - 增强版) -->
+  <!-- START: 屏幕方向与尺寸自适应修复脚本 (V3 - 最终版) -->
   <script>
-    function arjsResize() {
-        var sceneEl = document.querySelector('a-scene');
-        if (!sceneEl) return;
-
-        // 获取arjs系统，这是与AR.js核心交互的入口
-        var arSystem = sceneEl.systems['arjs'];
-        if (!arSystem) return;
-
-        // arToolkitSource是处理摄像头视频源的对象
-        var arToolkitSource = arSystem.arToolkitSource;
-        // arToolkitContext是处理识别和追踪的核心对象
-        var arToolkitContext = arSystem.arToolkitContext;
-        
-        if (!arToolkitSource || !arToolkitContext) return;
-
-        // 这是一个关键函数，它会通知ar.js重新计算所有与尺寸相关的参数
-        // 包括视频纹理、处理画布、投影矩阵等
-        arToolkitSource.onResizeElement();
-        arToolkitSource.copyElementSizeTo(arToolkitSource.domElement);
-        if (arToolkitContext.arController !== null) {
-            arToolkitSource.copyElementSizeTo(arToolkitContext.arController.canvas);
+    // 定义一个“投影同步器”组件
+    AFRAME.registerComponent('arjs-camera-updater', {
+        tick: function () {
+            // 确保AR系统已准备就绪
+            if (this.el.sceneEl.systems.arjs && this.el.sceneEl.systems.arjs.arToolkitContext) {
+                var arToolkitContext = this.el.sceneEl.systems.arjs.arToolkitContext;
+                
+                // 检查AR控制器是否已初始化
+                if (arToolkitContext.arController !== null) {
+                    var camera = this.el.getObject3D('camera');
+                    // 从AR控制器获取正确的投影矩阵
+                    var projectionMatrix = arToolkitContext.arController.getProjectionMatrix();
+                    if (projectionMatrix) {
+                        // 将这个正确的“图纸”应用到A-Frame的摄像头上
+                        camera.projectionMatrix.fromArray(projectionMatrix);
+                        camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
+                    }
+                }
+            }
         }
-        
-        console.log("AR.js核心系统已根据新窗口尺寸完成同步。");
-    }
-
-    function onResize() {
-      // 首先，调用我们新的arjsResize函数来同步AR.js的内部
-      arjsResize();
-
-      // 然后，我们仍然需要更新A-Frame的摄像头，以确保渲染器和摄像头同步
-      var sceneEl = document.querySelector('a-scene');
-      if (!sceneEl) return;
-
-      var renderer = sceneEl.renderer;
-      var camera = sceneEl.camera;
-
-      if (!renderer || !camera) return;
-      
-      console.log("正在更新A-Frame渲染器和摄像头宽高比...");
-
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-
-    // 我们需要确保在AR系统完全准备好之后再执行尺寸调整
-    // 'arjs-video-loaded' 是一个可靠的事件，表明摄像头视频已加载
-    window.addEventListener('arjs-video-loaded', function () {
-        console.log("AR摄像头视频已加载，准备进行尺寸调整。");
-        // 首次加载完成时，执行一次尺寸调整
-        onResize();
-        // 然后监听后续的窗口尺寸变化
-        window.addEventListener('resize', onResize);
     });
+
+    // 定义一个resize处理函数，用于同步渲染器尺寸
+    function onResize() {
+        var sceneEl = document.querySelector('a-scene');
+        if (sceneEl && sceneEl.renderer) {
+            sceneEl.renderer.setSize(window.innerWidth, window.innerHeight);
+            console.log("A-Frame渲染器尺寸已更新为: " + window.innerWidth + "x" + window.innerHeight);
+        }
+    }
+
+    // 监听窗口尺寸变化
+    window.addEventListener('resize', onResize);
+    
+    // 页面加载时也执行一次，确保初始尺寸正确
+    window.addEventListener('load', onResize);
+
   </script>
   <!-- END: 屏幕方向与尺寸自适应修复脚本 -->
 

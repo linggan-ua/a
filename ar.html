@@ -1053,41 +1053,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
-// ====================================================================
-// =============== 修复点: 全局状态管理函数 (核心修复) ===============
-// ====================================================================
-/**
- * 处理乐器被识别的全局函数
- * @param {object} data - 由s19组件传递的乐器数据
- */
-function handleInstrumentFound(data) {
-    console.log('全局函数 handleInstrumentFound 被调用, 数据:', data);
-
-    // 如果有其他乐器在播放，先停止它
-    if (currentAudioManager && currentAudioManager.markerId !== data.markerId &&
-        currentAudioManager.audio && !currentAudioManager.audio.paused) {
-        currentAudioManager.audio.pause();
-    }
-
-    // 安全地设置全局状态变量
-    currentAudioManager = {
-        markerId: data.markerId,
-        audio: data.audio,
-        markdownFile: data.markdownFile,
-        infoText: data.infoText,
-        // 保留同一乐器之前的播放状态
-        isPlaying: currentAudioManager && currentAudioManager.markerId === data.markerId ?
-                      currentAudioManager.isPlaying : false
-    };
-
-    // 统一更新所有UI
-    updateInfoDisplay();
-    updateDockButtons();
-    const instrumentName = data.markerId === 'marker1' ? '琵琶' : '葫芦丝';
-    showNotification(`🎯 检测到${instrumentName}`);
-}
-
-
 // =============== A-Frame组件注册 - 所有浏览器可用 ===============
 
 // 旋转组件 - 所有浏览器可用
@@ -1113,7 +1078,7 @@ AFRAME.registerComponent('o15', {
 });
 
 // ====================================================================
-// =============== 修复点: Marker检测组件 (直接调用模式) ===============
+// =============== 最终修复: Marker检测组件 (直接操作模式) ===============
 // ====================================================================
 AFRAME.registerComponent('s19', {
     init: function () {
@@ -1122,7 +1087,7 @@ AFRAME.registerComponent('s19', {
         let audioFile = '';
         let markdownFile = '';
         
-        console.log(`=== s19组件初始化: ${markerId} (直接调用模式) ===`);
+        console.log(`=== s19组件初始化: ${markerId} (直接操作模式) ===`);
         
         // 根据marker ID确定对应的文件
         if (markerId === 'marker1') {
@@ -1150,31 +1115,38 @@ AFRAME.registerComponent('s19', {
                 infoText = markerId === 'marker1' ? '岭南乐器：琵琶' : '岭南乐器：葫芦丝';
             });
         
-        // --- 核心修改：组件直接调用全局函数 ---
+        // --- 核心修复：组件直接在事件监听器中处理所有逻辑 ---
 
         markerElement.addEventListener('markerFound', () => {
-            console.log(`组件 ${markerId} 检测到 marker, 准备调用全局函数`);
+            console.log(`Marker ${markerId} found. Directly updating global state.`);
             
-            const instrumentData = {
+            // 1. 如果有其他乐器在播放，先停止它
+            if (currentAudioManager && currentAudioManager.markerId !== markerId &&
+                currentAudioManager.audio && !currentAudioManager.audio.paused) {
+                currentAudioManager.audio.pause();
+            }
+
+            // 2. 安全地设置全局状态变量
+            currentAudioManager = {
                 markerId: markerId,
                 audio: audioElement.audio,
                 markdownFile: markdownFile,
                 infoText: infoText,
+                // 保留同一乐器之前的播放状态
+                isPlaying: currentAudioManager && currentAudioManager.markerId === markerId ?
+                              currentAudioManager.isPlaying : false
             };
 
-            // 直接调用在全局作用域中定义的函数
-            if (typeof window.handleInstrumentFound === 'function') {
-                window.handleInstrumentFound(instrumentData);
-            } else {
-                console.error('错误: 全局函数 handleInstrumentFound 未定义!');
-            }
+            // 3. 直接调用全局函数更新所有UI
+            updateInfoDisplay();
+            updateDockButtons();
+            const instrumentName = markerId === 'marker1' ? '琵琶' : '葫芦丝';
+            showNotification(`🎯 检测到${instrumentName}`);
         });
 
         markerElement.addEventListener('markerLost', () => {
             console.log(`Marker event "markerLost": ${markerId}`);
         });
-        
-        console.log(`=== s19组件事件监听器已为 ${markerId} 设置 ===`);
     }
 });
 
@@ -1746,11 +1718,11 @@ document.addEventListener('DOMContentLoaded', function() {
     vr-mode-ui="enabled: false">
 
    <a-marker id="marker1" preset="custom" s19 url="pattern1.patt">
-    <a-entity gltf-model="model1.gltf" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler>
+    <a-entity gltf-model="model1.gltf" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>
    <a-marker id="marker2" preset="custom" s19 url="pattern2.patt">
-    <a-entity gltf-model="model2.gltf" id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.013 0.013 0.013" touch-handler>
+    <a-entity gltf-model="model2.gltf" id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler>
     </a-entity>
    </a-marker>
    <a-entity camera="">

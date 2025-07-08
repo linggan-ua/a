@@ -1077,13 +1077,25 @@ AFRAME.registerComponent('o15', {
     }
 });
 
-// Marker检测组件 - 所有浏览器可用
+// Marker检测组件
 AFRAME.registerComponent('s19', {
     init: function () {
         var markerElement = this.el;
         var markerId = markerElement.getAttribute('id');
         var audioFile = '';
         var markdownFile = '';
+        
+        // ====================================================================
+        // =============== 创建乐器名称映射表 ===============
+        // ====================================================================
+        
+        const instrumentNames = {
+            'marker1': '琵琶',
+            'marker2': '葫芦丝',
+            'marker3': '大筒', 
+            'marker4': '东北大鼓'  
+            
+        };
         
         console.log('=== s19组件初始化: ' + markerId + ' ===');
         
@@ -1094,6 +1106,12 @@ AFRAME.registerComponent('s19', {
         } else if (markerId === 'marker2') {
             audioFile = 'audio2.mp3';
             markdownFile = 'instrument2.md';
+        } else if (markerId === 'marker3') {
+            audioFile = 'audio3.mp3';
+            markdownFile = 'instrument3.md';
+        } else if (markerId === 'marker4') {
+            audioFile = 'audio4.mp3';
+            markdownFile = 'instrument4.md';
         }
         
         // 获取或创建音频元素
@@ -1108,7 +1126,8 @@ AFRAME.registerComponent('s19', {
         
         // 加载对应的信息文本
         var infoText = '';
-        var infoFile = markerId === 'marker1' ? 'info1.txt' : 'info2.txt';
+        // 逻辑简化：直接使用markerId构建文件名
+        var infoFile = `info${markerId.replace('marker', '')}.txt`;
         
         fetch(infoFile)
             .then(function (response) {
@@ -1119,7 +1138,8 @@ AFRAME.registerComponent('s19', {
             })
             .catch(function (error) {
                 console.error('Error loading info text:', error);
-                infoText = markerId === 'marker1' ? '岭南乐器：琵琶' : '岭南乐器：葫芦丝';
+                // 如果加载失败，也从映射表里获取名字作为备用
+                infoText = `岭南乐器：${instrumentNames[markerId] || '未知乐器'}`;
             });
         
         // 使用原来简单高效的检测逻辑 - 直接检查3D对象可见性
@@ -1156,7 +1176,12 @@ AFRAME.registerComponent('s19', {
                 
                 // 立即更新UI状态
                 updateDockButtons();
-                showNotification(`🎯 检测到${markerId === 'marker1' ? '琵琶' : '葫芦丝'}`);
+                
+                // ====================================================================
+                // =============== 使用映射表来显示通知 ===============
+                // ====================================================================
+                const instrumentName = instrumentNames[markerId] || '未知乐器'; // 从映射表中获取名字
+                showNotification(`🎯 检测到${instrumentName}`);
                 
             } else if (!isVisible && wasVisible) {
                 wasVisible = false;
@@ -1868,11 +1893,15 @@ document.addEventListener('DOMContentLoaded', function() {
     vr-mode-ui="enabled: false">
 
    <a-marker id="marker1" preset="custom" s19="" url="pattern1.patt">
-    <a-entity gltf-model="model1.gltf" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.04 0.04 0.04" touch-handler>
+    <a-entity gltf-model="model1.gltf" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler>
     </a-entity>
    </a-marker>
    <a-marker id="marker2" preset="custom" s19="" url="pattern2.patt">
-    <a-entity gltf-model="model2.gltf" id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.04 0.04 0.04" touch-handler>
+    <a-entity gltf-model="model2.gltf" id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler>
+    </a-entity>
+   </a-marker>
+    <a-marker id="marker3" preset="custom" s19="" url="pattern3.patt">
+    <a-entity gltf-model="model3.gltf" id="model3" o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler>
     </a-entity>
    </a-marker>
    <a-entity camera="">

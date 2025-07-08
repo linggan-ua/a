@@ -2,6 +2,7 @@
 <html lang="en">
  <head>
   <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"/>
   <title>
    岭南乐器增强现实视听工具
   </title>
@@ -12,6 +13,14 @@
   <!-- 添加marked.js用于markdown渲染（本地引用） -->
   <script src="marked.min.js"></script>
   <style>
+        /* =============== AR竖屏拉伸修复方案 =============== */
+        /* 
+         * 问题：手机竖屏模式下AR模型被拉伸
+         * 原因：AR.js对宽高比的假设导致在竖屏时拉伸
+         * 解决：重写ARjs.Source.prototype.copyElementSizeTo函数
+         * 参考：GitHub Issue #331的解决方案
+         */
+        
         /* 启动覆盖层 - iOS/HyperOS风格高斯模糊 */
         .start-overlay {
             position: fixed;
@@ -500,6 +509,7 @@
          * 7. 顶部信息框也使用相同的高性能方案
          * 8. iOS风格胶囊圆角设计（56px圆角，接近高度一半）
          * 9. 符合Apple Human Interface Guidelines的圆角策略
+         * 10. 竖屏拉伸问题通过重写AR.js函数解决
          */
         .dock-container {
             position: fixed;
@@ -1392,6 +1402,51 @@ function updateDockButtons() {
     }
 }
 
+// =============== AR竖屏拉伸修复方案 ===============
+
+// 基于GitHub Issue #331的解决方案
+// 重写ARjs.Source.prototype.copyElementSizeTo来修复竖屏拉伸问题
+function fixARjsPortraitStretching() {
+    console.log('应用AR.js竖屏拉伸修复');
+    
+    // 等待ARjs加载完成
+    const checkARjs = setInterval(() => {
+        if (typeof ARjs !== 'undefined' && ARjs.Source && ARjs.Source.prototype) {
+            clearInterval(checkARjs);
+            
+            // 重写copyElementSizeTo函数来修复宽高比问题
+            ARjs.Source.prototype.copyElementSizeTo = function(otherElement) {
+                console.log('修复AR.js宽高比');
+                
+                if (window.innerWidth > window.innerHeight) {
+                    // 横屏模式 - 保持原有逻辑
+                    otherElement.style.width = this.domElement.style.width;
+                    const height = parseInt(otherElement.style.width) * 3/4;
+                    otherElement.style.height = height + 'px';
+                    otherElement.style.marginLeft = '0px';
+                    otherElement.style.marginTop = ((window.innerHeight - height) / 2) + 'px';
+                } else {
+                    // 竖屏模式 - 修复拉伸问题
+                    otherElement.style.height = this.domElement.style.height;
+                    const width = parseInt(otherElement.style.height) * 4/3;
+                    otherElement.style.width = width + 'px';
+                    otherElement.style.marginLeft = ((window.innerWidth - width) / 2) + 'px';
+                    otherElement.style.marginTop = '0px';
+                }
+                
+                console.log(`AR画面尺寸已调整: ${otherElement.style.width} × ${otherElement.style.height}`);
+            };
+            
+            console.log('✅ AR.js竖屏拉伸修复已应用');
+        }
+    }, 100);
+    
+    // 5秒后停止检查（防止无限循环）
+    setTimeout(() => {
+        clearInterval(checkARjs);
+    }, 5000);
+}
+
 // =============== 启动系统 - 所有浏览器可用 ===============
 
 // 创建启动覆盖层
@@ -1505,8 +1560,13 @@ function startAR() {
         dockContainer.classList.add('active');
     }
     
+    // 应用AR.js竖屏拉伸修复
+    fixARjsPortraitStretching();
+    
     // 应用iOS视频修复（如果需要）
     applyIOSVideoFix();
+    
+    console.log('AR体验启动完成，已应用竖屏拉伸修复');
 }
 
 
@@ -1653,7 +1713,7 @@ function backToStart() {
 
 // 页面加载完成后显示启动覆盖层
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('页面加载完成');
+    console.log('页面加载完成，准备AR竖屏拉伸修复');
     createStartOverlay();
     
     // 监听权限被拒绝错误
@@ -1666,6 +1726,9 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(handlePermissionDenied, 500);
         }
     });
+    
+    console.log(`设备信息: 屏幕尺寸 ${window.innerWidth}x${window.innerHeight}`);
+    console.log(`设备方向: ${window.innerHeight > window.innerWidth ? '竖屏' : '横屏'}`);
 });
 
   </script>
@@ -1694,7 +1757,11 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
   
   <!-- AR场景：初始隐藏，用户点击启动后才显示 -->
-  <a-scene id="ar-scene" arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false" embedded="" vr-mode-ui="enabled: false">
+  <a-scene 
+    id="ar-scene" 
+    arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;" 
+    embedded="" 
+    vr-mode-ui="enabled: false">
    <a-marker id="marker1" preset="custom" s19="" url="pattern1.patt">
     <a-entity gltf-model="model1.gltf" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02">
     </a-entity>

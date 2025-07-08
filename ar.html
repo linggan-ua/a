@@ -14,8 +14,7 @@
   <script src="marked.min.js"></script>
   <style>
         /* =============== AR竖屏拉伸修复方案 =============== */
-        /* 
-         * 问题：手机竖屏模式下AR模型被拉伸
+        /* * 问题：手机竖屏模式下AR模型被拉伸
          * 原因：AR.js对宽高比的假设导致在竖屏时拉伸
          * 解决：重写ARjs.Source.prototype.copyElementSizeTo函数
          * 参考：GitHub Issue #331的解决方案
@@ -498,8 +497,7 @@
         }
         
         /* =============== 新增：Dock栏样式（高性能伪毛玻璃方案）=============== */
-        /* 
-         * 性能优化说明：
+        /* * 性能优化说明：
          * 1. 移除了backdrop-filter（性能杀手）
          * 2. 使用多层渐变叠加模拟毛玻璃效果
          * 3. 启用硬件加速（translateZ(0)）
@@ -1195,6 +1193,133 @@ AFRAME.registerComponent('s19', {
     }
 });
 
+// ====================================================================
+// =============== 新增功能: 模型触摸交互组件 (Touch Handler) ===============
+// ====================================================================
+AFRAME.registerComponent('touch-handler', {
+    // 定义可配置参数，方便微调
+    schema: {
+        rotateSensitivity: { type: 'number', default: 0.006 }, // 旋转灵敏度
+        minScale: { type: 'number', default: 0.3 },          // 最小缩放比例（相对于原始大小）
+        maxScale: { type: 'number', default: 3.0 }           // 最大缩放比例
+    },
+    init: function () {
+        // 绑定事件处理器，确保 'this' 指向正确
+        this.onTouchStart = this.onTouchStart.bind(this);
+        this.onTouchMove = this.onTouchMove.bind(this);
+        this.onTouchEnd = this.onTouchEnd.bind(this);
+
+        // 在整个场景上监听触摸事件，这样用户可以在屏幕任何位置开始交互
+        this.el.sceneEl.addEventListener('touchstart', this.onTouchStart);
+        this.el.sceneEl.addEventListener('touchmove', this.onTouchMove);
+        this.el.sceneEl.addEventListener('touchend', this.onTouchEnd);
+
+        // 初始化状态变量
+        this.isDragging = false; // 是否正在单指拖动
+        this.isPinching = false; // 是否正在双指捏合
+        this.previousTouchPosition = { x: 0, y: 0 };
+        this.initialPinchDistance = 0;
+        this.model = this.el.object3D; // 获取模型自身的3D对象
+        this.markerId = this.el.parentElement.id; // 获取此模型所属的marker的ID
+
+        // 在模型加载完成后，存储其原始缩放值，用于后续计算
+        this.initialScale = new THREE.Vector3();
+        this.el.addEventListener('model-loaded', () => {
+            this.initialScale.copy(this.model.scale);
+        });
+    },
+
+    // 检查此模型是否是当前活跃的交互目标
+    isThisMarkerActive: function() {
+        // 使用全局的 currentAudioManager 判断
+        return currentAudioManager && currentAudioManager.markerId === this.markerId;
+    },
+
+    onTouchStart: function (e) {
+        // 如果当前模型不是活跃目标，则不响应触摸
+        if (!this.isThisMarkerActive()) return;
+
+        if (e.touches.length === 1) { // 单指触摸开始
+            this.isDragging = true;
+            this.isPinching = false;
+            this.previousTouchPosition = {
+                x: e.touches[0].clientX,
+                y: e.touches[0].clientY
+            };
+        } else if (e.touches.length === 2) { // 双指触摸开始
+            this.isDragging = false;
+            this.isPinching = true;
+            this.initialPinchDistance = this.getDistance(e.touches[0], e.touches[1]);
+        }
+    },
+
+    onTouchMove: function (e) {
+        if (!this.isThisMarkerActive()) return;
+
+        // --- 单指拖动旋转 ---
+        if (this.isDragging && e.touches.length === 1) {
+            const deltaX = e.touches[0].clientX - this.previousTouchPosition.x;
+            const deltaY = e.touches[0].clientY - this.previousTouchPosition.y;
+
+            // 根据手指水平和垂直移动的距离，分别旋转模型的Y轴和X轴
+            this.model.rotation.y += deltaX * this.data.rotateSensitivity;
+            this.model.rotation.x += deltaY * this.data.rotateSensitivity;
+
+            // 更新上一次的触摸位置
+            this.previousTouchPosition = {
+                x: e.touches[0].clientX,
+                y: e.touches[0].clientY
+            };
+        }
+
+        // --- 双指捏合缩放 ---
+        if (this.isPinching && e.touches.length === 2) {
+            if (this.initialPinchDistance <= 0) return; // 安全检查
+            const currentPinchDistance = this.getDistance(e.touches[0], e.touches[1]);
+            const scaleFactor = currentPinchDistance / this.initialPinchDistance;
+
+            // 计算应用缩放后的新尺寸
+            const newScaleX = this.model.scale.x * scaleFactor;
+            
+            // 计算新尺寸相对于模型原始尺寸的比例
+            const relativeScale = newScaleX / this.initialScale.x;
+
+            // 只有在设定的最小和最大缩放范围内才应用缩放
+            if (relativeScale >= this.data.minScale && relativeScale <= this.data.maxScale) {
+                 this.model.scale.multiplyScalar(scaleFactor);
+            }
+            
+            // 更新初始捏合距离，以便在同一次手势中平滑缩放
+            this.initialPinchDistance = currentPinchDistance;
+        }
+    },
+
+    onTouchEnd: function (e) {
+        // 手指离开屏幕时，重置状态
+        if (e.touches.length < 2) {
+            this.isPinching = false;
+        }
+        if (e.touches.length < 1) {
+            this.isDragging = false;
+        }
+    },
+    
+    // 计算两点之间的距离
+    getDistance: function (touch1, touch2) {
+        const dx = touch1.clientX - touch2.clientX;
+        const dy = touch1.clientY - touch2.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    },
+
+    // 组件移除时，清理事件监听器，防止内存泄漏
+    remove: function () {
+        this.el.sceneEl.removeEventListener('touchstart', this.onTouchStart);
+        this.el.sceneEl.removeEventListener('touchmove', this.onTouchMove);
+        this.el.sceneEl.removeEventListener('touchend', this.onTouchEnd);
+    }
+});
+
+
 // =============== Dock栏功能 - 所有浏览器可用 ===============
 
 // 音频播放控制
@@ -1248,7 +1373,7 @@ function showSettings() {
                 <label class="setting-label">ℹ️ 应用信息</label>
                 <p style="margin: 8px 0; color: #666; font-size: 14px;">
                     <strong>岭南乐器增强现实视听工具</strong><br>
-                    版本：1.0.0<br>
+                    版本：1.1.0 (触摸交互版)<br>
                     <br>
                     浏览器：${c3() ? '微信浏览器' : '标准浏览器'}
                 </p>
@@ -1258,6 +1383,8 @@ function showSettings() {
                 <label class="setting-label">📖 使用说明</label>
                 <div style="color: #666; font-size: 14px; line-height: 1.5;">
                     <p style="margin: 6px 0;">• 将摄像头对准乐器码以识别乐器</p>
+                    <p style="margin: 6px 0;">• <b>新增:</b> 单指拖动模型可旋转</p>
+                    <p style="margin: 6px 0;">• <b>新增:</b> 双指捏合模型可缩放</p>
                     <p style="margin: 6px 0;">• 点击"播放"按钮聆听乐器音乐</p>
                     <p style="margin: 6px 0;">• 点击"介绍"按钮查看详细信息</p>
                 </div>
@@ -1762,12 +1889,18 @@ document.addEventListener('DOMContentLoaded', function() {
     arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;" 
     embedded="" 
     vr-mode-ui="enabled: false">
+
+   <!-- 
+    修改点: 
+    为下方的 a-entity 添加了新增的 'touch-handler' 组件。
+    这个组件负责处理所有的触摸交互逻辑。
+   -->
    <a-marker id="marker1" preset="custom" s19="" url="pattern1.patt">
-    <a-entity gltf-model="model1.gltf" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02">
+    <a-entity gltf-model="model1.gltf" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>
    <a-marker id="marker2" preset="custom" s19="" url="pattern2.patt">
-    <a-entity gltf-model="model2.gltf" id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03">
+    <a-entity gltf-model="model2.gltf" id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler>
     </a-entity>
    </a-marker>
    <a-entity camera="">

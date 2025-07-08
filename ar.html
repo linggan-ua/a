@@ -2,7 +2,7 @@
 <html lang="en">
  <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-scale=1.0, minimum-scale=1.0"/>
   <title>
    岭南乐器增强现实视听工具
   </title>
@@ -1043,12 +1043,6 @@ let isARStarted = false;
 let startOverlay;
 let currentAudioManager = null;
 
-// AR竖屏修复相关变量
-let arCamera = null;
-let arContext = null;
-let arRenderer = null;
-let orientationHandler = null;
-
 // 简化的日志函数
 function infoLog(message) {
     console.log(message);
@@ -1408,20 +1402,21 @@ function updateDockButtons() {
     }
 }
 
-// =============== 简化的AR竖屏修复方案 ===============
+// =============== AR竖屏拉伸修复方案 ===============
 
-// 基于GitHub Issue #331的简化解决方案
-function applySimplePortraitFix() {
-    console.log('🔧 应用简化的AR竖屏修复方案');
+// 基于GitHub Issue #331的解决方案
+// 重写ARjs.Source.prototype.copyElementSizeTo来修复竖屏拉伸问题
+function fixARjsPortraitStretching() {
+    console.log('应用AR.js竖屏拉伸修复');
     
-    // 等待AR.js加载完成
+    // 等待ARjs加载完成
     const checkARjs = setInterval(() => {
         if (typeof ARjs !== 'undefined' && ARjs.Source && ARjs.Source.prototype) {
             clearInterval(checkARjs);
             
-            // 简化的copyElementSizeTo修复 - 只修复显示问题，不调整模型
+            // 重写copyElementSizeTo函数来修复宽高比问题
             ARjs.Source.prototype.copyElementSizeTo = function(otherElement) {
-                console.log('🔧 执行简化的AR竖屏修复');
+                console.log('修复AR.js宽高比');
                 
                 if (window.innerWidth > window.innerHeight) {
                     // 横屏模式 - 保持原有逻辑
@@ -1431,7 +1426,7 @@ function applySimplePortraitFix() {
                     otherElement.style.marginLeft = '0px';
                     otherElement.style.marginTop = ((window.innerHeight - height) / 2) + 'px';
                 } else {
-                    // 竖屏模式 - 简化修复
+                    // 竖屏模式 - 修复拉伸问题
                     otherElement.style.height = this.domElement.style.height;
                     const width = parseInt(otherElement.style.height) * 4/3;
                     otherElement.style.width = width + 'px';
@@ -1439,62 +1434,17 @@ function applySimplePortraitFix() {
                     otherElement.style.marginTop = '0px';
                 }
                 
-                console.log(`✅ AR画面已修复: ${otherElement.style.width} × ${otherElement.style.height}`);
+                console.log(`AR画面尺寸已调整: ${otherElement.style.width} × ${otherElement.style.height}`);
             };
             
-            console.log('✅ 简化AR.js竖屏修复已应用');
+            console.log('✅ AR.js竖屏拉伸修复已应用');
         }
     }, 100);
     
-    // 5秒后停止检查
+    // 5秒后停止检查（防止无限循环）
     setTimeout(() => {
         clearInterval(checkARjs);
     }, 5000);
-}
-
-// 简化的方向变化处理
-function handleOrientationChange() {
-    console.log('🔧 处理设备方向变化');
-    
-    const isPortrait = window.innerHeight > window.innerWidth;
-    console.log(`当前方向: ${isPortrait ? '竖屏' : '横屏'}`);
-    
-    // 简单的重新计算
-    setTimeout(() => {
-        const arScene = document.querySelector('a-scene');
-        if (arScene && arScene.systems.arjs) {
-            window.dispatchEvent(new Event('resize'));
-        }
-    }, 300);
-}
-
-// 监听方向变化
-function setupOrientationListener() {
-    console.log('🔧 设置方向变化监听器');
-    
-    // 防抖处理
-    let orientationTimer = null;
-    
-    const handleResize = () => {
-        if (orientationTimer) {
-            clearTimeout(orientationTimer);
-        }
-        
-        orientationTimer = setTimeout(() => {
-            handleOrientationChange();
-        }, 500);
-    };
-    
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', () => {
-        setTimeout(handleResize, 1000); // 等待方向变化完成
-    });
-    
-    // 清理函数
-    orientationHandler = () => {
-        window.removeEventListener('resize', handleResize);
-        window.removeEventListener('orientationchange', handleResize);
-    };
 }
 
 // =============== 启动系统 - 所有浏览器可用 ===============
@@ -1583,8 +1533,7 @@ function createStartOverlay() {
             ✨ 启动AR体验
         </button>
         <div style="font-size: 0.9em; opacity: 0.8; margin-top: 15px;">
-            💡 为了保护隐私，需要您的授权才能访问相应功能<br>
-            🔧 已修复竖屏显示问题
+            💡 为了保护隐私，需要您的授权才能访问相应功能
         </div>
     `;
     
@@ -1595,7 +1544,7 @@ function createStartOverlay() {
 function startAR() {
     if (isARStarted) return;
     
-    console.log('🚀 启动AR体验');
+    console.log('启动AR体验');
     isARStarted = true;
     
     // 隐藏启动覆盖层
@@ -1611,17 +1560,15 @@ function startAR() {
         dockContainer.classList.add('active');
     }
     
-    // 应用简化的AR竖屏修复
-    applySimplePortraitFix();
-    
-    // 设置方向变化监听器
-    setupOrientationListener();
+    // 应用AR.js竖屏拉伸修复
+    fixARjsPortraitStretching();
     
     // 应用iOS视频修复（如果需要）
     applyIOSVideoFix();
     
-    console.log('✅ AR体验启动完成，已应用简化竖屏修复');
+    console.log('AR体验启动完成，已应用竖屏拉伸修复');
 }
+
 
 // iOS视频修复
 function applyIOSVideoFix() {
@@ -1660,7 +1607,7 @@ function applyIOSVideoFix() {
 
 // 处理权限被拒绝
 function handlePermissionDenied() {
-    console.log('⚠️ 检测到权限被拒绝');
+    console.log('检测到权限被拒绝');
     
     const device = getDeviceInfo();
     
@@ -1760,19 +1707,13 @@ function backToStart() {
         dockContainer.classList.remove('active');
     }
     
-    // 清理方向监听器
-    if (orientationHandler) {
-        orientationHandler();
-        orientationHandler = null;
-    }
-    
     startOverlay.classList.remove('hidden');
     isARStarted = false;
 }
 
 // 页面加载完成后显示启动覆盖层
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('📱 页面加载完成，准备简化AR竖屏修复');
+    console.log('页面加载完成，准备AR竖屏拉伸修复');
     createStartOverlay();
     
     // 监听权限被拒绝错误
@@ -1780,21 +1721,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isARStarted && event.reason && 
             (event.reason.name === 'NotAllowedError' || 
              event.reason.message && event.reason.message.includes('not allowed'))) {
-            console.log('❌ 捕获到权限拒绝错误');
+            console.log('捕获到权限拒绝错误');
             event.preventDefault();
             setTimeout(handlePermissionDenied, 500);
         }
     });
     
-    console.log(`📱 设备信息: 屏幕尺寸 ${window.innerWidth}x${window.innerHeight}`);
-    console.log(`📱 设备方向: ${window.innerHeight > window.innerWidth ? '竖屏' : '横屏'}`);
-});
-
-// 页面卸载时清理
-window.addEventListener('beforeunload', function() {
-    if (orientationHandler) {
-        orientationHandler();
-    }
+    console.log(`设备信息: 屏幕尺寸 ${window.innerWidth}x${window.innerHeight}`);
+    console.log(`设备方向: ${window.innerHeight > window.innerWidth ? '竖屏' : '横屏'}`);
 });
 
   </script>

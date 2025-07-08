@@ -1036,24 +1036,6 @@
             }
         }
   </style>
-      window.addEventListener("orientationchange", () => {
-          const arScene = document.querySelector('a-scene');
-          if (arScene && arScene.camera) {
-              arScene.camera.aspect = window.innerWidth / window.innerHeight;
-              arScene.camera.updateProjectionMatrix();
-              console.log("✅ 已修正相机投影矩阵");
-          }
-      });
-
-      window.addEventListener("load", () => {
-          const arScene = document.querySelector('a-scene');
-          if (arScene && arScene.camera) {
-              arScene.camera.aspect = window.innerWidth / window.innerHeight;
-              arScene.camera.updateProjectionMatrix();
-              console.log("✅ 已修正相机投影矩阵（初始加载）");
-          }
-      });
-    </script>
   <script>
 
 // =============== 全局变量和工具函数 - 所有浏览器可用 ===============

@@ -1693,8 +1693,8 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
   
   <!-- AR场景：初始隐藏，用户点击启动后才显示 -->
-  <!-- 关键修改：优化arjs参数，移除videoTexture -->
-  <a-scene id="ar-scene" arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false" embedded="" vr-mode-ui="enabled: false">
+  <!-- 关键修改 (V4): 优化arjs参数，为竖屏做准备 -->
+  <a-scene id="ar-scene" arjs='sourceType: webcam; detectionMode: mono_and_matrix; matrixCodeType: 3x3; debugUIEnabled: false' embedded vr-mode-ui="enabled: false">
    <a-marker id="marker1" preset="custom" s19="" url="pattern1.patt">
     <a-entity gltf-model="model1.gltf" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02">
     </a-entity>
@@ -1703,8 +1703,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <a-entity gltf-model="model2.gltf" id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03">
     </a-entity>
    </a-marker>
-   <!-- 关键修改：为摄像头添加arjs-camera-updater组件 -->
-   <a-entity camera arjs-camera-updater>
+   <a-entity camera>
    </a-entity>
   </a-scene>
   
@@ -1733,45 +1732,45 @@ document.addEventListener('DOMContentLoaded', function() {
     };
   </script>
 
-  <!-- START: 屏幕方向与尺寸自适应修复脚本 (V3 - 最终版) -->
+  <!-- START: 屏幕方向与尺寸自适应修复脚本 (V4 - 最终版) -->
   <script>
-    // 定义一个“投影同步器”组件
-    AFRAME.registerComponent('arjs-camera-updater', {
-        tick: function () {
-            // 确保AR系统已准备就绪
-            if (this.el.sceneEl.systems.arjs && this.el.sceneEl.systems.arjs.arToolkitContext) {
-                var arToolkitContext = this.el.sceneEl.systems.arjs.arToolkitContext;
+    window.addEventListener('load', () => {
+        const sceneEl = document.querySelector('a-scene');
+        const arSystem = sceneEl.systems.arjs;
+
+        // 确保AR系统初始化完成后再执行
+        sceneEl.addEventListener('arjs-source-inited', () => {
+            
+            function onResize() {
+                if (!arSystem) return;
+
+                const arToolkitSource = arSystem.arToolkitSource;
+                const arToolkitContext = arSystem.arToolkitContext;
                 
-                // 检查AR控制器是否已初始化
+                if (!arToolkitSource || !arToolkitContext) return;
+
+                const renderer = sceneEl.renderer;
+                const camera = sceneEl.camera;
+
+                // 强制AR.js核心重新计算尺寸和投影
+                arToolkitSource.onResizeElement();
+                arToolkitSource.copyElementSizeTo(renderer.domElement);
                 if (arToolkitContext.arController !== null) {
-                    var camera = this.el.getObject3D('camera');
-                    // 从AR控制器获取正确的投影矩阵
-                    var projectionMatrix = arToolkitContext.arController.getProjectionMatrix();
-                    if (projectionMatrix) {
-                        // 将这个正确的“图纸”应用到A-Frame的摄像头上
-                        camera.projectionMatrix.fromArray(projectionMatrix);
-                        camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
-                    }
+                    arToolkitSource.copyElementSizeTo(arToolkitContext.arController.canvas);
+                    camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix());
                 }
             }
-        }
+
+            // 监听窗口尺寸变化
+            window.addEventListener('resize', onResize);
+            
+            // 首次加载时，手动调用一次以确保竖屏状态正确
+            setTimeout(() => {
+                console.log("正在执行首次强制尺寸同步...");
+                onResize();
+            }, 500); // 延迟执行确保所有元素渲染完毕
+        });
     });
-
-    // 定义一个resize处理函数，用于同步渲染器尺寸
-    function onResize() {
-        var sceneEl = document.querySelector('a-scene');
-        if (sceneEl && sceneEl.renderer) {
-            sceneEl.renderer.setSize(window.innerWidth, window.innerHeight);
-            console.log("A-Frame渲染器尺寸已更新为: " + window.innerWidth + "x" + window.innerHeight);
-        }
-    }
-
-    // 监听窗口尺寸变化
-    window.addEventListener('resize', onResize);
-    
-    // 页面加载时也执行一次，确保初始尺寸正确
-    window.addEventListener('load', onResize);
-
   </script>
   <!-- END: 屏幕方向与尺寸自适应修复脚本 -->
 

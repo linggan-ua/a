@@ -489,8 +489,7 @@
         }
         
         /* =============== 新增：Dock栏样式（高性能伪毛玻璃方案）=============== */
-        /* 
-         * 性能优化说明：
+        /* * 性能优化说明：
          * 1. 移除了backdrop-filter（性能杀手）
          * 2. 使用多层渐变叠加模拟毛玻璃效果
          * 3. 启用硬件加速（translateZ(0)）
@@ -1731,5 +1730,45 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
   </script>
+
+  <!-- START: 屏幕方向与尺寸自适应修复脚本 -->
+  <script>
+    function handleResize() {
+      // 获取A-Frame场景元素
+      var sceneEl = document.querySelector('a-scene');
+      if (!sceneEl) { return; }
+
+      // 获取场景的渲染器和摄像头
+      var renderer = sceneEl.renderer;
+      var camera = sceneEl.camera;
+
+      if (!renderer || !camera) { return; }
+      
+      console.log("窗口尺寸发生变化，正在调整AR宽高比...");
+
+      // 计算新的宽高比
+      var newAspectRatio = window.innerWidth / window.innerHeight;
+
+      // 更新摄像头的宽高比
+      camera.aspect = newAspectRatio;
+      
+      // **非常重要**：应用摄像头的改动
+      camera.updateProjectionMatrix();
+
+      // 更新渲染器的尺寸
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // 当窗口尺寸发生变化时（包括旋转屏幕），调用我们的调整函数
+    window.addEventListener('resize', handleResize);
+
+    // 在页面加载完成时也主动调用一次，以确保初始状态正确
+    window.addEventListener('load', function() {
+        // 延迟一点执行，确保A-Frame完全初始化
+        setTimeout(handleResize, 100);
+    });
+  </script>
+  <!-- END: 屏幕方向与尺寸自适应修复脚本 -->
+
  </body>
 </html>

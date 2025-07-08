@@ -1566,25 +1566,47 @@ function initializeARWithCorrectParameters() {
     }
 }
 
-// 简化的方向变化处理
-function handleOrientationChange() {
-    console.log('🔧 处理设备方向变化');
-    
-    const isPortrait = window.innerHeight > window.innerWidth;
-    console.log(`当前方向: ${isPortrait ? '竖屏' : '横屏'}`);
-    
-    // 重新调整AR参数
-    adjustARParameters();
-    
-    // 重新计算显示尺寸
-    setTimeout(() => {
-        const arScene = document.querySelector('a-scene');
-        if (arScene && arScene.systems.arjs) {
-            window.dispatchEvent(new Event('resize'));
-        }
-    }, 300);
-}
+    function handleOrientationChange() {
+        console.log("🔧 检测到方向切换");
 
+        // 先修正 AR.js 的视频大小样式
+        adjustARParameters();
+
+        // 再修正 Three.js 摄像机投影矩阵
+        setTimeout(() => {
+            fixCameraProjection();
+        }, 300);
+    }
+
+    function adjustARParameters() {
+        // 如果你有 sourceWidth、sourceHeight 等，这里也可以动态修改
+        console.log("✅ 已调用 adjustARParameters()");
+    }
+
+    function fixCameraProjection() {
+        const arScene = document.querySelector('a-scene');
+        if (!arScene) {
+            console.log("未找到 a-scene");
+            return;
+        }
+        
+        const camera = arScene.camera;
+        if (!camera) {
+            console.log("未找到 camera");
+            return;
+        }
+
+        // 更新摄像机的 aspect
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+
+        console.log("✅ 相机投影矩阵已更新", camera.aspect);
+    }
+
+    // 页面加载完成时也需要跑一次，避免初始方向不对
+    window.addEventListener("load", handleOrientationChange);
+    window.addEventListener("orientationchange", handleOrientationChange);
+    
 // 监听方向变化
 function setupOrientationListener() {
     console.log('🔧 设置方向变化监听器');

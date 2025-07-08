@@ -1489,7 +1489,6 @@ function startAR() {
     if (isARStarted) return;
     
     console.log('启动AR体验');
-    isARStarted = true;
     
     // 隐藏启动覆盖层
     startOverlay.classList.add('hidden');
@@ -1497,6 +1496,11 @@ function startAR() {
     // 显示AR场景
     const arScene = document.getElementById('ar-scene');
     arScene.classList.add('active');
+    
+    // 关键修改 (V6): 动态添加arjs属性来初始化
+    arScene.setAttribute('arjs', 'sourceType: webcam; detectionMode: mono_and_matrix; matrixCodeType: 3x3; debugUIEnabled: false');
+    
+    isARStarted = true;
     
     // 显示dock栏
     const dockContainer = document.getElementById('dock-container');
@@ -1639,6 +1643,7 @@ function backToStart() {
     
     const arScene = document.getElementById('ar-scene');
     arScene.classList.remove('active');
+    arScene.removeAttribute('arjs'); // 关键：移除arjs属性以重置
     
     // 隐藏dock栏
     const dockContainer = document.getElementById('dock-container');
@@ -1692,9 +1697,8 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
   </div>
   
-  <!-- AR场景：初始隐藏，用户点击启动后才显示 -->
-  <!-- 关键修改 (V5): 优化arjs参数，为竖屏做准备 -->
-  <a-scene id="ar-scene" arjs='sourceType: webcam; detectionMode: mono_and_matrix; matrixCodeType: 3x3; debugUIEnabled: false;' renderer='antialias: true; alpha: true' embedded vr-mode-ui="enabled: false">
+  <!-- AR场景：初始隐藏，并且不带arjs属性 -->
+  <a-scene id="ar-scene" renderer='antialias: true; alpha: true; precision: medium;' embedded vr-mode-ui="enabled: false">
    <a-marker id="marker1" preset="custom" s19="" url="pattern1.patt">
     <a-entity gltf-model="model1.gltf" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02">
     </a-entity>
@@ -1732,43 +1736,8 @@ document.addEventListener('DOMContentLoaded', function() {
     };
   </script>
 
-  <!-- START: 屏幕方向与尺寸自适应修复脚本 (V5 - 最终版) -->
-  <script>
-    window.addEventListener('load', () => {
-        const sceneEl = document.querySelector('a-scene');
-        
-        // 确保AR系统初始化完成后再执行
-        sceneEl.addEventListener('loaded', () => {
-            const arSystem = sceneEl.systems.arjs;
-            
-            function onResize() {
-                if (!arSystem || !arSystem.arToolkitSource) {
-                    return;
-                }
-
-                const arToolkitSource = arSystem.arToolkitSource;
-                const arToolkitContext = arSystem.arToolkitContext;
-                
-                arToolkitSource.onResizeElement();
-                arToolkitSource.copyElementSizeTo(sceneEl.renderer.domElement);
-                
-                if (arToolkitContext.arController !== null) {
-                    arToolkitSource.copyElementSizeTo(arToolkitContext.arController.canvas);
-                }
-                console.log("AR.js核心系统已根据新窗口尺寸完成同步。");
-            }
-
-            // 监听窗口尺寸变化
-            window.addEventListener('resize', onResize);
-            
-            // 首次加载时，手动调用一次以确保竖屏状态正确
-            setTimeout(() => {
-                console.log("正在执行首次强制尺寸同步...");
-                onResize();
-            }, 500); // 延迟执行确保所有元素渲染完毕
-        });
-    });
-  </script>
+  <!-- START: 屏幕方向与尺寸自适应修复脚本 (V6 - 最终版) -->
+  <!-- 该脚本已不再需要，因为我们采用了动态初始化AR的方案 -->
   <!-- END: 屏幕方向与尺寸自适应修复脚本 -->
 
  </body>

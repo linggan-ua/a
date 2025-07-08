@@ -2,7 +2,6 @@
 <html lang="en">
  <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"/>
   <title>
    岭南乐器增强现实视听工具
   </title>
@@ -13,14 +12,6 @@
   <!-- 添加marked.js用于markdown渲染（本地引用） -->
   <script src="marked.min.js"></script>
   <style>
-        /* =============== AR竖屏拉伸修复方案 =============== */
-        /* 
-         * 问题：手机竖屏模式下AR模型被拉伸
-         * 原因：AR.js对宽高比的假设导致在竖屏时拉伸
-         * 解决：重写ARjs.Source.prototype.copyElementSizeTo函数
-         * 参考：GitHub Issue #331的解决方案
-         */
-        
         /* 启动覆盖层 - iOS/HyperOS风格高斯模糊 */
         .start-overlay {
             position: fixed;
@@ -509,7 +500,6 @@
          * 7. 顶部信息框也使用相同的高性能方案
          * 8. iOS风格胶囊圆角设计（56px圆角，接近高度一半）
          * 9. 符合Apple Human Interface Guidelines的圆角策略
-         * 10. 竖屏拉伸问题通过重写AR.js函数解决
          */
         .dock-container {
             position: fixed;
@@ -1402,93 +1392,6 @@ function updateDockButtons() {
     }
 }
 
-// =============== AR竖屏拉伸修复方案 (最终稳定版 - Fit模式) ===============
-
-// 最终版：采用"Fit"模式，牺牲全屏，换取绝对正确的模型比例、位置和大小
-function fixARjsPortraitStretching() {
-    console.log('应用AR.js竖屏拉伸及相机修复 (最终稳定版 - Fit模式)');
-    
-    const sceneEl = document.querySelector('a-scene');
-    if (!sceneEl) {
-        console.error("无法找到a-scene元素!");
-        return;
-    }
-
-    // 确保A-Frame场景和AR.js都已加载
-    const checkReady = setInterval(() => {
-        // 必须等到renderer, camera, 和 arSource都可用
-        if (typeof ARjs !== 'undefined' && ARjs.Source && ARjs.Source.prototype && sceneEl.renderer && sceneEl.camera && sceneEl.systems.arjs && sceneEl.systems.arjs.arSource) {
-            clearInterval(checkReady);
-            
-            const renderer = sceneEl.renderer;
-            const camera = sceneEl.camera;
-            const arSource = sceneEl.systems.arjs.arSource;
-
-            // 重写copyElementSizeTo函数
-            ARjs.Source.prototype.copyElementSizeTo = function(otherElement) {
-                const screenWidth = window.innerWidth;
-                const screenHeight = window.innerHeight;
-                const screenAspect = screenWidth / screenHeight;
-
-                // arSource.domElement is the <video> element
-                const videoWidth = arSource.domElement.videoWidth;
-                const videoHeight = arSource.domElement.videoHeight;
-                
-                // 防止视频尺寸未就绪时出错
-                if (videoWidth === 0 || videoHeight === 0) {
-                    console.log("等待视频尺寸...");
-                    return;
-                }
-
-                const videoAspect = videoWidth / videoHeight;
-
-                let canvasWidth, canvasHeight, marginLeft, marginTop;
-
-                // 1. "Fit" (Contain) 逻辑: 计算画布尺寸使其能完整地显示在屏幕内
-                if (screenAspect > videoAspect) {
-                    // 如果屏幕比视频更宽 (大部分横屏情况)，则让画布高度等于屏幕高度
-                    canvasHeight = screenHeight;
-                    canvasWidth = canvasHeight * videoAspect;
-                    marginTop = 0;
-                    marginLeft = (screenWidth - canvasWidth) / 2;
-                } else {
-                    // 如果屏幕比视频更高 (大部分竖屏情况)，则让画布宽度等于屏幕宽度
-                    canvasWidth = screenWidth;
-                    canvasHeight = canvasWidth / videoAspect;
-                    marginLeft = 0;
-                    marginTop = (screenHeight - canvasHeight) / 2;
-                }
-
-                // 应用计算出的样式到背景画布
-                otherElement.style.width = canvasWidth + 'px';
-                otherElement.style.height = canvasHeight + 'px';
-                otherElement.style.marginLeft = marginLeft + 'px';
-                otherElement.style.marginTop = marginTop + 'px';
-                
-                // 2. 将3D渲染器和相机与计算出的【背景画布尺寸】严格同步
-                if (renderer.domElement.width !== canvasWidth || renderer.domElement.height !== canvasHeight) {
-                    renderer.setSize(canvasWidth, canvasHeight);
-                }
-                
-                // 3. 相机宽高比必须匹配视频的真实宽高比
-                camera.aspect = videoAspect;
-                camera.updateProjectionMatrix();
-            };
-            
-            // 手动触发一次调整，以应用我们的新逻辑
-            setTimeout(() => {
-                 window.dispatchEvent(new Event('resize'));
-                 console.log('✅ AR.js修复(最终稳定版)已应用并触发重置');
-            }, 500);
-        }
-    }, 100);
-    
-    // 10秒后停止检查
-    setTimeout(() => {
-        clearInterval(checkReady);
-    }, 10000);
-}
-
 // =============== 启动系统 - 所有浏览器可用 ===============
 
 // 创建启动覆盖层
@@ -1602,13 +1505,8 @@ function startAR() {
         dockContainer.classList.add('active');
     }
     
-    // 应用AR.js竖屏拉伸修复
-    fixARjsPortraitStretching();
-    
     // 应用iOS视频修复（如果需要）
     applyIOSVideoFix();
-    
-    console.log('AR体验启动完成，已应用竖屏拉伸修复');
 }
 
 
@@ -1755,7 +1653,7 @@ function backToStart() {
 
 // 页面加载完成后显示启动覆盖层
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('页面加载完成，准备AR竖屏拉伸修复');
+    console.log('页面加载完成');
     createStartOverlay();
     
     // 监听权限被拒绝错误
@@ -1768,9 +1666,6 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(handlePermissionDenied, 500);
         }
     });
-    
-    console.log(`设备信息: 屏幕尺寸 ${window.innerWidth}x${window.innerHeight}`);
-    console.log(`设备方向: ${window.innerHeight > window.innerWidth ? '竖屏' : '横屏'}`);
 });
 
   </script>
@@ -1799,11 +1694,7 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
   
   <!-- AR场景：初始隐藏，用户点击启动后才显示 -->
-  <a-scene 
-    id="ar-scene" 
-    arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;" 
-    embedded="" 
-    vr-mode-ui="enabled: false">
+  <a-scene id="ar-scene" arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false" embedded="" vr-mode-ui="enabled: false">
    <a-marker id="marker1" preset="custom" s19="" url="pattern1.patt">
     <a-entity gltf-model="model1.gltf" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02">
     </a-entity>

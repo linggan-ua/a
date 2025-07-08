@@ -2,6 +2,7 @@
 <html lang="en">
  <head>
   <meta charset="utf-8"/>
+  <!-- 关键修改：采用Claude方案中推荐的viewport设置 -->
   <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"/>
   <title>
    岭南乐器增强现实视听工具
@@ -13,14 +14,6 @@
   <!-- 添加marked.js用于markdown渲染（本地引用） -->
   <script src="marked.min.js"></script>
   <style>
-        /* =============== AR竖屏拉伸修复方案 =============== */
-        /* 
-         * 问题：手机竖屏模式下AR模型被拉伸
-         * 原因：AR.js对宽高比的假设导致在竖屏时拉伸
-         * 解决：重写ARjs.Source.prototype.copyElementSizeTo函数
-         * 参考：GitHub Issue #331的解决方案
-         */
-        
         /* 启动覆盖层 - iOS/HyperOS风格高斯模糊 */
         .start-overlay {
             position: fixed;
@@ -498,8 +491,7 @@
         }
         
         /* =============== 新增：Dock栏样式（高性能伪毛玻璃方案）=============== */
-        /* 
-         * 性能优化说明：
+        /* * 性能优化说明：
          * 1. 移除了backdrop-filter（性能杀手）
          * 2. 使用多层渐变叠加模拟毛玻璃效果
          * 3. 启用硬件加速（translateZ(0)）
@@ -1402,51 +1394,6 @@ function updateDockButtons() {
     }
 }
 
-// =============== AR竖屏拉伸修复方案 ===============
-
-// 基于GitHub Issue #331的解决方案
-// 重写ARjs.Source.prototype.copyElementSizeTo来修复竖屏拉伸问题
-function fixARjsPortraitStretching() {
-    console.log('应用AR.js竖屏拉伸修复');
-    
-    // 等待ARjs加载完成
-    const checkARjs = setInterval(() => {
-        if (typeof ARjs !== 'undefined' && ARjs.Source && ARjs.Source.prototype) {
-            clearInterval(checkARjs);
-            
-            // 重写copyElementSizeTo函数来修复宽高比问题
-            ARjs.Source.prototype.copyElementSizeTo = function(otherElement) {
-                console.log('修复AR.js宽高比');
-                
-                if (window.innerWidth > window.innerHeight) {
-                    // 横屏模式 - 保持原有逻辑
-                    otherElement.style.width = this.domElement.style.width;
-                    const height = parseInt(otherElement.style.width) * 3/4;
-                    otherElement.style.height = height + 'px';
-                    otherElement.style.marginLeft = '0px';
-                    otherElement.style.marginTop = ((window.innerHeight - height) / 2) + 'px';
-                } else {
-                    // 竖屏模式 - 修复拉伸问题
-                    otherElement.style.height = this.domElement.style.height;
-                    const width = parseInt(otherElement.style.height) * 4/3;
-                    otherElement.style.width = width + 'px';
-                    otherElement.style.marginLeft = ((window.innerWidth - width) / 2) + 'px';
-                    otherElement.style.marginTop = '0px';
-                }
-                
-                console.log(`AR画面尺寸已调整: ${otherElement.style.width} × ${otherElement.style.height}`);
-            };
-            
-            console.log('✅ AR.js竖屏拉伸修复已应用');
-        }
-    }, 100);
-    
-    // 5秒后停止检查（防止无限循环）
-    setTimeout(() => {
-        clearInterval(checkARjs);
-    }, 5000);
-}
-
 // =============== 启动系统 - 所有浏览器可用 ===============
 
 // 创建启动覆盖层
@@ -1560,13 +1507,8 @@ function startAR() {
         dockContainer.classList.add('active');
     }
     
-    // 应用AR.js竖屏拉伸修复
-    fixARjsPortraitStretching();
-    
     // 应用iOS视频修复（如果需要）
     applyIOSVideoFix();
-    
-    console.log('AR体验启动完成，已应用竖屏拉伸修复');
 }
 
 
@@ -1713,7 +1655,7 @@ function backToStart() {
 
 // 页面加载完成后显示启动覆盖层
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('页面加载完成，准备AR竖屏拉伸修复');
+    console.log('页面加载完成');
     createStartOverlay();
     
     // 监听权限被拒绝错误
@@ -1726,9 +1668,6 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(handlePermissionDenied, 500);
         }
     });
-    
-    console.log(`设备信息: 屏幕尺寸 ${window.innerWidth}x${window.innerHeight}`);
-    console.log(`设备方向: ${window.innerHeight > window.innerWidth ? '竖屏' : '横屏'}`);
 });
 
   </script>

@@ -1402,11 +1402,11 @@ function updateDockButtons() {
     }
 }
 
-// =============== AR竖屏拉伸修复方案 (最终修正版) ===============
+// =============== AR竖屏拉伸修复方案 (最终修正版 v2) ===============
 
-// 修正版：确保CSS样式、渲染器尺寸和相机宽高比三者同步
+// 修正版：分离背景画布与3D渲染区的尺寸逻辑，确保3D渲染始终匹配屏幕
 function fixARjsPortraitStretching() {
-    console.log('应用AR.js竖屏拉伸及相机修复 (最终版)');
+    console.log('应用AR.js竖屏拉伸及相机修复 (v2)');
     
     const sceneEl = document.querySelector('a-scene');
     if (!sceneEl) {
@@ -1416,56 +1416,71 @@ function fixARjsPortraitStretching() {
 
     // 确保A-Frame场景和AR.js都已加载
     const checkReady = setInterval(() => {
-        // 必须等到renderer和camera都可用
-        if (typeof ARjs !== 'undefined' && ARjs.Source && ARjs.Source.prototype && sceneEl.renderer && sceneEl.camera) {
+        // 必须等到renderer, camera, 和 arSource都可用
+        if (typeof ARjs !== 'undefined' && ARjs.Source && ARjs.Source.prototype && sceneEl.renderer && sceneEl.camera && sceneEl.systems.arjs && sceneEl.systems.arjs.arSource) {
             clearInterval(checkReady);
             
             const renderer = sceneEl.renderer;
             const camera = sceneEl.camera;
+            const arSource = sceneEl.systems.arjs.arSource;
 
             // 重写copyElementSizeTo函数
             ARjs.Source.prototype.copyElementSizeTo = function(otherElement) {
                 const screenWidth = window.innerWidth;
                 const screenHeight = window.innerHeight;
+                const screenAspect = screenWidth / screenHeight;
 
-                let canvasWidth, canvasHeight;
-
-                // 1. 计算并应用画布的CSS样式 (这部分保留了您之前有效的逻辑)
-                if (screenWidth > screenHeight) {
-                    // 横屏模式
-                    otherElement.style.width = this.domElement.style.width;
-                    canvasHeight = parseInt(otherElement.style.width) * 3/4;
-                    otherElement.style.height = canvasHeight + 'px';
-                    otherElement.style.marginLeft = '0px';
-                    otherElement.style.marginTop = ((screenHeight - canvasHeight) / 2) + 'px';
-                    canvasWidth = parseInt(this.domElement.style.width);
-                } else {
-                    // 竖屏模式
-                    otherElement.style.height = this.domElement.style.height;
-                    canvasWidth = parseInt(otherElement.style.height) * 4/3;
-                    otherElement.style.width = canvasWidth + 'px';
-                    otherElement.style.marginLeft = ((screenWidth - canvasWidth) / 2) + 'px';
-                    otherElement.style.marginTop = '0px';
-                    canvasHeight = parseInt(this.domElement.style.height);
-                }
+                // arSource.domElement is the <video> element
+                const videoWidth = arSource.domElement.videoWidth;
+                const videoHeight = arSource.domElement.videoHeight;
                 
-                // --- 核心修复逻辑 ---
-                // 只有当canvas尺寸有效时才进行更新
-                if (canvasWidth && canvasHeight) {
-                    // 2. 将渲染器尺寸设置为计算出的画布CSS尺寸
-                    //    这是关键一步，确保渲染区域和CSS盒子大小一致
-                    renderer.setSize(canvasWidth, canvasHeight);
-                    
-                    // 3. 将相机的宽高比设置为计算出的画布宽高比
-                    camera.aspect = canvasWidth / canvasHeight;
-                    
-                    // 4. 更新相机的投影矩阵以应用新的宽高比
-                    camera.updateProjectionMatrix();
+                // 防止视频尺寸未就绪时出错
+                if (videoWidth === 0 || videoHeight === 0) {
+                    console.log("等待视频尺寸...");
+                    return;
                 }
-                // --- 修复逻辑结束 ---
+
+                const videoAspect = videoWidth / videoHeight;
+
+                let canvasWidth, canvasHeight, marginLeft, marginTop;
+
+                // 1. 计算背景画布(otherElement)的CSS样式，使其能"cover"整个屏幕
+                if (screenAspect > videoAspect) {
+                    // 屏幕比视频更宽 (例如桌面浏览器)，匹配屏幕宽度
+                    canvasWidth = screenWidth;
+                    canvasHeight = screenWidth / videoAspect;
+                    marginLeft = 0;
+                    marginTop = (screenHeight - canvasHeight) / 2;
+                } else {
+                    // 屏幕比视频更高 (例如手机竖屏)，匹配屏幕高度
+                    canvasHeight = screenHeight;
+                    canvasWidth = screenHeight * videoAspect;
+                    marginTop = 0;
+                    marginLeft = (screenWidth - canvasWidth) / 2;
+                }
+
+                // 应用计算出的样式到背景画布
+                otherElement.style.width = canvasWidth + 'px';
+                otherElement.style.height = canvasHeight + 'px';
+                otherElement.style.marginLeft = marginLeft + 'px';
+                otherElement.style.marginTop = marginTop + 'px';
+                
+                // --- 核心修正逻辑 ---
+                // 2. 将3D渲染器和相机严格与屏幕尺寸同步，而不是与背景画布同步
+                //    这确保3D世界坐标系是正确的
+                if (renderer.domElement.width !== screenWidth || renderer.domElement.height !== screenHeight) {
+                    renderer.setSize(screenWidth, screenHeight);
+                }
+                camera.aspect = screenAspect;
+                camera.updateProjectionMatrix();
             };
             
-            console.log('✅ AR.js竖屏拉伸及相机修复 (最终版) 已应用');
+            // 手动触发一次调整，以应用我们的新逻辑
+            // 使用setTimeout确保所有元素都已渲染
+            setTimeout(() => {
+                 window.dispatchEvent(new Event('resize'));
+                 console.log('✅ AR.js修复已应用并触发重置');
+            }, 500);
         }
     }, 100);
     

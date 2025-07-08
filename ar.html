@@ -329,30 +329,50 @@
         }
         
         /* =============== AR.js竖屏模式修复样式 =============== */
-        /* 确保AR画面在竖屏下正确显示 */
-        @media screen and (orientation: portrait) {
-            #ar-scene canvas,
-            #ar-scene video {
-                object-fit: cover !important;
-                width: auto !important;
-                height: 100vh !important;
-                max-width: none !important;
-            }
-            
-            /* 修复AR画面的容器样式 */
-            #ar-scene .a-canvas {
-                width: 100vw !important;
-                height: 100vh !important;
-            }
+        /* 确保AR画面在竖屏下正确显示，不被裁切 */
+        #ar-scene {
+            width: 100vw !important;
+            height: 100vh !important;
+            overflow: hidden;
         }
         
-        /* 横屏模式保持默认 */
-        @media screen and (orientation: landscape) {
+        #ar-scene canvas,
+        #ar-scene video {
+            width: 100vw !important;
+            height: 100vh !important;
+            object-fit: cover !important;
+            object-position: center !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            left: 0 !important;
+            top: 0 !important;
+            transform: none !important;
+        }
+        
+        /* 修复AR画面的容器样式 */
+        #ar-scene .a-canvas {
+            width: 100vw !important;
+            height: 100vh !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        
+        /* 确保AR实体渲染区域正确 */
+        #ar-scene a-entity,
+        #ar-scene a-marker {
+            display: block !important;
+        }
+        
+        @media screen and (orientation: portrait) {
+            #ar-scene,
             #ar-scene canvas,
             #ar-scene video {
                 width: 100vw !important;
                 height: 100vh !important;
-                object-fit: cover !important;
+                max-width: 100vw !important;
+                max-height: 100vh !important;
+                min-width: 100vw !important;
+                min-height: 100vh !important;
             }
         }
         
@@ -1554,6 +1574,31 @@ function startAR() {
     
     // 应用iOS视频修复（如果需要）
     applyIOSVideoFix();
+    
+    // 延迟应用AR画面修复，确保完全显示
+    setTimeout(function() {
+        const canvas = document.querySelector('#ar-scene canvas');
+        const video = document.querySelector('#ar-scene video');
+        console.log('AR启动后应用画面修复');
+        if (canvas) {
+            canvas.style.width = '100vw';
+            canvas.style.height = '100vh';
+            canvas.style.objectFit = 'cover';
+            canvas.style.margin = '0';
+            canvas.style.left = '0';
+            canvas.style.top = '0';
+            canvas.style.transform = 'none';
+        }
+        if (video) {
+            video.style.width = '100vw';
+            video.style.height = '100vh';
+            video.style.objectFit = 'cover';
+            video.style.margin = '0';
+            video.style.left = '0';
+            video.style.top = '0';
+            video.style.transform = 'none';
+        }
+    }, 1000);
 }
 
 
@@ -1765,23 +1810,22 @@ document.addEventListener('DOMContentLoaded', function() {
                
                // 重写ARjs.Source.prototype.copyElementSizeTo方法来修复纵横比问题
                ARjs.Source.prototype.copyElementSizeTo = function(otherElement) {
-                   const isPortrait = window.innerHeight > window.innerWidth;
-                   
-                   if (isPortrait) {
-                       // 竖屏模式：优化for手机竖屏使用
-                       otherElement.style.height = this.domElement.style.height;
-                       const width = parseInt(otherElement.style.height) * (4/3);
-                       otherElement.style.width = width + 'px';
-                       otherElement.style.marginLeft = ((window.innerWidth - width) / 2) + 'px';
-                       otherElement.style.marginTop = '0';
-                       console.log('竖屏模式AR画面修复已应用');
-                   } else {
-                       // 横屏模式：保持原有逻辑
-                       otherElement.style.width = this.domElement.style.width;
-                       const height = parseInt(otherElement.style.width) * (3/4);
-                       otherElement.style.height = height + 'px';
+                   // 简化修复方案，确保全屏显示
+                   if (window.innerHeight > window.innerWidth) {
+                       // 竖屏模式：确保画面覆盖整个屏幕
+                       otherElement.style.width = '100vw';
+                       otherElement.style.height = '100vh';
                        otherElement.style.marginLeft = '0';
-                       otherElement.style.marginTop = ((window.innerHeight - height) / 2) + 'px';
+                       otherElement.style.marginTop = '0';
+                       otherElement.style.objectFit = 'cover';
+                       console.log('竖屏模式AR画面修复已应用 - 全屏覆盖');
+                   } else {
+                       // 横屏模式：保持全屏
+                       otherElement.style.width = '100vw';
+                       otherElement.style.height = '100vh';
+                       otherElement.style.marginLeft = '0';
+                       otherElement.style.marginTop = '0';
+                       otherElement.style.objectFit = 'cover';
                    }
                };
                
@@ -1791,6 +1835,25 @@ document.addEventListener('DOMContentLoaded', function() {
                    clearTimeout(orientationChangeTimeout);
                    orientationChangeTimeout = setTimeout(function() {
                        console.log('屏幕方向变化，重新应用AR修复');
+                       // 强制重新设置AR画面尺寸
+                       const canvas = document.querySelector('#ar-scene canvas');
+                       const video = document.querySelector('#ar-scene video');
+                       if (canvas) {
+                           canvas.style.width = '100vw';
+                           canvas.style.height = '100vh';
+                           canvas.style.objectFit = 'cover';
+                           canvas.style.margin = '0';
+                           canvas.style.left = '0';
+                           canvas.style.top = '0';
+                       }
+                       if (video) {
+                           video.style.width = '100vw';
+                           video.style.height = '100vh';
+                           video.style.objectFit = 'cover';
+                           video.style.margin = '0';
+                           video.style.left = '0';
+                           video.style.top = '0';
+                       }
                        // 触发重新渲染
                        if (window.AFRAME && window.AFRAME.scenes[0]) {
                            const scene = window.AFRAME.scenes[0];
@@ -1798,6 +1861,30 @@ document.addEventListener('DOMContentLoaded', function() {
                        }
                    }, 500);
                });
+               
+               // AR启动后立即应用修复
+               setTimeout(function() {
+                   const canvas = document.querySelector('#ar-scene canvas');
+                   const video = document.querySelector('#ar-scene video');
+                   if (canvas) {
+                       canvas.style.width = '100vw';
+                       canvas.style.height = '100vh';
+                       canvas.style.objectFit = 'cover';
+                       canvas.style.margin = '0';
+                       canvas.style.left = '0';
+                       canvas.style.top = '0';
+                       console.log('Canvas尺寸修复已应用');
+                   }
+                   if (video) {
+                       video.style.width = '100vw';
+                       video.style.height = '100vh';
+                       video.style.objectFit = 'cover';
+                       video.style.margin = '0';
+                       video.style.left = '0';
+                       video.style.top = '0';
+                       console.log('Video尺寸修复已应用');
+                   }
+               }, 3000);
                
                // 额外的竖屏优化：调整摄像头约束
                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {

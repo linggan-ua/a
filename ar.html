@@ -4,15 +4,16 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"/>
   <title>
-   岭南乐器增强现实视听工具
+   岭南乐器增强现实视听工具 (最终完整优化版)
   </title>
   <script src="aframe.min.js">
   </script>
   <script src="aframe-ar.js">
   </script>
-  <!-- 添加marked.js用于markdown渲染（本地引用） -->
-  <script src="marked.min.js"></script>
+  <!-- 使用CDN加载marked.js以确保可用性 -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
+        /* =============== 您的所有原始CSS样式都已保留 =============== */
         /* =============== AR竖屏拉伸修复方案 =============== */
         /* * 问题：手机竖屏模式下AR模型被拉伸
          * 原因：AR.js对宽高比的假设导致在竖屏时拉伸
@@ -497,18 +498,6 @@
         }
         
         /* =============== 新增：Dock栏样式（高性能伪毛玻璃方案）=============== */
-        /* * 性能优化说明：
-         * 1. 移除了backdrop-filter（性能杀手）
-         * 2. 使用多层渐变叠加模拟毛玻璃效果
-         * 3. 启用硬件加速（translateZ(0)）
-         * 4. 大幅提升不透明度增强可读性（90%-100%范围）
-         * 5. 这种方案性能提升80%+，特别适合移动设备
-         * 6. 视觉效果接近真实毛玻璃，但CPU消耗极低
-         * 7. 顶部信息框也使用相同的高性能方案
-         * 8. iOS风格胶囊圆角设计（56px圆角，接近高度一半）
-         * 9. 符合Apple Human Interface Guidelines的圆角策略
-         * 10. 竖屏拉伸问题通过重写AR.js函数解决
-         */
         .dock-container {
             position: fixed;
             bottom: 20px;
@@ -526,7 +515,6 @@
         }
         
         .dock-bar {
-            /* 高性能伪毛玻璃方案 - iOS风格胶囊圆角 */
             background: 
                 linear-gradient(135deg, 
                     rgba(255, 255, 255, 0.3) 0%, 
@@ -538,7 +526,6 @@
                     rgba(255, 255, 255, 0.2),
                     rgba(255, 255, 255, 0.15)),
                 rgba(255, 255, 255, 0.2);
-            /* iOS风格胶囊圆角 - 接近高度的一半 */
             border-radius: 56px;
             padding: 18px 32px;
             box-shadow: 
@@ -550,7 +537,6 @@
             display: flex;
             gap: 22px;
             align-items: center;
-            /* 硬件加速优化 */
             transform: translateZ(0);
             will-change: transform;
         }
@@ -568,7 +554,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            /* 高性能伪毛玻璃效果 - 大幅提升可读性 */
             background: linear-gradient(135deg, 
                 rgba(255, 255, 255, 0.3) 0%, 
                 rgba(255, 255, 255, 0.18) 50%, 
@@ -578,7 +563,6 @@
                 inset 0 1px 0 rgba(255, 255, 255, 0.6),
                 inset 0 -1px 0 rgba(255, 255, 255, 0.2);
             border: 1.5px solid rgba(255, 255, 255, 0.4);
-            /* 启用硬件加速，但移除backdrop-filter */
             transform: translateZ(0);
             will-change: transform;
         }
@@ -600,7 +584,6 @@
             transform: translateY(-2px) scale(1.02);
         }
         
-        /* 播放按钮 - 黄色亮色系（为深色emoji提供对比度） */
         #play-btn {
             background: linear-gradient(135deg, 
                 rgba(255, 193, 7, 0.9) 0%,
@@ -625,7 +608,6 @@
                 inset 0 -1px 0 rgba(255, 255, 255, 0.3);
         }
         
-        /* 播放中状态 - 深黄色（暂停时） */
         #play-btn.playing {
             background: linear-gradient(135deg, 
                 rgba(255, 152, 0, 0.95) 0%,
@@ -650,7 +632,6 @@
                 inset 0 -1px 0 rgba(255, 255, 255, 0.3);
         }
         
-        /* 介绍按钮 - 亮蓝色系（为深色emoji提供对比度） */
         #info-btn {
             background: linear-gradient(135deg, 
                 rgba(3, 169, 244, 0.9) 0%,
@@ -675,7 +656,6 @@
                 inset 0 -1px 0 rgba(255, 255, 255, 0.3);
         }
         
-        /* 复位按钮 - 橙色系 */
         #reset-btn {
             background: linear-gradient(135deg, 
                 rgba(255, 111, 97, 0.9) 0%,
@@ -700,7 +680,6 @@
                 inset 0 -1px 0 rgba(255, 255, 255, 0.3);
         }
         
-        /* 禁用状态 - 灰色伪毛玻璃（提升可读性） */
         .dock-button.disabled {
             background: linear-gradient(135deg, 
                 rgba(158, 158, 158, 0.8) 0%,
@@ -742,10 +721,7 @@
             left: 0;
             right: 0;
             height: 80vh;
-            /* 可选：高性能伪毛玻璃方案（如需进一步优化性能可启用） */
             background: rgba(255, 255, 255, 0.95);
-            /* backdrop-filter: blur(30px) saturate(1.8);
-            -webkit-backdrop-filter: blur(30px) saturate(1.8); */
             border-top-left-radius: 25px;
             border-top-right-radius: 25px;
             box-shadow: 
@@ -821,11 +797,9 @@
             height: calc(100% - 70px);
             overflow-y: auto;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            /* 性能优化：启用硬件加速和平滑滚动 */
             -webkit-overflow-scrolling: touch;
             transform: translateZ(0);
             will-change: scroll-position;
-            /* 优化滚动性能 */
             scroll-behavior: smooth;
         }
         
@@ -901,7 +875,6 @@
             transform: translateX(-50%);
             max-width: calc(100% - 40px);
             min-width: 280px;
-            /* 高性能伪毛玻璃方案 - 替代backdrop-filter */
             background: 
                 linear-gradient(135deg, 
                     rgba(0, 0, 0, 0.7) 0%, 
@@ -928,7 +901,6 @@
             pointer-events: none;
             transition: opacity 0.3s ease;
             line-height: 1.4;
-            /* 硬件加速优化 */
             transform: translateX(-50%) translateZ(0);
             will-change: transform, opacity;
         }
@@ -1012,17 +984,44 @@
   </style>
   <script>
 
-// =============== 全局变量和工具函数 - 所有浏览器可用 ===============
+// =============== 全局变量和状态管理 ===============
 let isARStarted = false;
 let startOverlay;
-let currentAudioManager = null;
+let currentAudioManager = null; // 管理当前激活的乐器
+const audioCache = {}; // 音频缓存
+const infoCache = {}; // 介绍文本缓存
+const markdownCache = {}; // Markdown内容缓存
 
-// 简化的日志函数
-function infoLog(message) {
-    console.log(message);
-}
+// ====================================================================
+// 乐器配置中心 (全局)
+// - 包含所有资源路径和加载状态，作为单一数据源
+// ====================================================================
+const instrumentConfig = {
+    'marker1':  { name: '琵琶',       model: 'assets/models/pipa.gltf',             audio: 'assets/audio/audio-pipa.mp3',             markdown: 'assets/markdown/pipa.md',             info: 'assets/info/pipa.txt',             isLoaded: false },
+    'marker2':  { name: '葫芦丝',     model: 'assets/models/hulusi.gltf',           audio: 'assets/audio/audio-hulusi.mp3',           markdown: 'assets/markdown/hulusi.md',           info: 'assets/info/hulusi.txt',           isLoaded: false },
+    'marker3':  { name: '东北大鼓',   model: 'assets/models/dongbei_dagu.gltf',     audio: 'assets/audio/audio-dongbei_dagu.mp3',     markdown: 'assets/markdown/dongbei_dagu.md',     info: 'assets/info/dongbei_dagu.txt',     isLoaded: false },
+    'marker4':  { name: '冬不拉',     model: 'assets/models/dongbula.gltf',         audio: 'assets/audio/audio-dongbula.mp3',         markdown: 'assets/markdown/dongbula.md',         info: 'assets/info/dongbula.txt',         isLoaded: false },
+    'marker5':  { name: '高胡',       model: 'assets/models/gaohu.gltf',            audio: 'assets/audio/audio-gaohu.mp3',            markdown: 'assets/markdown/gaohu.md',            info: 'assets/info/gaohu.txt',            isLoaded: false },
+    'marker6':  { name: '花鼓',       model: 'assets/models/huagu.gltf',            audio: 'assets/audio/audio-huagu.mp3',            markdown: 'assets/markdown/huagu.md',            info: 'assets/info/huagu.txt',            isLoaded: false },
+    'marker7':  { name: '火不思',     model: 'assets/models/huobusi.gltf',          audio: 'assets/audio/audio-huobusi.mp3',          markdown: 'assets/markdown/huobusi.md',          info: 'assets/info/huobusi.txt',          isLoaded: false },
+    'marker8':  { name: '马头琴',     model: 'assets/models/matouqin.gltf',         audio: 'assets/audio/audio-matouqin.mp3',         markdown: 'assets/markdown/matouqin.md',         info: 'assets/info/matouqin.txt',         isLoaded: false },
+    'marker9':  { name: '牛角琴',     model: 'assets/models/niujiaoqin.gltf',       audio: 'assets/audio/audio-niujiaoqin.mp3',       markdown: 'assets/markdown/niujiaoqin.md',       info: 'assets/info/niujiaoqin.txt',       isLoaded: false },
+    'marker10': { name: '唢呐',       model: 'assets/models/suona.gltf',            audio: 'assets/audio/audio-suona.mp3',            markdown: 'assets/markdown/suona.md',            info: 'assets/info/suona.txt',            isLoaded: false },
+    'marker11': { name: '月琴',       model: 'assets/models/yueqin.gltf',           audio: 'assets/audio/audio-yueqin.mp3',           markdown: 'assets/markdown/yueqin.md',           info: 'assets/info/yueqin.txt',           isLoaded: false },
+    'marker12': { name: '潮州唢呐',   model: 'assets/models/chaozhou_suona.gltf',   audio: 'assets/audio/audio-chaozhou_suona.mp3',   markdown: 'assets/markdown/chaozhou_suona.md',   info: 'assets/info/chaozhou_suona.txt',   isLoaded: false },
+    'marker13': { name: '潮州筝',     model: 'assets/models/chaozhou_zheng.gltf',   audio: 'assets/audio/audio-chaozhou_zheng.mp3',   markdown: 'assets/markdown/chaozhou_zheng.md',   info: 'assets/info/chaozhou_zheng.txt',   isLoaded: false },
+    'marker14': { name: '洞箫',       model: 'assets/models/dongxiao.gltf',         audio: 'assets/audio/audio-dongxiao.mp3',         markdown: 'assets/markdown/dongxiao.md',         info: 'assets/info/dongxiao.txt',         isLoaded: false },
+    'marker15': { name: '喉管',       model: 'assets/models/houguan.gltf',          audio: 'assets/audio/audio-houguan.mp3',          markdown: 'assets/markdown/houguan.md',          info: 'assets/info/houguan.txt',          isLoaded: false },
+    'marker16': { name: '木鱼',       model: 'assets/models/muyu.gltf',             audio: 'assets/audio/audio-muyu.mp3',             markdown: 'assets/markdown/muyu.md',             info: 'assets/info/muyu.txt',             isLoaded: false },
+    'marker17': { name: '牛角号',     model: 'assets/models/niujiaohao.gltf',       audio: 'assets/audio/audio-niujiaohao.mp3',       markdown: 'assets/markdown/niujiaohao.md',       info: 'assets/info/niujiaohao.txt',       isLoaded: false },
+    'marker18': { name: '秦琴',       model: 'assets/models/qinqin.gltf',           audio: 'assets/audio/audio-qinqin.mp3',           markdown: 'assets/markdown/qinqin.md',           info: 'assets/info/qinqin.txt',           isLoaded: false },
+    'marker19': { name: '椰胡',       model: 'assets/models/yehu.gltf',             audio: 'assets/audio/audio-yehu.mp3',             markdown: 'assets/markdown/yehu.md',             info: 'assets/info/yehu.txt',             isLoaded: false },
+    'marker20': { name: '渔鼓',       model: 'assets/models/yugu.gltf',             audio: 'assets/audio/audio-yugu.mp3',             markdown: 'assets/markdown/yugu.md',             info: 'assets/info/yugu.txt',             isLoaded: false },
+    'marker21': { name: '竹板',       model: 'assets/models/zhuban.gltf',           audio: 'assets/audio/audio-zhuban.mp3',           markdown: 'assets/markdown/zhuban.md',           info: 'assets/info/zhuban.txt',           isLoaded: false },
+    'marker22': { name: '花鼓大筒',   model: 'assets/models/huagudatong.gltf',      audio: 'assets/audio/audio-huagudatong.mp3',      markdown: 'assets/markdown/huagudatong.md',      info: 'assets/info/huagudatong.txt',      isLoaded: false }
+};
 
-// 环境检测（仅用于显示，不影响功能）
+// 工具函数
 function getDeviceInfo() {
     const ua = navigator.userAgent;
     return {
@@ -1033,52 +1032,9 @@ function getDeviceInfo() {
     };
 }
 
-function c3() {
-    return /MicroMessenger/i.test(navigator.userAgent);
-}
+// =============== A-Frame 组件注册 ===============
 
-// =============== 音频系统初始化 - 所有浏览器可用 ===============
-var audioCache = {};
-
-document.addEventListener('DOMContentLoaded', function () {
-    console.log('🎵 音频系统初始化');
-    
-    var audioFiles = [
-        'audio-pipa.mp3',             // 琵琶
-        'audio-hulusi.mp3',           // 葫芦丝
-       /* 'audio-dongbei_dagu.mp3',     // 东北大鼓
-        'audio-dongbula.mp3',         // 冬不拉
-        'audio-gaohu.mp3',            // 高胡
-        'audio-huagu.mp3',            // 花鼓
-        'audio-huobusi.mp3',          // 火不思
-        'audio-matouqin.mp3',         // 马头琴
-        'audio-niujiaoqin.mp3',       // 牛角琴
-        'audio-suona.mp3',            // 唢呐
-        'audio-yueqin.mp3',           // 月琴
-        'audio-chaozhou_suona.mp3',   // 潮州唢呐
-        'audio-chaozhou_zheng.mp3',   // 潮州筝
-        'audio-dongxiao.mp3',         // 洞箫
-        'audio-houguan.mp3',          // 喉管
-        'audio-muyu.mp3',             // 木鱼
-        'audio-niujiaohao.mp3',       // 牛角号
-        'audio-qinqin.mp3',           // 秦琴
-        'audio-yehu.mp3',             // 椰胡
-        'audio-yugu.mp3',             // 渔鼓
-        'audio-zhuban.mp3',           // 竹板*/
-        'audio-huagudatong.mp3'      // 花鼓大筒
-    ]; 
-    audioFiles.forEach(function (filename) {
-        var audio = new Audio();
-        audio.src = 'assets/audio/' + filename; // 修正路径
-        audio.preload = 'auto';
-        audio.load();
-        audioCache[filename] = { audio: audio };
-    });
-});
-
-// =============== A-Frame组件注册 - 所有浏览器可用 ===============
-
-// 旋转组件 - 所有浏览器可用
+// 旋转组件 (o15) - 保留原样
 AFRAME.registerComponent('o15', {
     schema: {
         x: { type: 'number', default: 0 },
@@ -1100,183 +1056,146 @@ AFRAME.registerComponent('o15', {
     }
 });
 
-// Marker检测组件
-// 完整的s19组件修复版本
-// 替换您当前的s19组件为以下版本：
-
+// Marker检测组件 (s19) - 核心重构
 AFRAME.registerComponent('s19', {
     init: function () {
-        var markerElement = this.el;
-        var markerId = markerElement.getAttribute('id');
+        this.marker = this.el;
+        this.markerId = this.marker.id;
+        this.config = instrumentConfig[this.markerId];
         
-        // ================== 乐器信息配置中心 ==================
-                const instrumentConfig = {
-            'marker1':  { name: '琵琶',       audio: 'pipa.mp3',             markdown: 'pipa.md',             info: 'pipa.txt' },
-            'marker2':  { name: '葫芦丝',     audio: 'hulusi.mp3',           markdown: 'hulusi.md',           info: 'hulusi.txt' },
-          /*  'marker3':  { name: '东北大鼓',   audio: 'dongbei_dagu.mp3',     markdown: 'dongbei_dagu.md',     info: 'dongbei_dagu.txt' },
-            'marker4':  { name: '冬不拉',     audio: 'dongbula.mp3',         markdown: 'dongbula.md',         info: 'dongbula.txt' },
-            'marker5':  { name: '高胡',       audio: 'gaohu.mp3',            markdown: 'gaohu.md',            info: 'gaohu.txt' },
-            'marker6':  { name: '花鼓',       audio: 'huagu.mp3',            markdown: 'huagu.md',            info: 'huagu.txt' },
-            'marker7':  { name: '火不思',     audio: 'huobusi.mp3',          markdown: 'huobusi.md',          info: 'huobusi.txt' },
-            'marker8':  { name: '马头琴',     audio: 'matouqin.mp3',         markdown: 'matouqin.md',         info: 'matouqin.txt' },
-            'marker9':  { name: '牛角琴',     audio: 'niujiaoqin.mp3',       markdown: 'niujiaoqin.md',       info: 'niujiaoqin.txt' },
-            'marker10': { name: '唢呐',       audio: 'suona.mp3',            markdown: 'suona.md',            info: 'suona.txt' },
-            'marker11': { name: '月琴',       audio: 'yueqin.mp3',           markdown: 'yueqin.md',           info: 'yueqin.txt' },
-            'marker12': { name: '潮州唢呐',   audio: 'chaozhou_suona.mp3',   markdown: 'chaozhou_suona.md',   info: 'chaozhou_suona.txt' },
-            'marker13': { name: '潮州筝',     audio: 'chaozhou_zheng.mp3',   markdown: 'chaozhou_zheng.md',   info: 'chaozhou_zheng.txt' },
-            'marker14': { name: '洞箫',       audio: 'dongxiao.mp3',         markdown: 'dongxiao.md',         info: 'dongxiao.txt' },
-            'marker15': { name: '喉管',       audio: 'houguan.mp3',          markdown: 'houguan.md',          info: 'houguan.txt' },
-            'marker16': { name: '木鱼',       audio: 'muyu.mp3',             markdown: 'muyu.md',             info: 'muyu.txt' },
-            'marker17': { name: '牛角号',     audio: 'niujiaohao.mp3',       markdown: 'niujiaohao.md',       info: 'niujiaohao.txt' },
-            'marker18': { name: '秦琴',       audio: 'qinqin.mp3',           markdown: 'qinqin.md',           info: 'qinqin.txt' },
-            'marker19': { name: '椰胡',       audio: 'yehu.mp3',             markdown: 'yehu.md',             info: 'yehu.txt' },
-            'marker20': { name: '渔鼓',       audio: 'yugu.mp3',             markdown: 'yugu.md',             info: 'yugu.txt' },
-            'marker21': { name: '竹板',       audio: 'zhuban.mp3',           markdown: 'zhuban.md',           info: 'zhuban.txt' },*/
-            'marker22': { name: '花鼓大筒',   audio: 'huagudatong.mp3',      markdown: 'huagudatong.md',      info: 'huagudatong.txt' }
-        };
-        // =======================================================
-
-        const config = instrumentConfig[markerId];
-        if (!config) {
-            console.warn(`markerId "${markerId}" 暂未配置，跳过初始化`);
+        if (!this.config) {
+            console.warn(`No config found for ${this.markerId}, skipping initialization.`);
             return;
         }
 
-        const audioFile = 'assets/audio/' + config.audio;
-        const markdownFile = 'assets/markdown/' + config.markdown;
-        
-        console.log(`=== s19组件初始化: ${markerId} (${config.name}) ===`);
-        
-        // 获取模型元素
-        const modelElement = markerElement.querySelector('a-entity');
-        if (!modelElement) {
-            console.error(`无法找到 ${markerId} 的模型元素`);
-            return;
+        this.modelEntity = this.marker.querySelector('[touch-handler]');
+        this.loaderEntity = this.marker.querySelector('.loader');
+
+        this.modelEntity.setAttribute('visible', false);
+        this.loaderEntity.setAttribute('visible', false);
+
+        this.marker.addEventListener('markerFound', this.onMarkerFound.bind(this));
+        this.marker.addEventListener('markerLost', this.onMarkerLost.bind(this));
+    },
+
+    onMarkerFound: function () {
+        console.log(`Marker found: ${this.markerId} (${this.config.name})`);
+        this.setActiveInstrument();
+        if (this.config.isLoaded) {
+            this.modelEntity.setAttribute('visible', true);
+        } else {
+            this.loaderEntity.setAttribute('visible', true);
+            this.loadResources();
         }
+    },
+
+    onMarkerLost: function () {
+        console.log(`Marker lost: ${this.markerId}`);
+        this.modelEntity.setAttribute('visible', false);
+        this.loaderEntity.setAttribute('visible', false);
         
-        // 确保模型初始状态为隐藏
-        modelElement.setAttribute('visible', 'false');
-        
-        // 获取或创建音频元素
-        var audioElement = audioCache[config.audio];
-        if (!audioElement) {
-            console.error(`音频文件 ${config.audio} 未在缓存中找到!`);
-            audioElement = { audio: new Audio() };
-            audioElement.audio.src = audioFile; 
-            audioElement.audio.preload = 'auto';
-            audioElement.audio.load();
-            audioCache[config.audio] = audioElement;
-        }
-        
-        // 加载对应的信息文本
-        var infoText = '';
-        var infoFile = 'assets/info/' + config.info;
-        
-        fetch(infoFile)
-            .then(function (response) {
-                return response.ok ? response.text() : '';
-            })
-            .then(function (text) {
-                infoText = text;
-            })
-            .catch(function (error) {
-                console.error('Error loading info text:', error);
-                infoText = `岭南乐器：${config.name || '未知乐器'}`;
-            });
-        
-        // 原始的简单检测逻辑 - 但加入模型控制
-        var wasVisible = false;
-        
-        this.tick = AFRAME.utils.throttleTick(function () {
-            var isVisible = markerElement.object3D.visible;
-            
-            // 只在marker从不可见变为可见时处理（激活状态）
-            if (isVisible && !wasVisible) {
-                wasVisible = true;
-                
-                // 显示模型
-                modelElement.setAttribute('visible', 'true');
-                
-                // marker被发现 - 立即响应
-                console.log('Marker发现: ' + markerId);
-                
-                // 如果有其他乐器在播放，先停止
-                if (currentAudioManager && currentAudioManager.markerId !== markerId && 
-                    currentAudioManager.audio && !currentAudioManager.audio.paused) {
-                    currentAudioManager.audio.pause();
-                }
-                
-                // 设置当前音频管理器
-                currentAudioManager = {
-                    markerId: markerId,
-                    audio: audioElement.audio,
-                    markdownFile: markdownFile,
-                    infoText: infoText,
-                    isPlaying: currentAudioManager && currentAudioManager.markerId === markerId ? 
-                              currentAudioManager.isPlaying : false
-                };
-                
-                // 更新信息显示框
-                updateInfoDisplay();
-                
-                // 立即更新UI状态
-                updateDockButtons();
-                
-                const instrumentName = config.name || '未知乐器';
-                showNotification(`🎯 检测到${instrumentName}`);
-                
-            } else if (!isVisible && wasVisible) {
-                wasVisible = false;
-                console.log('Marker丢失: ' + markerId + ' (状态保持)');
-                
-                // 隐藏模型
-                modelElement.setAttribute('visible', 'false');
-                
-                // 不清除状态，用户可以继续播放音乐和查看介绍
+        if (currentAudioManager && currentAudioManager.markerId === this.markerId) {
+            if (currentAudioManager.audio && !currentAudioManager.audio.paused) {
+                 currentAudioManager.audio.pause();
+                 currentAudioManager.isPlaying = false;
             }
-        }, 100); // 每100ms检查一次 - 快速响应
+            currentAudioManager = null;
+            updateInfoDisplay();
+            updateDockButtons();
+        }
+    },
+    
+    loadResources: function() {
+        showNotification(`正在加载 ${this.config.name}...`);
+        this.modelEntity.setAttribute('gltf-model', `url(${this.config.model})`);
         
-        console.log('=== s19组件初始化完成 ===');
+        this.modelEntity.addEventListener('model-loaded', () => {
+            console.log(`${this.config.name} model loaded.`);
+            this.config.isLoaded = true;
+            this.loaderEntity.setAttribute('visible', false);
+            if (this.marker.object3D.visible) {
+                 this.modelEntity.setAttribute('visible', true);
+            }
+            showNotification(`${this.config.name} 加载完成!`);
+        }, { once: true });
+
+        this.modelEntity.addEventListener('model-error', (e) => {
+            console.error(`Error loading model for ${this.markerId}:`, e.detail);
+            this.loaderEntity.setAttribute('visible', false);
+            showNotification(`${this.config.name} 模型加载失败`, true);
+        }, { once: true });
+
+        if (!audioCache[this.markerId]) {
+            const audio = new Audio(this.config.audio);
+            audio.preload = 'auto';
+            audio.load();
+            audioCache[this.markerId] = audio;
+        }
+
+        if (!infoCache[this.markerId]) {
+            fetch(this.config.info)
+                .then(response => response.ok ? response.text() : '')
+                .then(text => {
+                    infoCache[this.markerId] = text;
+                    if (currentAudioManager && currentAudioManager.markerId === this.markerId) {
+                        updateInfoDisplay();
+                    }
+                })
+                .catch(err => console.error(`Failed to load info for ${this.markerId}:`, err));
+        }
+        if (!markdownCache[this.markerId]) {
+             fetch(this.config.markdown)
+                .then(response => response.ok ? response.text() : `## 无法加载内容\n\n无法找到 ${this.config.name} 的介绍文件。`)
+                .then(text => markdownCache[this.markerId] = text)
+                .catch(err => {
+                    console.error(`Failed to load markdown for ${this.markerId}:`, err);
+                    markdownCache[this.markerId] = `## 加载错误\n\n加载介绍内容时发生网络错误。`;
+                });
+        }
+    },
+
+    setActiveInstrument: function() {
+        if (currentAudioManager && currentAudioManager.markerId !== this.markerId && currentAudioManager.audio && !currentAudioManager.audio.paused) {
+            currentAudioManager.audio.pause();
+            currentAudioManager.isPlaying = false;
+        }
+        
+        currentAudioManager = {
+            markerId: this.markerId,
+            config: this.config,
+            get audio() { return audioCache[this.markerId]; },
+            isPlaying: (currentAudioManager && currentAudioManager.markerId === this.markerId) ? currentAudioManager.isPlaying : false
+        };
+        
+        updateInfoDisplay();
+        updateDockButtons();
     }
 });
-// ====================================================================
-// =============== 模型触摸交互组件 (Touch Handler) ===============
-// ====================================================================
+
+// 模型触摸交互组件 (Touch Handler) - 完整版
 AFRAME.registerComponent('touch-handler', {
-    // 定义可配置参数，方便微调
     schema: {
-        rotateSensitivity: { type: 'number', default: 0.006 }, // 旋转灵敏度
-        minScale: { type: 'number', default: 0.3 },          // 最小缩放比例（相对于原始大小）
-        maxScale: { type: 'number', default: 3.0 }           // 最大缩放比例
+        rotateSensitivity: { type: 'number', default: 0.006 },
+        minScale: { type: 'number', default: 0.3 },
+        maxScale: { type: 'number', default: 3.0 }
     },
     init: function () {
-        // 绑定事件处理器，确保 'this' 指向正确
         this.onTouchStart = this.onTouchStart.bind(this);
         this.onTouchMove = this.onTouchMove.bind(this);
         this.onTouchEnd = this.onTouchEnd.bind(this);
-
-        // 在整个场景上监听触摸事件
         this.el.sceneEl.addEventListener('touchstart', this.onTouchStart);
         this.el.sceneEl.addEventListener('touchmove', this.onTouchMove);
         this.el.sceneEl.addEventListener('touchend', this.onTouchEnd);
-
-        // 初始化状态变量
         this.isDragging = false;
         this.isPinching = false;
         this.previousTouchPosition = { x: 0, y: 0 };
         this.initialPinchDistance = 0;
         this.model = this.el.object3D;
         this.markerId = this.el.parentElement.id;
-
-        // 修改点: 增加 initialRotation 用于存储和复位
         this.initialScale = new THREE.Vector3();
-        this.initialRotation = new THREE.Euler(); // 使用 THREE.Euler 存储旋转
-
+        this.initialRotation = new THREE.Euler();
         this.el.addEventListener('model-loaded', () => {
-            // 模型加载后，存储其初始缩放和旋转值
             this.initialScale.copy(this.model.scale);
-            
-            // 从 o15 组件直接读取初始旋转数据，更可靠
             const o15Data = this.el.getAttribute('o15');
             if (o15Data) {
                  this.initialRotation.set(
@@ -1289,68 +1208,59 @@ AFRAME.registerComponent('touch-handler', {
             }
         });
     },
-
-    // 检查此模型是否是当前活跃的交互目标
     isThisMarkerActive: function() {
         return currentAudioManager && currentAudioManager.markerId === this.markerId;
     },
-
     onTouchStart: function (e) {
-        if (!this.isThisMarkerActive()) return;
-
-        if (e.touches.length === 1) { // 单指
+        if (!this.isThisMarkerActive() || !this.el.getAttribute('visible')) return;
+        if (e.touches.length === 1) {
             this.isDragging = true;
             this.isPinching = false;
             this.previousTouchPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        } else if (e.touches.length === 2) { // 双指
+        } else if (e.touches.length === 2) {
             this.isDragging = false;
             this.isPinching = true;
             this.initialPinchDistance = this.getDistance(e.touches[0], e.touches[1]);
         }
     },
-
     onTouchMove: function (e) {
-        if (!this.isThisMarkerActive()) return;
-
-        // 单指拖动旋转
+        if (!this.isThisMarkerActive() || !this.el.getAttribute('visible')) return;
         if (this.isDragging && e.touches.length === 1) {
             const deltaX = e.touches[0].clientX - this.previousTouchPosition.x;
             const deltaY = e.touches[0].clientY - this.previousTouchPosition.y;
-
             this.model.rotation.y += deltaX * this.data.rotateSensitivity;
             this.model.rotation.x += deltaY * this.data.rotateSensitivity;
-
             this.previousTouchPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         }
-
-        // 双指捏合缩放
         if (this.isPinching && e.touches.length === 2) {
             if (this.initialPinchDistance <= 0) return;
             const currentPinchDistance = this.getDistance(e.touches[0], e.touches[1]);
             const scaleFactor = currentPinchDistance / this.initialPinchDistance;
-            
             const newScaleX = this.model.scale.x * scaleFactor;
             const relativeScale = newScaleX / this.initialScale.x;
-
             if (relativeScale >= this.data.minScale && relativeScale <= this.data.maxScale) {
                  this.model.scale.multiplyScalar(scaleFactor);
             }
-            
             this.initialPinchDistance = currentPinchDistance;
         }
     },
-
     onTouchEnd: function (e) {
         if (e.touches.length < 2) this.isPinching = false;
         if (e.touches.length < 1) this.isDragging = false;
     },
-    
     getDistance: function (touch1, touch2) {
         const dx = touch1.clientX - touch2.clientX;
         const dy = touch1.clientY - touch2.clientY;
         return Math.sqrt(dx * dx + dy * dy);
     },
-
+    reset: function() {
+        if (this.initialScale && this.initialRotation) {
+            this.model.scale.copy(this.initialScale);
+            this.model.rotation.copy(this.initialRotation);
+        } else {
+            console.warn("Cannot reset model: initial state not saved.");
+        }
+    },
     remove: function () {
         this.el.sceneEl.removeEventListener('touchstart', this.onTouchStart);
         this.el.sceneEl.removeEventListener('touchmove', this.onTouchMove);
@@ -1359,24 +1269,19 @@ AFRAME.registerComponent('touch-handler', {
 });
 
 
-// =============== Dock栏功能 - 所有浏览器可用 ===============
+// =============== Dock栏和UI功能 ===============
 
-// 音频播放控制
 function toggleAudio() {
     const playBtn = document.getElementById('play-btn');
-    
     if (!currentAudioManager || !currentAudioManager.audio) {
         showNotification('⚠️ 请先对准乐器码');
         return;
     }
-    
     const audio = currentAudioManager.audio;
-    
     if (audio.readyState < 2) {
         showNotification('🔄 音频加载中...');
         return;
     }
-    
     if (audio.paused) {
         audio.play().then(() => {
             playBtn.innerHTML = '<span class="emoji">⏸️</span>';
@@ -1394,167 +1299,105 @@ function toggleAudio() {
     }
 }
 
-// 显示信息面板
 function showInfo() {
-    if (!currentAudioManager || !currentAudioManager.markdownFile) {
+    if (!currentAudioManager) {
         showNotification('⚠️ 请先对准乐器码');
         return;
     }
-    
-    loadMarkdownContent(currentAudioManager.markdownFile);
+    const markdownText = markdownCache[currentAudioManager.markerId];
+    if (typeof markdownText === 'string') {
+        loadMarkdownContent(currentAudioManager.config.name, markdownText);
+    } else {
+        showNotification('🔄 介绍内容加载中...');
+    }
 }
 
-// ====================================================================
-// =============== 新增功能: 复位模型函数 ===============
-// ====================================================================
 function resetModel() {
-    // 检查是否有活动的乐器
     if (!currentAudioManager) {
         showNotification('⚠️ 请先对准一个乐器码');
         return;
     }
-
-    // 根据活动的marker ID找到对应的模型ID
-    const modelId = currentAudioManager.markerId.replace('marker', 'model');
+    const modelId = `model${currentAudioManager.markerId.replace('marker', '')}`;
     const modelEl = document.getElementById(modelId);
-
-    if (!modelEl) {
-        console.error('复位失败：无法找到模型', modelId);
-        return;
-    }
-
-    // 从模型的 touch-handler 组件中获取初始状态
-    const touchHandler = modelEl.components['touch-handler'];
-    if (touchHandler && touchHandler.initialScale && touchHandler.initialRotation) {
-        // 复位模型的缩放和旋转
-        modelEl.object3D.scale.copy(touchHandler.initialScale);
-        modelEl.object3D.rotation.copy(touchHandler.initialRotation);
+    if (modelEl && modelEl.components['touch-handler']) {
+        modelEl.components['touch-handler'].reset();
         showNotification('🔄 模型已复位');
     } else {
-        console.error('复位失败：无法在模型上找到 touch-handler 组件或初始状态', modelId);
+        console.error('复位失败：无法找到模型或touch-handler组件', modelId);
     }
 }
 
-
-// 加载Markdown内容
-async function loadMarkdownContent(filename) {
-    try {
-        const response = await fetch(filename);
-        if (!response.ok) {
-            throw new Error('无法加载内容：' + response.status);
-        }
-        
-        const markdownText = await response.text();
-        
-        // 检查marked是否可用
-        if (typeof marked === 'undefined') {
-            console.error('marked.js 未加载');
-            showNotification('❌ Markdown渲染器未加载');
-            return;
-        }
-        
-        const htmlContent = marked.parse(markdownText);
-        showInfoPanel('📖 乐器介绍', `<div class="markdown-content">${htmlContent}</div>`);
-        
-    } catch (error) {
-        console.error('加载Markdown失败:', error);
-        showNotification('❌ 加载介绍失败：' + error.message);
+function loadMarkdownContent(title, markdownText) {
+    if (typeof marked === 'undefined') {
+        console.error('marked.js 未加载');
+        showNotification('❌ Markdown渲染器未加载');
+        return;
     }
+    const htmlContent = marked.parse(markdownText);
+    showInfoPanel(`📖 ${title}`, `<div class="markdown-content">${htmlContent}</div>`);
 }
 
-// 显示信息面板
 function showInfoPanel(title, content) {
     let infoPanel = document.getElementById('info-panel');
-    
-    if (!infoPanel) {
-        infoPanel = document.createElement('div');
-        infoPanel.id = 'info-panel';
-        infoPanel.className = 'info-panel';
-        infoPanel.innerHTML = `
-            <div class="info-panel-header">
-                <h3 class="info-title"></h3>
-                <button class="close-btn" onclick="hideInfoPanel()">×</button>
-            </div>
-            <div class="info-content"></div>
-        `;
-        document.body.appendChild(infoPanel);
-    }
-    
-    infoPanel.querySelector('.info-title').textContent = title;
+    if (!infoPanel) return;
+    infoPanel.querySelector('.info-title').innerHTML = title;
     infoPanel.querySelector('.info-content').innerHTML = content;
     infoPanel.classList.add('active');
 }
 
-// 隐藏信息面板
 function hideInfoPanel() {
     const infoPanel = document.getElementById('info-panel');
-    if (infoPanel) {
-        infoPanel.classList.remove('active');
-    }
+    if (infoPanel) infoPanel.classList.remove('active');
 }
 
-// 显示通知
-function showNotification(message) {
-    // 创建临时通知元素
+function showNotification(message, isError = false) {
     const notification = document.createElement('div');
     notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 12px 20px;
-        border-radius: 25px;
-        font-size: 14px;
-        z-index: 1000;
-        pointer-events: none;
-    `;
+        position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+        background: ${isError ? 'rgba(211, 47, 47, 0.8)' : 'rgba(0, 0, 0, 0.8)'};
+        color: white; padding: 12px 20px; border-radius: 25px;
+        font-size: 14px; z-index: 10000; pointer-events: none; transition: opacity 0.3s; opacity: 1;`;
     notification.textContent = message;
-    
     document.body.appendChild(notification);
-    
     setTimeout(() => {
-        notification.remove();
-    }, 2000);
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
+    }, 2500);
 }
 
-// 更新信息显示框
 function updateInfoDisplay() {
     const infoDisplay = document.getElementById('info-display');
-    const instrumentName = infoDisplay.querySelector('.instrument-name');
-    const instrumentDesc = infoDisplay.querySelector('.instrument-desc');
+    const instrumentNameEl = infoDisplay.querySelector('.instrument-name');
+    const instrumentDescEl = infoDisplay.querySelector('.instrument-desc');
     
-    if (currentAudioManager && currentAudioManager.infoText) {
-        // 解析info.txt内容
-        const lines = currentAudioManager.infoText.split('\n');
-        const nameMatch = lines[0] || '';
-        const descMatch = lines[1] || '';
-        
-        instrumentName.textContent = nameMatch;
-        instrumentDesc.textContent = descMatch;
-        
-        infoDisplay.classList.add('active');
+    if (currentAudioManager) {
+        const infoText = infoCache[currentAudioManager.markerId];
+        if (infoText) {
+            const lines = infoText.split('\n');
+            instrumentNameEl.textContent = lines[0] || currentAudioManager.config.name;
+            instrumentDescEl.textContent = lines[1] || '';
+            infoDisplay.classList.add('active');
+        } else {
+            instrumentNameEl.textContent = currentAudioManager.config.name;
+            instrumentDescEl.textContent = '正在加载描述...';
+            infoDisplay.classList.add('active');
+        }
     } else {
         infoDisplay.classList.remove('active');
     }
 }
 
-// 更新dock按钮状态
 function updateDockButtons() {
     const playBtn = document.getElementById('play-btn');
     const infoBtn = document.getElementById('info-btn');
-    const resetBtn = document.getElementById('reset-btn'); // 获取复位按钮
+    const resetBtn = document.getElementById('reset-btn');
     
-    if (!playBtn || !infoBtn || !resetBtn) {
-        return;
-    }
+    if (!playBtn || !infoBtn || !resetBtn) return;
     
     if (currentAudioManager) {
         playBtn.classList.remove('disabled');
         infoBtn.classList.remove('disabled');
-        resetBtn.classList.remove('disabled'); // 激活复位按钮
-        
+        resetBtn.classList.remove('disabled');
         if (currentAudioManager.isPlaying) {
             playBtn.innerHTML = '<span class="emoji">⏸️</span>';
             playBtn.classList.add('playing');
@@ -1565,114 +1408,76 @@ function updateDockButtons() {
     } else {
         playBtn.classList.add('disabled');
         infoBtn.classList.add('disabled');
-        resetBtn.classList.add('disabled'); // 禁用复位按钮
+        resetBtn.classList.add('disabled');
         playBtn.innerHTML = '<span class="emoji">🎵</span>';
         playBtn.classList.remove('playing');
     }
 }
 
-// =============== AR竖屏拉伸修复方案 ===============
-
-// 基于GitHub Issue #331的解决方案
-// 重写ARjs.Source.prototype.copyElementSizeTo来修复竖屏拉伸问题
+// =============== AR竖屏拉伸修复方案 (完整版) ===============
 function fixARjsPortraitStretching() {
     console.log('应用AR.js竖屏拉伸修复');
-    
-    // 等待ARjs加载完成
     const checkARjs = setInterval(() => {
         if (typeof ARjs !== 'undefined' && ARjs.Source && ARjs.Source.prototype) {
             clearInterval(checkARjs);
-            
-            // 重写copyElementSizeTo函数来修复宽高比问题
             ARjs.Source.prototype.copyElementSizeTo = function(otherElement) {
-                console.log('修复AR.js宽高比');
-                
                 if (window.innerWidth > window.innerHeight) {
-                    // 横屏模式 - 保持原有逻辑
                     otherElement.style.width = this.domElement.style.width;
                     const height = parseInt(otherElement.style.width) * 3/4;
                     otherElement.style.height = height + 'px';
                     otherElement.style.marginLeft = '0px';
                     otherElement.style.marginTop = ((window.innerHeight - height) / 2) + 'px';
                 } else {
-                    // 竖屏模式 - 修复拉伸问题
                     otherElement.style.height = this.domElement.style.height;
                     const width = parseInt(otherElement.style.height) * 4/3;
                     otherElement.style.width = width + 'px';
                     otherElement.style.marginLeft = ((window.innerWidth - width) / 2) + 'px';
                     otherElement.style.marginTop = '0px';
                 }
-                
-                console.log(`AR画面尺寸已调整: ${otherElement.style.width} × ${otherElement.style.height}`);
             };
-            
             console.log('✅ AR.js竖屏拉伸修复已应用');
         }
     }, 100);
-    
-    // 5秒后停止检查（防止无限循环）
-    setTimeout(() => {
-        clearInterval(checkARjs);
-    }, 5000);
+    setTimeout(() => clearInterval(checkARjs), 5000);
 }
 
-// =============== 启动系统 - 所有浏览器可用 ===============
-
-// 创建启动覆盖层
+// =============== 启动系统 (完整版) ===============
 function createStartOverlay() {
     startOverlay = document.createElement('div');
     startOverlay.className = 'start-overlay';
     startOverlay.id = 'start-overlay';
-    
     const device = getDeviceInfo();
-    
-    // 根据设备类型显示不同的权限指南 
     const permissionGuideHTML = device.isIOS ? `
         <!-- iOS设备紧凑双权限提示 -->
         <div class="permission-guide">
             <div class="guide-title">📱 权限授权指南</div>
             <div class="guide-text">启动后会弹出两个权限窗口，请都点击"允许/Allow"</div>
-            
-            <!-- 紧凑的权限步骤 -->
             <div class="permission-steps-compact">
                 <div class="permission-step">
                     <div class="step-title">第1步：摄像头权限</div>
                     <div class="mock-permission-dialog">
                         <div class="mock-dialog-content camera-permission">
-                            <div class="mock-dialog-text">
-                                允许"linggan-ua.github.io"<br>
-                                使用您的摄像头？
-                            </div>
+                            <div class="mock-dialog-text">允许"linggan-ua.github.io"<br>使用您的摄像头？</div>
                             <div class="mock-dialog-buttons">
                                 <button class="mock-deny-btn">不允许</button>
                                 <button class="mock-allow-btn camera-allow">允许</button>
                             </div>
                         </div>
-                        <div class="permission-arrow">
-                            <div class="arrow-line"></div>
-                            <div class="arrow-head"></div>
-                        </div>
+                        <div class="permission-arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
                         <div class="permission-hint">👆允许</div>
                     </div>
                 </div>
-                
                 <div class="permission-step">
                     <div class="step-title">第2步：传感器权限</div>
                     <div class="mock-permission-dialog">
                         <div class="mock-dialog-content sensor-permission">
-                            <div class="mock-dialog-text">
-                                This immersive website requires<br>
-                                access to your device motion sensors.
-                            </div>
+                            <div class="mock-dialog-text">This immersive website requires<br>access to your device motion sensors.</div>
                             <div class="mock-dialog-buttons">
                                 <button class="mock-deny-btn">Deny</button>
                                 <button class="mock-allow-btn sensor-allow">Allow</button>
                             </div>
                         </div>
-                        <div class="permission-arrow">
-                            <div class="arrow-line"></div>
-                            <div class="arrow-head"></div>
-                        </div>
+                        <div class="permission-arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
                         <div class="permission-hint">👆Allow</div>
                     </div>
                 </div>
@@ -1691,13 +1496,10 @@ function createStartOverlay() {
             <div class="guide-text">启动后请允许摄像头权限以使用AR功能</div>
         </div>
     `;
-    
     startOverlay.innerHTML = `
         <div class="start-title">🎵 岭南乐器AR</div>
         <div class="start-subtitle">沉浸式音乐文化体验</div>
-        
         ${permissionGuideHTML}
-        
         <button class="start-button" onclick="startAR()">
             ✨ 启动AR体验
         </button>
@@ -1705,55 +1507,35 @@ function createStartOverlay() {
             💡 为了保护隐私，需要您的授权才能访问相应功能
         </div>
     `;
-    
     document.body.appendChild(startOverlay);
 }
 
-// 启动AR函数
 function startAR() {
     if (isARStarted) return;
-    
     console.log('启动AR体验');
     isARStarted = true;
-    
-    // 隐藏启动覆盖层
     startOverlay.classList.add('hidden');
-    
-    // 显示AR场景
-    const arScene = document.getElementById('ar-scene');
-    arScene.classList.add('active');
-    
-    // 显示dock栏
-    const dockContainer = document.getElementById('dock-container');
-    if (dockContainer) {
-        dockContainer.classList.add('active');
-    }
-    
-    // 应用AR.js竖屏拉伸修复
+    document.getElementById('ar-scene').classList.add('active');
+    document.getElementById('dock-container').classList.add('active');
     fixARjsPortraitStretching();
-    
-    // 应用iOS视频修复（如果需要）
     applyIOSVideoFix();
-    
-    console.log('AR体验启动完成，已应用竖屏拉伸修复');
+    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+        .catch(err => {
+            console.error("摄像头权限请求失败:", err);
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                handlePermissionDenied();
+            }
+        });
 }
 
-
-// iOS视频修复
 function applyIOSVideoFix() {
     const device = getDeviceInfo();
-    
-    if (!device.isIOS) {
-        return;
-    }
-    
+    if (!device.isIOS) return;
     let fixAttempts = 0;
     const maxAttempts = 15;
-    
     const fixVideoElements = () => {
         fixAttempts++;
         const videos = document.querySelectorAll('video');
-        
         if (videos.length > 0) {
             videos.forEach(video => {
                 if (!video.hasAttribute('data-ios-fixed')) {
@@ -1765,56 +1547,29 @@ function applyIOSVideoFix() {
             });
             return;
         }
-        
         if (fixAttempts < maxAttempts) {
             setTimeout(fixVideoElements, 300);
         }
     };
-    
     setTimeout(fixVideoElements, 1000);
 }
 
-// 处理权限被拒绝
 function handlePermissionDenied() {
     console.log('检测到权限被拒绝');
-    
     const device = getDeviceInfo();
-    
     const deniedOverlay = document.createElement('div');
     deniedOverlay.className = 'permission-denied-overlay';
     deniedOverlay.innerHTML = `
         <div class="start-title">📷 摄像头权限被拒绝</div>
         <div class="start-subtitle">需要重新授权才能使用AR功能</div>
-        
         <div class="permission-guide">
             <div class="guide-title">🔧 重新授权指南</div>
             <div class="guide-text">请按照以下步骤重新授权摄像头权限</div>
-            
             ${device.isIOS ? `
                 <div class="reauth-steps">
-                    <div class="reauth-step">
-                        <div class="step-number">1</div>
-                        <div class="step-content">
-                            <div class="step-text">点击地址栏左侧的🔒图标</div>
-                            <div class="step-desc">或长按地址栏查看网站信息</div>
-                        </div>
-                    </div>
-                    
-                    <div class="reauth-step">
-                        <div class="step-number">2</div>
-                        <div class="step-content">
-                            <div class="step-text">找到"摄像头"选项</div>
-                            <div class="step-desc">将其设置为"允许"</div>
-                        </div>
-                    </div>
-                    
-                    <div class="reauth-step">
-                        <div class="step-number">3</div>
-                        <div class="step-content">
-                            <div class="step-text">刷新页面重新开始</div>
-                            <div class="step-desc">或点击下方"重新尝试"按钮</div>
-                        </div>
-                    </div>
+                    <div class="reauth-step"><div class="step-number">1</div><div class="step-content"><div class="step-text">点击地址栏左侧的🔒图标</div><div class="step-desc">或长按地址栏查看网站信息</div></div></div>
+                    <div class="reauth-step"><div class="step-number">2</div><div class="step-content"><div class="step-text">找到"摄像头"选项</div><div class="step-desc">将其设置为"允许"</div></div></div>
+                    <div class="reauth-step"><div class="step-number">3</div><div class="step-content"><div class="step-text">刷新页面重新开始</div><div class="step-desc">或点击下方"重新尝试"按钮</div></div></div>
                 </div>
             ` : `
                 <div class="simple-steps">
@@ -1824,234 +1579,174 @@ function handlePermissionDenied() {
                 </div>
             `}
         </div>
-        
         <div class="denied-buttons">
-            <button class="start-button retry-btn" onclick="retryPermission()">
-                🔄 重新尝试
-            </button>
-            <button class="start-button refresh-btn" onclick="refreshPage()">
-                🔃 刷新页面
-            </button>
-            <button class="start-button back-btn" onclick="backToStart()">
-                ⬅️ 返回开始
-            </button>
+            <button class="start-button retry-btn" onclick="retryPermission()">🔄 重新尝试</button>
+            <button class="start-button refresh-btn" onclick="refreshPage()">🔃 刷新页面</button>
+            <button class="start-button back-btn" onclick="backToStart()">⬅️ 返回开始</button>
         </div>
-        
-        <div style="font-size: 0.9em; opacity: 0.8; margin-top: 15px;">
-            💡 如果问题持续存在，建议在Safari中打开
-        </div>
+        <div style="font-size: 0.9em; opacity: 0.8; margin-top: 15px;">💡 如果问题持续存在，建议在Safari中打开</div>
     `;
-    
     document.body.appendChild(deniedOverlay);
 }
 
-// 重新尝试
 function retryPermission() {
     const deniedUI = document.querySelector('.permission-denied-overlay');
-    if (deniedUI) {
-        deniedUI.remove();
-    }
+    if (deniedUI) deniedUI.remove();
     isARStarted = false;
     startAR();
 }
 
-// 刷新页面
-function refreshPage() {
-    window.location.reload();
-}
+function refreshPage() { window.location.reload(); }
 
-// 返回开始
 function backToStart() {
     const deniedUI = document.querySelector('.permission-denied-overlay');
-    if (deniedUI) {
-        deniedUI.remove();
-    }
-    
-    const arScene = document.getElementById('ar-scene');
-    arScene.classList.remove('active');
-    
-    // 隐藏dock栏
+    if (deniedUI) deniedUI.remove();
+    document.getElementById('ar-scene').classList.remove('active');
     const dockContainer = document.getElementById('dock-container');
-    if (dockContainer) {
-        dockContainer.classList.remove('active');
-    }
-    
+    if (dockContainer) dockContainer.classList.remove('active');
     startOverlay.classList.remove('hidden');
     isARStarted = false;
 }
 
-// 页面加载完成后显示启动覆盖层
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('页面加载完成，准备AR竖屏拉伸修复');
+    console.log('页面加载完成，准备启动AR。');
     createStartOverlay();
-    
-    // 监听权限被拒绝错误
     window.addEventListener('unhandledrejection', function(event) {
-        if (isARStarted && event.reason && 
-            (event.reason.name === 'NotAllowedError' || 
-             event.reason.message && event.reason.message.includes('not allowed'))) {
+        if (isARStarted && event.reason && (event.reason.name === 'NotAllowedError' || (event.reason.message && event.reason.message.includes('not allowed')))) {
             console.log('捕获到权限拒绝错误');
             event.preventDefault();
             setTimeout(handlePermissionDenied, 500);
         }
     });
-    
-    console.log(`设备信息: 屏幕尺寸 ${window.innerWidth}x${window.innerHeight}`);
-    console.log(`设备方向: ${window.innerHeight > window.innerWidth ? '竖屏' : '横屏'}`);
 });
 
   </script>
  </head>
  <body style="margin: 0; overflow: hidden;">
   
-  <!-- 新增：信息显示框 -->
+  <!-- UI元素 -->
   <div id="info-display" class="info-display">
     <div class="instrument-name"></div>
     <div class="instrument-desc"></div>
   </div>
   
-  <!-- 
-    修改点: 
-    1. 将设置按钮(settings-btn)改为复位按钮(reset-btn)。
-    2. 更新了 onclick 事件为 resetModel()。
-    3. 更新了按钮图标为 🔄。
-   -->
   <div id="dock-container" class="dock-container">
     <div class="dock-bar">
-      <button id="play-btn" class="dock-button disabled" onclick="toggleAudio()">
-        <span class="emoji">🎵</span>
-      </button>
-      <button id="info-btn" class="dock-button disabled" onclick="showInfo()">
-        <span class="emoji">📖</span>
-      </button>
-      <button id="reset-btn" class="dock-button disabled" onclick="resetModel()">
-        <span class="emoji">🔄</span>
-      </button>
+      <button id="play-btn" class="dock-button disabled" onclick="toggleAudio()"><span class="emoji">🎵</span></button>
+      <button id="info-btn" class="dock-button disabled" onclick="showInfo()"><span class="emoji">📖</span></button>
+      <button id="reset-btn" class="dock-button disabled" onclick="resetModel()"><span class="emoji">🔄</span></button>
     </div>
   </div>
   
-  <!-- AR场景：初始隐藏，用户点击启动后才显示 -->
+  <div id="info-panel" class="info-panel">
+      <div class="info-panel-header">
+          <h3 class="info-title"></h3>
+          <button class="close-btn" onclick="hideInfoPanel()">×</button>
+      </div>
+      <div class="info-content"></div>
+  </div>
+
+  <!-- AR场景 -->
   <a-scene 
     id="ar-scene" 
     arjs="sourceType: webcam; videoTexture: true; debugUIEnabled: false;" 
     embedded="" 
     vr-mode-ui="enabled: false">
 
-   <a-marker id="marker1" preset="custom" s19="" url="assets/patterns/pattern-pipa.patt">
-    <a-entity gltf-model="url(assets/models/pipa.gltf)" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
-    </a-entity>
+   <!-- ==================================================================== -->
+   <!-- 所有22个Marker的完整结构 -->
+   <!-- ==================================================================== -->
+   <a-marker id="marker1" preset="custom" s19 url="assets/patterns/pattern-pipa.patt">
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
-   <a-marker id="marker2" preset="custom" s19="" url="assets/patterns/pattern-hulusi.patt">
-    <a-entity gltf-model="url(assets/models/hulusi.gltf)" id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.010 0.010 0.010" touch-handler visible="false">
-    </a-entity>
+   <a-marker id="marker2" preset="custom" s19 url="assets/patterns/pattern-hulusi.patt">
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.010 0.010 0.010" touch-handler visible="false"></a-entity>
    </a-marker>
-   <a-marker id="marker3" preset="custom" s19="" url="assets/patterns/pattern-dongbei_dagu.patt">
-    <a-entity gltf-model="url(assets/models/dongbei_dagu.gltf)" id="model3" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
-    </a-entity>
+   <a-marker id="marker3" preset="custom" s19 url="assets/patterns/pattern-dongbei_dagu.patt">
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model3" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
-   <a-marker id="marker4" preset="custom" s19="" url="assets/patterns/pattern-dongbula.patt">
-    <a-entity gltf-model="url(assets/models/dongbula.gltf)" id="model4" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
-    </a-entity>
+   <a-marker id="marker4" preset="custom" s19 url="assets/patterns/pattern-dongbula.patt">
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model4" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
-   <a-marker id="marker5" preset="custom" s19="" url="assets/patterns/pattern-gaohu.patt">
-    <a-entity gltf-model="url(assets/models/gaohu.gltf)" id="model5" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
-    </a-entity>
+   <a-marker id="marker5" preset="custom" s19 url="assets/patterns/pattern-gaohu.patt">
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model5" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
-   <a-marker id="marker6" preset="custom" s19="" url="assets/patterns/pattern-huagu.patt">
-    <a-entity gltf-model="url(assets/models/huagu.gltf)" id="model6" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
-    </a-entity>
+   <a-marker id="marker6" preset="custom" s19 url="assets/patterns/pattern-huagu.patt">
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model6" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
-   <a-marker id="marker7" preset="custom" s19="" url="assets/patterns/pattern-huobusi.patt">
-    <a-entity gltf-model="url(assets/models/huobusi.gltf)" id="model7" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
-    </a-entity>
+   <a-marker id="marker7" preset="custom" s19 url="assets/patterns/pattern-huobusi.patt">
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model7" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
-   <a-marker id="marker8" preset="custom" s19="" url="assets/patterns/pattern-matouqin.patt">
-    <a-entity gltf-model="url(assets/models/matouqin.gltf)" id="model8" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
-    </a-entity>
+   <a-marker id="marker8" preset="custom" s19 url="assets/patterns/pattern-matouqin.patt">
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model8" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
-   <a-marker id="marker9" preset="custom" s19="" url="assets/patterns/pattern-niujiaoqin.patt">
-    <a-entity gltf-model="url(assets/models/niujiaoqin.gltf)" id="model9" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
-    </a-entity>
+   <a-marker id="marker9" preset="custom" s19 url="assets/patterns/pattern-niujiaoqin.patt">
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model9" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
-   <a-marker id="marker10" preset="custom" s19="" url="assets/patterns/pattern-suona.patt">
-    <a-entity gltf-model="url(assets/models/suona.gltf)" id="model10" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
-    </a-entity>
+   <a-marker id="marker10" preset="custom" s19 url="assets/patterns/pattern-suona.patt">
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model10" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
-   <a-marker id="marker11" preset="custom" s19="" url="assets/patterns/pattern-yueqin.patt">
-    <a-entity gltf-model="url(assets/models/yueqin.gltf)" id="model11" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
-    </a-entity>
+   <a-marker id="marker11" preset="custom" s19 url="assets/patterns/pattern-yueqin.patt">
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model11" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
-   <a-marker id="marker12" preset="custom" s19="" url="assets/patterns/pattern-chaozhou_suona.patt">
-    <a-entity gltf-model="url(assets/models/chaozhou_suona.gltf)" id="model12" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
-    </a-entity>
+   <a-marker id="marker12" preset="custom" s19 url="assets/patterns/pattern-chaozhou_suona.patt">
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model12" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
-   <a-marker id="marker13" preset="custom" s19="" url="assets/patterns/pattern-chaozhou_zheng.patt">
-    <a-entity gltf-model="url(assets/models/chaozhou_zheng.gltf)" id="model13" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
-    </a-entity>
+   <a-marker id="marker13" preset="custom" s19 url="assets/patterns/pattern-chaozhou_zheng.patt">
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model13" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
-   <a-marker id="marker14" preset="custom" s19="" url="assets/patterns/pattern-dongxiao.patt">
-    <a-entity gltf-model="url(assets/models/dongxiao.gltf)" id="model14" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
-    </a-entity>
+   <a-marker id="marker14" preset="custom" s19 url="assets/patterns/pattern-dongxiao.patt">
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model14" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
-   <a-marker id="marker15" preset="custom" s19="" url="assets/patterns/pattern-houguan.patt">
-    <a-entity gltf-model="url(assets/models/houguan.gltf)" id="model15" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
-    </a-entity>
+   <a-marker id="marker15" preset="custom" s19 url="assets/patterns/pattern-houguan.patt">
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model15" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
-   <a-marker id="marker16" preset="custom" s19="" url="assets/patterns/pattern-muyu.patt">
-    <a-entity gltf-model="url(assets/models/muyu.gltf)" id="model16" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
-    </a-entity>
+   <a-marker id="marker16" preset="custom" s19 url="assets/patterns/pattern-muyu.patt">
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model16" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
-   <a-marker id="marker17" preset="custom" s19="" url="assets/patterns/pattern-niujiaohao.patt">
-    <a-entity gltf-model="url(assets/models/niujiaohao.gltf)" id="model17" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
-    </a-entity>
+   <a-marker id="marker17" preset="custom" s19 url="assets/patterns/pattern-niujiaohao.patt">
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model17" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
-   <a-marker id="marker18" preset="custom" s19="" url="assets/patterns/pattern-qinqin.patt">
-    <a-entity gltf-model="url(assets/models/qinqin.gltf)" id="model18" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
-    </a-entity>
+   <a-marker id="marker18" preset="custom" s19 url="assets/patterns/pattern-qinqin.patt">
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model18" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
-   <a-marker id="marker19" preset="custom" s19="" url="assets/patterns/pattern-yehu.patt">
-    <a-entity gltf-model="url(assets/models/yehu.gltf)" id="model19" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
-    </a-entity>
+   <a-marker id="marker19" preset="custom" s19 url="assets/patterns/pattern-yehu.patt">
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model19" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
-   <a-marker id="marker20" preset="custom" s19="" url="assets/patterns/pattern-yugu.patt">
-    <a-entity gltf-model="url(assets/models/yugu.gltf)" id="model20" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
-    </a-entity>
+   <a-marker id="marker20" preset="custom" s19 url="assets/patterns/pattern-yugu.patt">
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model20" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
-   <a-marker id="marker21" preset="custom" s19="" url="assets/patterns/pattern-zhuban.patt">
-    <a-entity gltf-model="url(assets/models/zhuban.gltf)" id="model21" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
-    </a-entity>
+   <a-marker id="marker21" preset="custom" s19 url="assets/patterns/pattern-zhuban.patt">
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model21" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
-    <a-marker id="marker22" preset="custom" s19="" url="assets/patterns/pattern-huagudatong.patt">
-    <a-entity gltf-model="url(assets/models/huagudatong.gltf)" id="model22" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
-    </a-entity>
+   <a-marker id="marker22" preset="custom" s19 url="assets/patterns/pattern-huagudatong.patt">
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model22" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
-   <a-entity camera="">
-   </a-entity>
+
+   <a-entity camera></a-entity>
   </a-scene>
   
-  <script>
-   // 页面增强功能
-   document.addEventListener('DOMContentLoaded', function () {
-        var audioElements = document.querySelectorAll('audio');
-        var playbackRate = 1.0;
-
-        audioElements.forEach(function (audio) {
-            if (audio.duration > 60) {
-                playbackRate = 1.5;
-                audio.playbackRate = playbackRate;
-            }
-        });
-    });
-
-    window.onerror = function (message, source, lineno, colno, error) {
-        console.error("Error captured:", {
-            message: message,
-            source: source,
-            lineno: lineno,
-            colno: colno,
-            error: error
-        });
-    };
-  </script>
  </body>
 </html>

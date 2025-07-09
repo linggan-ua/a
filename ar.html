@@ -909,6 +909,68 @@
             opacity: 0.9;
         }
         
+        /* =============== 新增：加载覆盖层样式 =============== */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(15px) saturate(1.5);
+            -webkit-backdrop-filter: blur(15px) saturate(1.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            color: white;
+            text-align: center;
+            transition: opacity 0.3s ease;
+        }
+
+        .loading-panel {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 25px 35px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            width: 90%;
+            max-width: 320px;
+        }
+
+        #loading-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #fff;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        #progress-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 4px;
+            transition: width 0.3s ease-out;
+        }
+
+        #loading-text {
+            font-size: 14px;
+            margin: 0;
+            opacity: 0.9;
+            color: #eee;
+        }
+        /* =============== 结束：新增样式 =============== */
+        
         @media (max-width: 480px) {
             .start-title { font-size: 2em; }
             .start-subtitle { font-size: 1em; }
@@ -933,6 +995,7 @@ let currentAudioManager = null;
 const audioCache = {};
 const infoCache = {};
 const markdownCache = {};
+let loadingInterval = null; // 新增：用于管理加载动画的计时器
 
 // ====================================================================
 // 乐器配置中心 (全局)
@@ -1009,10 +1072,10 @@ AFRAME.registerComponent('instrument-handler', {
         }
 
         this.modelEntity = this.marker.querySelector('[touch-handler]');
-        this.loaderEntity = this.marker.querySelector('.loader');
+        // this.loaderEntity = this.marker.querySelector('.loader'); // 移除对旧loader的引用
 
         this.modelEntity.setAttribute('visible', false);
-        this.loaderEntity.setAttribute('visible', false);
+        // this.loaderEntity.setAttribute('visible', false); // 移除对旧loader的引用
 
         this.marker.addEventListener('markerFound', this.onMarkerFound.bind(this));
         this.marker.addEventListener('markerLost', this.onMarkerLost.bind(this));
@@ -1024,7 +1087,7 @@ AFRAME.registerComponent('instrument-handler', {
         if (this.config.isLoaded) {
             this.modelEntity.setAttribute('visible', true);
         } else {
-            this.loaderEntity.setAttribute('visible', true);
+            // this.loaderEntity.setAttribute('visible', true); // 移除对旧loader的引用
             this.loadResources();
         }
     },
@@ -1032,26 +1095,31 @@ AFRAME.registerComponent('instrument-handler', {
     onMarkerLost: function () {
         console.log(`Marker lost: ${this.markerId}. State will be preserved.`);
         this.modelEntity.setAttribute('visible', false);
-        this.loaderEntity.setAttribute('visible', false);
+        // this.loaderEntity.setAttribute('visible', false); // 移除对旧loader的引用
     },
     
     loadResources: function() {
-        showNotification(`正在加载 ${this.config.name}...`);
+        // showNotification(`正在加载 ${this.config.name}...`); // 旧的提示方式
+        showLoadingOverlay(this.config.name); // 新的加载弹窗
+        
         this.modelEntity.setAttribute('gltf-model', `url(${this.config.model})`);
         
         this.modelEntity.addEventListener('model-loaded', () => {
             console.log(`${this.config.name} model loaded.`);
             this.config.isLoaded = true;
-            this.loaderEntity.setAttribute('visible', false);
+            // this.loaderEntity.setAttribute('visible', false); // 移除对旧loader的引用
+            hideLoadingOverlay(true); // 成功加载，关闭弹窗
+            
             if (this.marker.object3D.visible) {
                  this.modelEntity.setAttribute('visible', true);
             }
-            showNotification(`${this.config.name} 加载完成!`);
+            // showNotification(`${this.config.name} 加载完成!`); // 旧的提示方式，现在由加载弹窗处理
         }, { once: true });
 
         this.modelEntity.addEventListener('model-error', (e) => {
             console.error(`Error loading model for ${this.markerId}:`, e.detail);
-            this.loaderEntity.setAttribute('visible', false);
+            // this.loaderEntity.setAttribute('visible', false); // 移除对旧loader的引用
+            hideLoadingOverlay(false); // 加载失败，关闭弹窗
             showNotification(`${this.config.name} 模型加载失败`, true);
         }, { once: true });
 
@@ -1236,7 +1304,8 @@ function showInfo() {
     }
     const markdownText = markdownCache[currentAudioManager.markerId];
     if (typeof markdownText === 'string') {
-        loadMarkdownContent(currentAudioManager.config.name, markdownText);
+        // 修改：传入markdown文件路径以修复图片链接
+        loadMarkdownContent(currentAudioManager.config.name, markdownText, currentAudioManager.config.markdown);
     } else {
         showNotification('🔄 介绍内容加载中...');
     }
@@ -1257,7 +1326,8 @@ function resetModel() {
     }
 }
 
-function loadMarkdownContent(title, markdownText) {
+// 修改：增加 markdownPath 参数，并实现图片路径修复逻辑
+function loadMarkdownContent(title, markdownText, markdownPath) {
     if (typeof marked === 'undefined') {
         console.error('marked.js 未加载');
         showNotification('❌ Markdown渲染器未加载');
@@ -1265,6 +1335,35 @@ function loadMarkdownContent(title, markdownText) {
     }
     const htmlContent = marked.parse(markdownText);
     showInfoPanel(`📖 ${title}`, `<div class="markdown-content">${htmlContent}</div>`);
+
+    // 新增：图片流式加载逻辑
+    const infoPanel = document.getElementById('info-panel');
+    if (!infoPanel) return;
+    const contentDiv = infoPanel.querySelector('.info-content');
+    // 从markdown文件路径中提取其所在的目录
+    const markdownDir = markdownPath.substring(0, markdownPath.lastIndexOf('/') + 1);
+    const images = contentDiv.querySelectorAll('.markdown-content img');
+    
+    images.forEach(img => {
+        const originalSrc = img.getAttribute('src');
+        // 只处理相对路径的图片
+        if (originalSrc && originalSrc.startsWith('./')) {
+            // 构造新的、正确的图片绝对路径
+            const newSrc = markdownDir + originalSrc.substring(2);
+            console.log(`Fixing image path: ${originalSrc} -> ${newSrc}`);
+            img.src = newSrc;
+            // 增加图片加载失败的备用处理
+            img.onerror = () => {
+                console.error(`Failed to load image: ${img.src}`);
+                img.alt = `图片加载失败: ${originalSrc}`;
+                // 可以选择隐藏图片或显示一个占位符
+                const errorText = document.createElement('p');
+                errorText.textContent = `[图片: ${originalSrc} 加载失败]`;
+                errorText.style.color = 'red';
+                img.parentNode.replaceChild(errorText, img);
+            };
+        }
+    });
 }
 
 function showInfoPanel(title, content) {
@@ -1293,6 +1392,55 @@ function showNotification(message, isError = false) {
         notification.style.opacity = '0';
         setTimeout(() => notification.remove(), 300);
     }, 2500);
+}
+
+// =============== 新增：加载弹窗控制函数 ===============
+function showLoadingOverlay(instrumentName) {
+    const overlay = document.getElementById('loading-overlay');
+    const title = document.getElementById('loading-title');
+    const progressBar = document.getElementById('progress-bar');
+    const text = document.getElementById('loading-text');
+
+    if (!overlay) return;
+
+    title.textContent = `正在加载 ${instrumentName} 模型`;
+    progressBar.style.width = '0%';
+    text.textContent = '0% - 预计需要 5-15 秒...';
+    overlay.classList.remove('hidden');
+
+    let progress = 0;
+    // 模拟加载进度
+    loadingInterval = setInterval(() => {
+        progress += Math.random() * 5;
+        if (progress > 95) {
+            progress = 95; // 在加载完成前，最多只显示到95%
+            clearInterval(loadingInterval);
+        }
+        progressBar.style.width = `${progress}%`;
+        text.textContent = `${Math.round(progress)}% - 请稍候...`;
+    }, 200);
+}
+
+function hideLoadingOverlay(isSuccess) {
+    const overlay = document.getElementById('loading-overlay');
+    const progressBar = document.getElementById('progress-bar');
+    const text = document.getElementById('loading-text');
+
+    if (!overlay) return;
+
+    clearInterval(loadingInterval);
+    loadingInterval = null;
+
+    if (isSuccess) {
+        progressBar.style.width = '100%';
+        text.textContent = '加载完成!';
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+        }, 500); // 延迟半秒关闭，让用户看到“加载完成”
+    } else {
+        // 如果失败，立即隐藏
+        overlay.classList.add('hidden');
+    }
 }
 
 function updateInfoDisplay() {
@@ -1503,6 +1651,17 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
   </div>
 
+  <!-- 新增：加载弹窗UI -->
+  <div id="loading-overlay" class="loading-overlay hidden">
+    <div class="loading-panel">
+        <h3 id="loading-title"></h3>
+        <div class="progress-bar-container">
+            <div id="progress-bar" class="progress-bar"></div>
+        </div>
+        <p id="loading-text"></p>
+    </div>
+  </div>
+
   <div id="info-display" class="info-display">
     <div class="instrument-name"></div>
     <div class="instrument-desc"></div>
@@ -1533,98 +1692,75 @@ document.addEventListener('DOMContentLoaded', function() {
     arjs="sourceType: webcam; debugUIEnabled: false;">
 
    <!-- ==================================================================== -->
-   <!-- 所有23个Marker的完整结构 -->
+   <!-- 所有23个Marker的完整结构 (已移除旧的 <a-torus> 加载动画) -->
    <!-- ==================================================================== -->
    <a-marker id="marker1" type="pattern" url="assets/patterns/pattern-pipa.patt" instrument-handler>
-        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
    <a-marker id="marker2" type="pattern" url="assets/patterns/pattern-hulusi.patt" instrument-handler>
-        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.010 0.010 0.010" touch-handler visible="false"></a-entity>
    </a-marker>
    <a-marker id="marker3" type="pattern" url="assets/patterns/pattern-dongbei_dagu.patt" instrument-handler>
-        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model3" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
    <a-marker id="marker4" type="pattern" url="assets/patterns/pattern-dongbula.patt" instrument-handler>
-        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model4" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
    <a-marker id="marker5" type="pattern" url="assets/patterns/pattern-gaohu.patt" instrument-handler>
-        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model5" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
    <a-marker id="marker6" type="pattern" url="assets/patterns/pattern-huagu.patt" instrument-handler>
-        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model6" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
    <a-marker id="marker7" type="pattern" url="assets/patterns/pattern-huobusi.patt" instrument-handler>
-        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model7" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
    <a-marker id="marker8" type="pattern" url="assets/patterns/pattern-matouqin.patt" instrument-handler>
-        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model8" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
    <a-marker id="marker9" type="pattern" url="assets/patterns/pattern-niujiaoqin.patt" instrument-handler>
-        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model9" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
    <a-marker id="marker10" type="pattern" url="assets/patterns/pattern-suona.patt" instrument-handler>
-        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model10" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
    <a-marker id="marker11" type="pattern" url="assets/patterns/pattern-yueqin.patt" instrument-handler>
-        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model11" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
    <a-marker id="marker12" type="pattern" url="assets/patterns/pattern-chaozhou_suona.patt" instrument-handler>
-        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model12" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
    <a-marker id="marker13" type="pattern" url="assets/patterns/pattern-chaozhou_zheng.patt" instrument-handler>
-        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model13" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
    <a-marker id="marker14" type="pattern" url="assets/patterns/pattern-dongxiao.patt" instrument-handler>
-        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model14" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
    <a-marker id="marker15" type="pattern" url="assets/patterns/pattern-houguan.patt" instrument-handler>
-        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model15" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
    <a-marker id="marker16" type="pattern" url="assets/patterns/pattern-muyu.patt" instrument-handler>
-        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model16" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
    <a-marker id="marker17" type="pattern" url="assets/patterns/pattern-niujiaohao.patt" instrument-handler>
-        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model17" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
    <a-marker id="marker18" type="pattern" url="assets/patterns/pattern-qinqin.patt" instrument-handler>
-        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model18" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
    <a-marker id="marker19" type="pattern" url="assets/patterns/pattern-yehu.patt" instrument-handler>
-        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model19" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
    <a-marker id="marker20" type="pattern" url="assets/patterns/pattern-yugu.patt" instrument-handler>
-        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model20" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
    <a-marker id="marker21" type="pattern" url="assets/patterns/pattern-zhuban.patt" instrument-handler>
-        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model21" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
    <a-marker id="marker22" type="pattern" url="assets/patterns/pattern-huagudatong.patt" instrument-handler>
-        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model22" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
     <a-marker id="marker23" type="pattern" url="assets/patterns/pattern-koubidi.patt" instrument-handler>
-        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model23" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
    <a-entity camera></a-entity>

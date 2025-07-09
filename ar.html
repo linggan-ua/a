@@ -4,18 +4,18 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"/>
   <title>
-   岭南乐器AR (最终版-参数精调)
+   中国传统音乐与乐器增强现实（AR）视听云平台
   </title>
   
-  <!-- 使用已被证明可靠的公共CDN库 -->
-  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
-  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  <!-- 使用本地加载的ar库 -->
+  <script src="aframe.min.js"></script>
+  <script src="aframe-ar.js"></script>
   
-  <!-- 使用CDN加载marked.js以确保可用性 -->
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- 使用本地加载marked.js以确保可用性 -->
+  <script src="marked.min.js"></script>
   
   <style>
-        /* =============== 您的所有原始CSS样式都已完整保留 =============== */
+        /* =============== 所有原始CSS样式都已完整保留 =============== */
         body {
             margin: 0;
             overflow: hidden;
@@ -959,7 +959,8 @@ const instrumentConfig = {
     'marker19': { name: '椰胡',       model: 'assets/models/yehu.gltf',             audio: 'assets/audio/audio-yehu.mp3',             markdown: 'assets/markdown/yehu.md',             info: 'assets/info/yehu.txt',             isLoaded: false },
     'marker20': { name: '渔鼓',       model: 'assets/models/yugu.gltf',             audio: 'assets/audio/audio-yugu.mp3',             markdown: 'assets/markdown/yugu.md',             info: 'assets/info/yugu.txt',             isLoaded: false },
     'marker21': { name: '竹板',       model: 'assets/models/zhuban.gltf',           audio: 'assets/audio/audio-zhuban.mp3',           markdown: 'assets/markdown/zhuban.md',           info: 'assets/info/zhuban.txt',           isLoaded: false },
-    'marker22': { name: '花鼓大筒',   model: 'assets/models/huagudatong.gltf',      audio: 'assets/audio/audio-huagudatong.mp3',      markdown: 'assets/markdown/huagudatong.md',      info: 'assets/info/huagudatong.txt',      isLoaded: false }
+    'marker22': { name: '花鼓大筒',   model: 'assets/models/huagudatong.gltf',      audio: 'assets/audio/audio-huagudatong.mp3',      markdown: 'assets/markdown/huagudatong.md',      info: 'assets/info/huagudatong.txt',      isLoaded: false },
+    'marker23': { name: '口鼻笛',       model: 'assets/models/koubidi.gltf',             audio: 'assets/audio/audio-koubidi.mp3',             markdown: 'assets/markdown/koubidi.md',             info: 'assets/info/koubidi.txt',             isLoaded: false },
 };
 
 // 工具函数
@@ -1078,7 +1079,7 @@ AFRAME.registerComponent('instrument-handler', {
                 .then(text => markdownCache[this.markerId] = text)
                 .catch(err => {
                     console.error(`Failed to load markdown for ${this.markerId}:`, err);
-                    markdownCache[this.markerId] = `## 加载错误\n\n加载介绍内容时发生网络错误。`;
+                    markdownCache[this.markerId] = `## 加载错误\n\n加载介绍内容时发生网络错误。请尝试刷新网页`;
                 });
         }
     },
@@ -1308,7 +1309,7 @@ function updateInfoDisplay() {
             infoDisplay.classList.add('active');
         } else {
             instrumentNameEl.textContent = currentAudioManager.config.name;
-            instrumentDescEl.textContent = '正在加载描述...';
+            instrumentDescEl.textContent = '正在加载描述...（取决于网络）';
             infoDisplay.classList.add('active');
         }
     } else {
@@ -1350,37 +1351,8 @@ function createStartOverlay() {
     const permissionGuideHTML = device.isIOS ? `
         <div class="permission-guide">
             <div class="guide-title">📱 权限授权指南</div>
-            <div class="guide-text">启动后会弹出两个权限窗口，请都点击"允许/Allow"</div>
-            <div class="permission-steps-compact">
-                <div class="permission-step">
-                    <div class="step-title">第1步：摄像头权限</div>
-                    <div class="mock-permission-dialog">
-                        <div class="mock-dialog-content camera-permission">
-                            <div class="mock-dialog-text">允许"linggan-ua.github.io"<br>使用您的摄像头？</div>
-                            <div class="mock-dialog-buttons">
-                                <button class="mock-deny-btn">不允许</button>
-                                <button class="mock-allow-btn camera-allow">允许</button>
-                            </div>
-                        </div>
-                        <div class="permission-arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
-                        <div class="permission-hint">👆允许</div>
-                    </div>
-                </div>
-                <div class="permission-step">
-                    <div class="step-title">第2步：传感器权限</div>
-                    <div class="mock-permission-dialog">
-                        <div class="mock-dialog-content sensor-permission">
-                            <div class="mock-dialog-text">This immersive website requires<br>access to your device motion sensors.</div>
-                            <div class="mock-dialog-buttons">
-                                <button class="mock-deny-btn">Deny</button>
-                                <button class="mock-allow-btn sensor-allow">Allow</button>
-                            </div>
-                        </div>
-                        <div class="permission-arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
-                        <div class="permission-hint">👆Allow</div>
-                    </div>
-                </div>
-            </div>
+            <div class="guide-text">启动后会弹出两个权限窗口，请都点击"允许/Allow"以使用AR功能</div>
+            <div class="guide-text">如果没有弹出，请点击地址栏左侧的🔒图标，选择"摄像头"选项</div>
         </div>
     ` : device.isDesktop ? `
         <div class="permission-guide">
@@ -1521,8 +1493,8 @@ document.addEventListener('DOMContentLoaded', function() {
   
   <!-- UI元素 -->
   <div id="start-overlay" class="start-overlay">
-    <div class="start-title">🎵 岭南乐器AR</div>
-    <div class="start-subtitle">沉浸式音乐文化体验</div>
+    <div class="start-title">中国传统音乐与乐器增强现实（AR）视听云平台</div>
+    <div class="start-subtitle">让传统音乐“带在口袋里”</div>
     <button class="start-button" onclick="startAR()">
         ✨ 启动AR体验
     </button>
@@ -1561,7 +1533,7 @@ document.addEventListener('DOMContentLoaded', function() {
     arjs="sourceType: webcam; debugUIEnabled: false;">
 
    <!-- ==================================================================== -->
-   <!-- 所有22个Marker的完整结构 -->
+   <!-- 所有23个Marker的完整结构 -->
    <!-- ==================================================================== -->
    <a-marker id="marker1" type="pattern" url="assets/patterns/pattern-pipa.patt" instrument-handler>
         <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
@@ -1651,7 +1623,10 @@ document.addEventListener('DOMContentLoaded', function() {
         <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
         <a-entity id="model22" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
    </a-marker>
-
+    <a-marker id="marker23" type="pattern" url="assets/patterns/pattern-口鼻笛.patt" instrument-handler>
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model23" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
+   </a-marker>
    <a-entity camera></a-entity>
   </a-scene>
   

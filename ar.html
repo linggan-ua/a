@@ -78,17 +78,6 @@
             overflow: hidden;
         }
         
-        .start-button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.5s ease;
-        }
-        
         .start-button:hover {
             background: rgba(255, 255, 255, 0.18);
             border-color: rgba(255, 255, 255, 0.4);
@@ -996,6 +985,7 @@ const audioCache = {};
 const infoCache = {};
 const markdownCache = {};
 let loadingInterval = null; // 新增：用于管理加载动画的计时器
+let isAudioReloading = false; // 新增：防止重复触发音频重载
 
 // ====================================================================
 // 乐器配置中心 (全局)
@@ -1037,6 +1027,32 @@ function getDeviceInfo() {
     };
 }
 
+// ====================================================================
+// 新增：带重试机制的通用 Fetch 函数
+// ====================================================================
+async function fetchWithRetry(url, maxRetries = 3, retryDelay = 1000, resourceName = '资源') {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response; // 成功时返回 response 对象
+        } catch (error) {
+            console.warn(`${resourceName} fetch attempt ${attempt} failed:`, error.message);
+            if (attempt === maxRetries) {
+                console.error(`All ${maxRetries} fetch attempts for ${resourceName} failed.`);
+                throw error; // 重试次数用尽，抛出最终错误
+            }
+            // 每次重试前都短暂提示
+            showNotification(`${resourceName}加载失败，第 ${attempt} 次重试中...`, true);
+            // 等待一段时间再重试，可以采用递增延迟
+            await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
+        }
+    }
+}
+
+
 // =============== A-Frame 组件注册 ===============
 
 // 旋转组件 (o15)
@@ -1072,11 +1088,7 @@ AFRAME.registerComponent('instrument-handler', {
         }
 
         this.modelEntity = this.marker.querySelector('[touch-handler]');
-        // this.loaderEntity = this.marker.querySelector('.loader'); // 移除对旧loader的引用
-
         this.modelEntity.setAttribute('visible', false);
-        // this.loaderEntity.setAttribute('visible', false); // 移除对旧loader的引用
-
         this.marker.addEventListener('markerFound', this.onMarkerFound.bind(this));
         this.marker.addEventListener('markerLost', this.onMarkerLost.bind(this));
     },
@@ -1087,7 +1099,6 @@ AFRAME.registerComponent('instrument-handler', {
         if (this.config.isLoaded) {
             this.modelEntity.setAttribute('visible', true);
         } else {
-            // this.loaderEntity.setAttribute('visible', true); // 移除对旧loader的引用
             this.loadResources();
         }
     },
@@ -1095,59 +1106,85 @@ AFRAME.registerComponent('instrument-handler', {
     onMarkerLost: function () {
         console.log(`Marker lost: ${this.markerId}. State will be preserved.`);
         this.modelEntity.setAttribute('visible', false);
-        // this.loaderEntity.setAttribute('visible', false); // 移除对旧loader的引用
     },
     
+    // ====================================================================
+    // 修改：loadResources 函数 - 引入了模型和文本文件的加载重试机制
+    // ====================================================================
     loadResources: function() {
-        // showNotification(`正在加载 ${this.config.name}...`); // 旧的提示方式
-        showLoadingOverlay(this.config.name); // 新的加载弹窗
+        showLoadingOverlay(this.config.name);
         
-        this.modelEntity.setAttribute('gltf-model', `url(${this.config.model})`);
-        
-        this.modelEntity.addEventListener('model-loaded', () => {
+        // --- 模型加载与重试逻辑 ---
+        let modelRetryCount = 0;
+        const maxModelRetries = 3; // 模型最多重试3次
+
+        const modelLoadHandler = () => {
             console.log(`${this.config.name} model loaded.`);
             this.config.isLoaded = true;
-            // this.loaderEntity.setAttribute('visible', false); // 移除对旧loader的引用
-            hideLoadingOverlay(true); // 成功加载，关闭弹窗
+            hideLoadingOverlay(true);
             
             if (this.marker.object3D.visible) {
                  this.modelEntity.setAttribute('visible', true);
             }
-            // showNotification(`${this.config.name} 加载完成!`); // 旧的提示方式，现在由加载弹窗处理
-        }, { once: true });
+            // 成功后移除监听器，避免内存泄漏
+            this.modelEntity.removeEventListener('model-loaded', modelLoadHandler);
+            this.modelEntity.removeEventListener('model-error', modelErrorHandler);
+        };
 
-        this.modelEntity.addEventListener('model-error', (e) => {
-            console.error(`Error loading model for ${this.markerId}:`, e.detail);
-            // this.loaderEntity.setAttribute('visible', false); // 移除对旧loader的引用
-            hideLoadingOverlay(false); // 加载失败，关闭弹窗
-            showNotification(`${this.config.name} 模型加载失败`, true);
-        }, { once: true });
+        const modelErrorHandler = (e) => {
+            modelRetryCount++;
+            console.error(`Error loading model for ${this.markerId} (Attempt ${modelRetryCount}):`, e.detail);
 
+            if (modelRetryCount < maxModelRetries) {
+                showNotification(`${this.config.name} 模型加载失败，第 ${modelRetryCount} 次重试中...`, true);
+                setTimeout(() => {
+                    // 通过重新设置gltf-model属性来触发A-Frame的重新加载
+                    this.modelEntity.setAttribute('gltf-model', `url(${this.config.model})`);
+                }, 1500 * modelRetryCount); // 递增延迟重试
+            } else {
+                console.error(`All ${maxModelRetries} attempts failed for model ${this.config.name}.`);
+                hideLoadingOverlay(false);
+                showNotification(`${this.config.name} 模型加载失败，请检查网络后重试`, true);
+                // 失败后同样移除监听器
+                this.modelEntity.removeEventListener('model-loaded', modelLoadHandler);
+                this.modelEntity.removeEventListener('model-error', modelErrorHandler);
+            }
+        };
+        
+        // 绑定可移除的事件监听器
+        this.modelEntity.addEventListener('model-loaded', modelLoadHandler);
+        this.modelEntity.addEventListener('model-error', modelErrorHandler);
+        // 首次触发加载
+        this.modelEntity.setAttribute('gltf-model', `url(${this.config.model})`);
+
+        // --- 音频预加载 ---
         if (!audioCache[this.markerId]) {
             const audio = new Audio(this.config.audio);
             audio.preload = 'auto';
-            audio.load();
+            audio.load(); // 开始预加载
             audioCache[this.markerId] = audio;
         }
 
+        // --- Info和Markdown文本加载与重试 ---
         if (!infoCache[this.markerId]) {
-            fetch(this.config.info)
-                .then(response => response.ok ? response.text() : '')
+            fetchWithRetry(this.config.info, 3, 1000, `${this.config.name}描述`)
+                .then(response => response.text())
                 .then(text => {
-                    infoCache[this.markerId] = text;
+                    infoCache[this.markerId] = text || '';
                     if (currentAudioManager && currentAudioManager.markerId === this.markerId) {
                         updateInfoDisplay();
                     }
                 })
-                .catch(err => console.error(`Failed to load info for ${this.markerId}:`, err));
+                .catch(err => console.error(`Failed to load info for ${this.markerId} after retries:`, err));
         }
+        
         if (!markdownCache[this.markerId]) {
-             fetch(this.config.markdown)
-                .then(response => response.ok ? response.text() : `## 无法加载内容\n\n无法找到 ${this.config.name} 的介绍文件。`)
+             fetchWithRetry(this.config.markdown, 3, 1000, `${this.config.name}介绍`)
+                .then(response => response.text())
                 .then(text => markdownCache[this.markerId] = text)
                 .catch(err => {
-                    console.error(`Failed to load markdown for ${this.markerId}:`, err);
-                    markdownCache[this.markerId] = `## 加载错误\n\n加载介绍内容时发生网络错误。请尝试刷新网页`;
+                    console.error(`Failed to load markdown for ${this.markerId} after retries:`, err);
+                    markdownCache[this.markerId] = `## 加载错误\n\n加载介绍内容时发生网络错误。请检查网络后刷新页面。`;
                 });
         }
     },
@@ -1269,31 +1306,90 @@ AFRAME.registerComponent('touch-handler', {
 
 // =============== UI 和交互逻辑 ===============
 
+// toggleAudio 函数 - 增加了音频加载失败后的重试机制
 function toggleAudio() {
     const playBtn = document.getElementById('play-btn');
     if (!currentAudioManager || !currentAudioManager.audio) {
         showNotification('⚠️ 请先对准乐器码');
         return;
     }
+
     const audio = currentAudioManager.audio;
-    if (audio.readyState < 2) {
-        showNotification('🔄 音频加载中...');
+
+    // 情况1: 音频已准备好，直接播放或暂停
+    if (audio.readyState >= 2) { // readyState 2 (HAVE_CURRENT_DATA) 或更高即可
+        if (audio.paused) {
+            audio.play().then(() => {
+                playBtn.innerHTML = '<span class="emoji">⏸️</span>';
+                playBtn.classList.add('playing');
+                currentAudioManager.isPlaying = true;
+            }).catch(error => {
+                console.error('Audio playback failed:', error);
+                showNotification('❌ 播放失败，请检查浏览器权限');
+            });
+        } else {
+            audio.pause();
+            playBtn.innerHTML = '<span class="emoji">🎵</span>';
+            playBtn.classList.remove('playing');
+            currentAudioManager.isPlaying = false;
+        }
         return;
     }
-    if (audio.paused) {
-        audio.play().then(() => {
-            playBtn.innerHTML = '<span class="emoji">⏸️</span>';
-            playBtn.classList.add('playing');
-            currentAudioManager.isPlaying = true;
-        }).catch(error => {
-            console.error('Audio playback failed:', error);
-            showNotification('❌ 播放失败');
-        });
-    } else {
-        audio.pause();
-        playBtn.innerHTML = '<span class="emoji">🎵</span>';
-        playBtn.classList.remove('playing');
-        currentAudioManager.isPlaying = false;
+
+    // 情况2: 音频未准备好，并且没有在重载中，则启动重载
+    if (audio.readyState < 2 && !isAudioReloading) {
+        isAudioReloading = true;
+        console.log(`Audio not ready for ${currentAudioManager.config.name}. Attempting to reload.`);
+
+        // 复用加载弹窗UI
+        const overlay = document.getElementById('loading-overlay');
+        const title = document.getElementById('loading-title');
+        const progressBar = document.getElementById('progress-bar');
+        const text = document.getElementById('loading-text');
+
+        if (!overlay) {
+             showNotification('❌ 加载组件出错');
+             isAudioReloading = false;
+             return;
+        }
+
+        title.textContent = `正在加载 ${currentAudioManager.config.name} 音频`;
+        progressBar.style.width = '50%'; // 使用一个中间值表示不确定的加载状态
+        text.textContent = '网络不佳，正在重新尝试...';
+        overlay.classList.remove('hidden');
+
+        // 定义一次性的事件处理器
+        const onCanPlay = () => {
+            cleanupListeners();
+            hideLoadingOverlay(true);
+            isAudioReloading = false;
+            console.log(`Audio for ${currentAudioManager.config.name} successfully reloaded.`);
+            // 加载成功后，再次调用本函数来播放音频
+            toggleAudio();
+        };
+
+        const onError = () => {
+            cleanupListeners();
+            hideLoadingOverlay(false);
+            isAudioReloading = false;
+            console.error(`Failed to reload audio for ${currentAudioManager.config.name}.`);
+            showNotification(`❌ ${currentAudioManager.config.name} 音频加载失败`, true);
+        };
+        
+        const cleanupListeners = () => {
+            audio.removeEventListener('canplaythrough', onCanPlay);
+            audio.removeEventListener('error', onError);
+        };
+
+        // 绑定事件
+        audio.addEventListener('canplaythrough', onCanPlay, { once: true });
+        audio.addEventListener('error', onError, { once: true });
+
+        // 触发重新加载
+        audio.load();
+    } else if (isAudioReloading) {
+        // 情况3: 如果正在重载中，提示用户等待
+        showNotification('🔄 音频正在加载中，请稍候...');
     }
 }
 
@@ -1304,7 +1400,6 @@ function showInfo() {
     }
     const markdownText = markdownCache[currentAudioManager.markerId];
     if (typeof markdownText === 'string') {
-        // 修改：传入markdown文件路径以修复图片链接
         loadMarkdownContent(currentAudioManager.config.name, markdownText, currentAudioManager.config.markdown);
     } else {
         showNotification('🔄 介绍内容加载中...');
@@ -1326,7 +1421,6 @@ function resetModel() {
     }
 }
 
-// 修改：增加 markdownPath 参数，并实现图片路径修复逻辑
 function loadMarkdownContent(title, markdownText, markdownPath) {
     if (typeof marked === 'undefined') {
         console.error('marked.js 未加载');
@@ -1336,27 +1430,21 @@ function loadMarkdownContent(title, markdownText, markdownPath) {
     const htmlContent = marked.parse(markdownText);
     showInfoPanel(`📖 ${title}`, `<div class="markdown-content">${htmlContent}</div>`);
 
-    // 新增：图片流式加载逻辑
     const infoPanel = document.getElementById('info-panel');
     if (!infoPanel) return;
     const contentDiv = infoPanel.querySelector('.info-content');
-    // 从markdown文件路径中提取其所在的目录
     const markdownDir = markdownPath.substring(0, markdownPath.lastIndexOf('/') + 1);
     const images = contentDiv.querySelectorAll('.markdown-content img');
     
     images.forEach(img => {
         const originalSrc = img.getAttribute('src');
-        // 只处理相对路径的图片
         if (originalSrc && originalSrc.startsWith('./')) {
-            // 构造新的、正确的图片绝对路径
             const newSrc = markdownDir + originalSrc.substring(2);
             console.log(`Fixing image path: ${originalSrc} -> ${newSrc}`);
             img.src = newSrc;
-            // 增加图片加载失败的备用处理
             img.onerror = () => {
                 console.error(`Failed to load image: ${img.src}`);
                 img.alt = `图片加载失败: ${originalSrc}`;
-                // 可以选择隐藏图片或显示一个占位符
                 const errorText = document.createElement('p');
                 errorText.textContent = `[图片: ${originalSrc} 加载失败]`;
                 errorText.style.color = 'red';
@@ -1394,7 +1482,7 @@ function showNotification(message, isError = false) {
     }, 2500);
 }
 
-// =============== 新增：加载弹窗控制函数 ===============
+// 加载弹窗控制函数
 function showLoadingOverlay(instrumentName) {
     const overlay = document.getElementById('loading-overlay');
     const title = document.getElementById('loading-title');
@@ -1516,7 +1604,11 @@ function createStartOverlay() {
     
     const guideContainer = document.createElement('div');
     guideContainer.innerHTML = permissionGuideHTML;
-    startOverlay.insertBefore(guideContainer, startOverlay.querySelector('.start-button'));
+    
+    const infoContainer = document.getElementById('start-info-container');
+    if (infoContainer) {
+        infoContainer.prepend(guideContainer); // 使用 prepend 将其作为第一个子元素插入
+    }
 }
 
 function startAR() {
@@ -1647,8 +1739,13 @@ document.addEventListener('DOMContentLoaded', function() {
     <button class="start-button" onclick="startAR()">
         ✨ 点我启动AR体验
     </button>
-    <div style="font-size: 0.9em; opacity: 0.8; margin-top: 15px;">
-        🪈 小提示：可用手指对乐器模型进行旋转缩放~
+    
+    <!-- 新增一个容器来包裹所有按钮下方的提示信息 -->
+    <div id="start-info-container" style="text-align: center; margin-top: 20px;">
+        <!-- “温馨提示”会由JS动态插入到这里 -->
+        <div style="font-size: 0.9em; opacity: 0.8; margin-top: 15px;">
+            🪈 小提示：可用手指对乐器模型进行旋转缩放~
+        </div>
     </div>
   </div>
 

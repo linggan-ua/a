@@ -106,18 +106,22 @@
         }
         
         .permission-guide {
-            background: rgba(255, 255, 255, 0.08);
-            border-radius: 20px;
-            padding: 20px;
-            margin: 20px 0;
-            backdrop-filter: blur(20px) saturate(1.5);
-            -webkit-backdrop-filter: blur(20px) saturate(1.5);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            max-width: 95%;
-            box-shadow: 
-                0 8px 32px rgba(0, 0, 0, 0.2),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
-        }
+    position: absolute; /* 将其从正常文档流中脱离 */
+    bottom: 30px; /* 定位到距离底部30px的位置 */
+    left: 50%; /* 水平居中 */
+    transform: translateX(-50%); /* 水平居中 */
+    width: 90%; /* 宽度为父容器的90% */
+    max-width: 95%;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 20px;
+    backdrop-filter: blur(20px) saturate(1.5);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
         
         .guide-title {
             font-size: 1em;
@@ -1735,7 +1739,7 @@ document.addEventListener('DOMContentLoaded', function() {
   
   <!-- UI元素 -->
   <div id="start-overlay" class="start-overlay">
-    <div class="start-title"> 中国传统音乐与乐器<br>增强现实（AR）视听云平台</div>
+    <div class="start-title"> 中国传统音乐与乐器<br>增强现实(AR)视听云平台</div>
     <div class="start-subtitle">————把传统乐器“装在口袋里”</div>
     
     <button class="start-button" onclick="startAR()">
@@ -1743,16 +1747,10 @@ document.addEventListener('DOMContentLoaded', function() {
     </button>
     
     <!-- 新增一个容器来包裹所有按钮下方的提示信息 -->
-   <div id="start-info-container" style="
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    padding: 15px;
-    text-align: center;
-    z-index: 10000;
-        ">
-    <!-- “温馨提示”会由JS动态插入到这里 -->
-</div>
+    <div id="start-info-container" style="text-align: bottom; margin-top: 20px;">
+        <!-- “温馨提示”会由JS动态插入到这里 -->
+        
+    </div>
 
   </div>
 

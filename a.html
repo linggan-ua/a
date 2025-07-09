@@ -1586,19 +1586,21 @@ function createStartOverlay() {
     const device = getDeviceInfo();
     const permissionGuideHTML = device.isIOS ? `
         <div class="permission-guide">
-            <div class="guide-title">📱 星海音乐学院师生团队温馨提示：</div>
-            <div class="guide-text">启动后会弹出权限窗口，请都点击"允许/Allow"以使用AR功能</div>
-        
+            <div class="guide-title">星海音乐学院师生团队温馨提示：</div>
+            <div class="guide-text">请点击"允许/Allow"授权摄像头、传感器以使用AR功能</div>
+            <div class="guide-text">进入AR界面后可用手指对乐器模型进行旋转缩放~</div>
         </div>
     ` : device.isDesktop ? `
         <div class="permission-guide">
-            <div class="guide-title">📱 星海音乐学院师生团队温馨提示：</div>
-            <div class="guide-text">启动后请允许摄像头权限以使用AR功能</div>
+            <div class="guide-title">星海音乐学院师生团队温馨提示：</div>
+            <div class="guide-text">请点击"允许/Allow"授权摄像头以使用AR功能</div>
+            <div class="guide-text">进入AR界面后可用鼠标对乐器模型进行旋转缩放~</div>
         </div>
     ` : `
         <div class="permission-guide">
-            <div class="guide-title">📱 星海音乐学院师生团队温馨提示：</div>
-            <div class="guide-text">启动后请允许摄像头权限以使用AR功能</div>
+            <div class="guide-title">星海音乐学院师生团队温馨提示：</div>
+            <div class="guide-text">请点击"允许/Allow"授权摄像头以使用AR功能</div>
+            <div class="guide-text">进入AR界面后可用手指对乐器模型进行旋转缩放~</div>
         </div>
     `;
     

@@ -1101,7 +1101,7 @@ AFRAME.registerComponent('o15', {
 });
 
 // Marker检测组件
-// 改进的Marker检测组件 - 防误识别版本
+// 恢复原逻辑的Marker检测组件 - 在原基础上最小化改进
 AFRAME.registerComponent('s19', {
     init: function () {
         var markerElement = this.el;
@@ -1117,7 +1117,7 @@ AFRAME.registerComponent('s19', {
 
         const config = instrumentConfig[markerId];
         if (!config) {
-            console.warn(`markerId "${markerId}" 暂未配置，跳过初始化`);
+            console.error(`未找到 markerId "${markerId}" 的配置信息`);
             return;
         }
 
@@ -1127,14 +1127,15 @@ AFRAME.registerComponent('s19', {
         console.log(`=== s19组件初始化: ${markerId} (${config.name}) ===`);
         
         // 获取或创建音频元素
-        var audioElement = audioCache[config.audio]; // 使用config.audio而不是audioFile
+        var audioElement = audioCache[audioFile];
         if (!audioElement) {
-            console.error(`音频文件 ${config.audio} 未在缓存中找到!`);
+            console.error(`音频文件 ${audioFile} 未在缓存中找到!`);
+            // 即使未预加载，也尝试创建一个
             audioElement = { audio: new Audio() };
             audioElement.audio.src = audioFile; 
             audioElement.audio.preload = 'auto';
             audioElement.audio.load();
-            audioCache[config.audio] = audioElement;
+            audioCache[audioFile] = audioElement;
         }
         
         // 加载对应的信息文本
@@ -1153,106 +1154,71 @@ AFRAME.registerComponent('s19', {
                 infoText = `岭南乐器：${config.name || '未知乐器'}`;
             });
         
-        // ===== 新增：防误识别检测逻辑 =====
+        // ===== 恢复您原来的逻辑，只加入最小的稳定性检查 =====
         var wasVisible = false;
-        var stableCount = 0;        // 稳定检测计数器
-        var unstableCount = 0;      // 不稳定检测计数器
-        var lastDetectionTime = 0;  // 上次检测时间
+        var stableVisibleCount = 0;  // 新增：稳定可见计数
+        var stableHiddenCount = 0;   // 新增：稳定隐藏计数
         
-        const STABLE_THRESHOLD = 3;      // 需要连续3次检测才认为稳定
-        const UNSTABLE_THRESHOLD = 5;    // 连续5次不稳定则认为误识别
-        const DETECTION_TIMEOUT = 500;   // 检测超时时间(ms)
+        // 稳定性参数 - 很小的值，不影响响应速度
+        var STABLE_SHOW_THRESHOLD = 2;  // 连续2次可见才触发显示
+        var STABLE_HIDE_THRESHOLD = 3;  // 连续3次隐藏才触发隐藏
         
         this.tick = AFRAME.utils.throttleTick(function () {
             var isVisible = markerElement.object3D.visible;
-            var currentTime = Date.now();
             
             if (isVisible) {
-                // 检测到marker可见
-                if (!wasVisible) {
-                    // 从不可见变为可见 - 开始稳定性验证
-                    stableCount = 1;
-                    unstableCount = 0;
-                    lastDetectionTime = currentTime;
-                    console.log(`${markerId}: 开始检测验证 (1/${STABLE_THRESHOLD})`);
-                } else {
-                    // 持续可见 - 增加稳定计数
-                    if (currentTime - lastDetectionTime < DETECTION_TIMEOUT) {
-                        stableCount++;
-                        lastDetectionTime = currentTime;
-                        
-                        if (stableCount >= STABLE_THRESHOLD) {
-                            // 达到稳定阈值 - 认为是真正的检测
-                            if (stableCount === STABLE_THRESHOLD) {
-                                console.log(`✅ ${markerId}: 检测验证通过 (${stableCount}/${STABLE_THRESHOLD})`);
-                                
-                                // 执行原有的激活逻辑
-                                // 如果有其他乐器在播放，先停止
-                                if (currentAudioManager && currentAudioManager.markerId !== markerId && 
-                                    currentAudioManager.audio && !currentAudioManager.audio.paused) {
-                                    currentAudioManager.audio.pause();
-                                }
-                                
-                                // 设置当前音频管理器
-                                currentAudioManager = {
-                                    markerId: markerId,
-                                    audio: audioElement.audio,
-                                    markdownFile: markdownFile,
-                                    infoText: infoText,
-                                    isPlaying: currentAudioManager && currentAudioManager.markerId === markerId ? 
-                                              currentAudioManager.isPlaying : false
-                                };
-                                
-                                // 更新信息显示框
-                                updateInfoDisplay();
-                                
-                                // 立即更新UI状态
-                                updateDockButtons();
-                                
-                                const instrumentName = config.name || '未知乐器';
-                                showNotification(`🎯 检测到${instrumentName}`);
-                            }
-                            // 已经稳定，不需要重复执行
-                        } else {
-                            console.log(`${markerId}: 检测验证中 (${stableCount}/${STABLE_THRESHOLD})`);
-                        }
-                    } else {
-                        // 检测超时 - 重置计数器
-                        console.log(`⚠️ ${markerId}: 检测超时，重置计数器`);
-                        stableCount = 1;
-                        unstableCount = 0;
-                        lastDetectionTime = currentTime;
-                    }
-                }
+                // 当前可见
+                stableHiddenCount = 0;  // 重置隐藏计数
+                stableVisibleCount++;
                 
-                // 重置不稳定计数
-                unstableCount = 0;
-                
-            } else {
-                // marker不可见
-                if (wasVisible) {
-                    // 从可见变为不可见
-                    if (stableCount >= STABLE_THRESHOLD) {
-                        // 之前已经稳定激活，现在正常丢失
-                        console.log(`${markerId}: 正常丢失 (状态保持)`);
-                    } else {
-                        // 之前还在验证中就丢失了 - 可能是误识别
-                        console.log(`❌ ${markerId}: 验证中丢失，可能是误识别 (${stableCount}/${STABLE_THRESHOLD})`);
+                // 稳定性检查：连续几次可见才认为是真正的激活
+                if (!wasVisible && stableVisibleCount >= STABLE_SHOW_THRESHOLD) {
+                    // 从不可见变为稳定可见 - 执行原来的激活逻辑
+                    wasVisible = true;
+                    
+                    console.log('Marker发现: ' + markerId);
+                    
+                    // 如果有其他乐器在播放，先停止
+                    if (currentAudioManager && currentAudioManager.markerId !== markerId && 
+                        currentAudioManager.audio && !currentAudioManager.audio.paused) {
+                        currentAudioManager.audio.pause();
                     }
                     
-                    unstableCount = 0;
-                    stableCount = 0;
+                    // 设置当前音频管理器
+                    currentAudioManager = {
+                        markerId: markerId,
+                        audio: audioElement.audio,
+                        markdownFile: markdownFile,
+                        infoText: infoText,
+                        isPlaying: currentAudioManager && currentAudioManager.markerId === markerId ? 
+                                  currentAudioManager.isPlaying : false
+                    };
+                    
+                    // 更新信息显示框
+                    updateInfoDisplay();
+                    
+                    // 立即更新UI状态
+                    updateDockButtons();
+                    
+                    const instrumentName = config.name || '未知乐器';
+                    showNotification(`🎯 检测到${instrumentName}`);
                 }
+            } else {
+                // 当前不可见
+                stableVisibleCount = 0;  // 重置可见计数
+                stableHiddenCount++;
                 
-                // 重置检测计数
-                stableCount = 0;
+                // 稳定性检查：连续几次不可见才认为是真正的丢失
+                if (wasVisible && stableHiddenCount >= STABLE_HIDE_THRESHOLD) {
+                    wasVisible = false;
+                    console.log('Marker丢失: ' + markerId + ' (状态保持)');
+                    // 不清除状态，用户可以继续播放音乐和查看介绍
+                }
             }
             
-            wasVisible = isVisible;
-            
-        }, 100); // 每100ms检查一次 - 快速响应
+        }, 100); // 保持原来的100ms检查间隔
         
-        console.log('=== s19组件初始化完成 (防误识别版本) ===');
+        console.log('=== s19组件初始化完成 ===');
     }
 });
 // ====================================================================

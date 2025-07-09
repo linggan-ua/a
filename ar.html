@@ -336,6 +336,11 @@
             display: block;
         }
         
+        /* 启动覆盖层默认显示 */
+        .start-overlay {
+            display: flex;
+        }
+        
         .hidden {
             display: none !important;
         }
@@ -1920,6 +1925,12 @@ function fixARjsPortraitStretching() {
 
 // 创建启动覆盖层
 function createStartOverlay() {
+    // 检查是否已经存在启动层
+    const existingOverlay = document.getElementById('start-overlay');
+    if (existingOverlay) {
+        existingOverlay.remove();
+    }
+    
     startOverlay = document.createElement('div');
     startOverlay.className = 'start-overlay';
     startOverlay.id = 'start-overlay';
@@ -2007,6 +2018,11 @@ function createStartOverlay() {
     `;
     
     document.body.appendChild(startOverlay);
+    
+    // 确保启动页面显示
+    startOverlay.style.display = 'flex';
+    
+    console.log('启动页面已创建并显示');
 }
 
 // 启动AR函数
@@ -2017,11 +2033,21 @@ function startAR() {
     isARStarted = true;
     
     // 隐藏启动覆盖层
-    startOverlay.classList.add('hidden');
+    if (startOverlay) {
+        startOverlay.classList.add('hidden');
+    }
+    
+    // 隐藏预加载提示
+    const hint = document.getElementById('preload-hint');
+    if (hint) {
+        hint.style.display = 'none';
+    }
     
     // 显示AR场景
     const arScene = document.getElementById('ar-scene');
-    arScene.classList.add('active');
+    if (arScene) {
+        arScene.classList.add('active');
+    }
     
     // 显示dock栏
     const dockContainer = document.getElementById('dock-container');
@@ -2036,6 +2062,7 @@ function startAR() {
     applyIOSVideoFix();
     
     console.log('AR体验启动完成，已应用竖屏拉伸修复');
+    console.log('Dock栏应该已显示:', dockContainer ? dockContainer.classList.contains('active') : '找不到dock容器');
 }
 
 // iOS视频修复
@@ -2205,7 +2232,24 @@ setInterval(() => {
 // 页面加载完成后显示启动覆盖层
 document.addEventListener('DOMContentLoaded', function() {
     console.log('页面加载完成，启用流式加载系统');
+    
+    // 重置AR状态
+    isARStarted = false;
+    
+    // 确保启动页面正确显示
     createStartOverlay();
+    
+    // 确保AR场景初始是隐藏的
+    const arScene = document.getElementById('ar-scene');
+    if (arScene) {
+        arScene.classList.remove('active');
+    }
+    
+    // 确保dock按钮初始是隐藏的
+    const dockContainer = document.getElementById('dock-container');
+    if (dockContainer) {
+        dockContainer.classList.remove('active');
+    }
     
     // 监听权限被拒绝错误
     window.addEventListener('unhandledrejection', function(event) {
@@ -2220,6 +2264,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log(`设备信息: 屏幕尺寸 ${window.innerWidth}x${window.innerHeight}`);
     console.log(`设备方向: ${window.innerHeight > window.innerWidth ? '竖屏' : '横屏'}`);
+    console.log('启动页面状态:', document.getElementById('start-overlay') ? '已创建' : '未创建');
+    console.log('Dock栏状态:', document.getElementById('dock-container') ? '已存在' : '未存在');
 });
 
   </script>
@@ -2373,16 +2419,20 @@ document.addEventListener('DOMContentLoaded', function() {
   <script>
    // 页面增强功能
    document.addEventListener('DOMContentLoaded', function () {
-        // 显示预加载提示
-        const hint = document.getElementById('preload-hint');
-        if (hint) {
-            hint.style.display = 'block';
-            
-            // 5秒后自动隐藏
-            setTimeout(() => {
-                hint.style.display = 'none';
-            }, 5000);
-        }
+        console.log('页面DOM加载完成');
+        
+        // 显示预加载提示（延迟显示，让启动页面先显示）
+        setTimeout(() => {
+            const hint = document.getElementById('preload-hint');
+            if (hint && !isARStarted) {
+                hint.style.display = 'block';
+                
+                // 5秒后自动隐藏
+                setTimeout(() => {
+                    hint.style.display = 'none';
+                }, 5000);
+            }
+        }, 1000);
         
         var audioElements = document.querySelectorAll('audio');
         var playbackRate = 1.0;

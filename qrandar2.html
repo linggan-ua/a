@@ -477,8 +477,8 @@
                 </div>
 
                 <div class="action-buttons">
-                    <button class="btn btn-success" onclick="downloadResult()">📥 下载合成图片</button>
-                    <button class="btn btn-warning" onclick="copyToClipboard()">📋 复制到剪贴板</button>
+                    <button class="btn btn-success" onclick="downloadResult()">🎨 高质量导出</button>
+                    <button class="btn btn-warning" onclick="copyToClipboard()">📋 复制高清版</button>
                     <button class="btn btn-secondary" onclick="resetAll()">🔄 重置所有</button>
                 </div>
             </div>
@@ -517,11 +517,11 @@
                         </div>
                         <div class="preset-btn" onclick="applyPreset('prominent')">
                             <div>👁️ 突出显示</div>
-                            <small>25% 大小</small>
+                            <small>30% 大小</small>
                         </div>
-                        <div class="preset-btn" onclick="applyPreset('custom')">
-                            <div>⚙️ 自定义</div>
-                            <small>手动调节</small>
+                        <div class="preset-btn" onclick="applyPreset('maximum')">
+                            <div>🔥 最大尺寸</div>
+                            <small>45% 大小</small>
                         </div>
                     </div>
                 </div>
@@ -529,7 +529,7 @@
                 <div class="control-group">
                     <label class="control-label">AR码大小 (相对于二维码)</label>
                     <div class="slider-group">
-                        <input type="range" class="slider" id="sizeSlider" min="10" max="40" value="20">
+                        <input type="range" class="slider" id="sizeSlider" min="10" max="50" value="20">
                         <span class="slider-value" id="sizeValue">20%</span>
                     </div>
                 </div>
@@ -565,11 +565,14 @@
                 <div class="tips-section">
                     <div class="tips-title">💡 使用建议</div>
                     <div class="tips-list">
-                        • 建议AR码大小为二维码的15-25%<br>
+                        • 建议AR码大小为二维码的15-35%<br>
+                        • 35%-50%为大尺寸模式，需确保二维码可读<br>
                         • 保持透明度在85-95%之间<br>
                         • AR码居中放置效果最佳<br>
                         • 确保二维码边缘有足够空白<br>
-                        • 使用高对比度的AR码图案
+                        • 使用高对比度的AR码图案<br>
+                        • 🎨 <strong>导出时选择2x-4x分辨率消除锯齿</strong><br>
+                        • 📱 PNG格式最清晰，JPEG文件更小
                     </div>
                 </div>
             </div>
@@ -779,7 +782,7 @@
                     const distance = Math.sqrt(Math.pow(e.clientX - centerX, 2) + Math.pow(e.clientY - centerY, 2));
                     const parentRect = arOverlay.parentElement.getBoundingClientRect();
                     const parentSize = Math.min(parentRect.width, parentRect.height);
-                    const newSize = Math.max(10, Math.min(40, (distance * 2 / parentSize) * 100));
+                    const newSize = Math.max(10, Math.min(50, (distance * 2 / parentSize) * 100));
                     
                     document.getElementById('sizeSlider').value = newSize;
                     updateSliderValues();
@@ -845,8 +848,8 @@
             const presets = {
                 optimal: { size: 20, opacity: 90, x: 50, y: 50 },
                 minimal: { size: 15, opacity: 85, x: 50, y: 50 },
-                prominent: { size: 25, opacity: 95, x: 50, y: 50 },
-                custom: { size: 20, opacity: 90, x: 50, y: 50 }
+                prominent: { size: 30, opacity: 95, x: 50, y: 50 },
+                maximum: { size: 45, opacity: 95, x: 50, y: 50 }
             };
 
             const config = presets[preset];
@@ -914,15 +917,19 @@
 
             // 检查是否在安全区域
             const isCentered = Math.abs(x - 50) < 25 && Math.abs(y - 50) < 25;
-            const isOptimalSize = size >= 15 && size <= 25;
+            const isOptimalSize = size >= 15 && size <= 35;
+            const isLargeSize = size > 35 && size <= 50;
             const isOptimalOpacity = opacity >= 85;
 
             if (isOptimalSize && isOptimalOpacity && isCentered) {
                 indicator.className = 'quality-indicator quality-good';
                 indicator.innerHTML = '✅ 配置优秀：二维码和AR码都能完美识别';
-            } else if (size < 10 || size > 35) {
+            } else if (isLargeSize && isOptimalOpacity && isCentered) {
+                indicator.className = 'quality-indicator quality-warning';
+                indicator.innerHTML = '⚠️ AR码较大：确保二维码仍可正常扫描';
+            } else if (size < 10 || size > 50) {
                 indicator.className = 'quality-indicator quality-error';
-                indicator.innerHTML = '❌ AR码尺寸不当：可能影响识别效果';
+                indicator.innerHTML = '❌ AR码尺寸超出范围：可能影响识别效果';
             } else if (opacity < 70) {
                 indicator.className = 'quality-indicator quality-error';
                 indicator.innerHTML = '❌ 透明度过低：AR码可能不够清晰';
@@ -935,79 +942,298 @@
             }
         }
 
-        // 下载结果
+        // 高质量下载结果
         function downloadResult() {
             if (!qrImage || !arImage) {
                 alert('请先上传二维码和AR码图片！');
                 return;
             }
 
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            // 设置画布大小为二维码大小
-            canvas.width = qrImage.width;
-            canvas.height = qrImage.height;
-            
-            // 绘制二维码
-            ctx.drawImage(qrImage, 0, 0);
-            
-            // 计算AR码位置和大小
+            // 获取当前配置
             const size = parseInt(document.getElementById('sizeSlider').value);
             const opacity = parseInt(document.getElementById('opacitySlider').value);
             const x = parseInt(document.getElementById('xSlider').value);
             const y = parseInt(document.getElementById('ySlider').value);
             
-            const arSize = Math.min(qrImage.width, qrImage.height) * (size / 100);
-            const arX = (qrImage.width * (x / 100)) - (arSize / 2);
-            const arY = (qrImage.height * (y / 100)) - (arSize / 2);
+            // 显示导出选项对话框
+            showExportDialog(size, opacity, x, y);
+        }
+
+        // 显示导出选项对话框
+        function showExportDialog(size, opacity, x, y) {
+            const dialog = document.createElement('div');
+            dialog.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.8); z-index: 10000; display: flex;
+                align-items: center; justify-content: center;
+            `;
             
-            // 绘制AR码
+            dialog.innerHTML = `
+                <div style="background: white; border-radius: 15px; padding: 30px; max-width: 500px; width: 90%;">
+                    <h3 style="margin-bottom: 20px; color: #333;">🎨 导出设置</h3>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 8px;">导出质量：</label>
+                        <select id="exportQuality" style="width: 100%; padding: 10px; border: 2px solid #e9ecef; border-radius: 8px;">
+                            <option value="2">🏆 超高清 (2x分辨率)</option>
+                            <option value="3">💎 极致清晰 (3x分辨率)</option>
+                            <option value="4">🚀 专业级 (4x分辨率)</option>
+                            <option value="1">📱 标准 (原分辨率)</option>
+                        </select>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 8px;">导出格式：</label>
+                        <select id="exportFormat" style="width: 100%; padding: 10px; border: 2px solid #e9ecef; border-radius: 8px;">
+                            <option value="png">PNG (推荐，无损)</option>
+                            <option value="jpeg">JPEG (较小文件)</option>
+                            <option value="webp">WebP (现代格式)</option>
+                        </select>
+                    </div>
+                    
+                    <div id="jpegQuality" style="margin-bottom: 20px; display: none;">
+                        <label style="display: block; font-weight: 600; margin-bottom: 8px;">JPEG质量：</label>
+                        <input type="range" id="jpegQualitySlider" min="80" max="100" value="95" style="width: 100%;">
+                        <span id="jpegQualityValue">95%</span>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="antiAlias" checked>
+                            <span>启用抗锯齿 (推荐)</span>
+                        </label>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button onclick="this.closest('div').parentElement.remove()" 
+                                style="padding: 10px 20px; border: 2px solid #6c757d; background: white; color: #6c757d; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                            取消
+                        </button>
+                        <button onclick="executeDownload(${size}, ${opacity}, ${x}, ${y}); this.closest('div').parentElement.remove();" 
+                                style="padding: 10px 20px; border: none; background: #007bff; color: white; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                            🎯 开始导出
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(dialog);
+            
+            // 格式切换事件
+            document.getElementById('exportFormat').addEventListener('change', function() {
+                const jpegQuality = document.getElementById('jpegQuality');
+                jpegQuality.style.display = this.value === 'jpeg' ? 'block' : 'none';
+            });
+            
+            // JPEG质量滑块
+            document.getElementById('jpegQualitySlider').addEventListener('input', function() {
+                document.getElementById('jpegQualityValue').textContent = this.value + '%';
+            });
+            
+            // 点击背景关闭
+            dialog.addEventListener('click', function(e) {
+                if (e.target === dialog) {
+                    dialog.remove();
+                }
+            });
+        }
+
+        // 执行高质量导出
+        function executeDownload(size, opacity, x, y) {
+            const quality = parseInt(document.getElementById('exportQuality').value);
+            const format = document.getElementById('exportFormat').value;
+            const antiAlias = document.getElementById('antiAlias').checked;
+            const jpegQuality = parseInt(document.getElementById('jpegQualitySlider').value) / 100;
+            
+            // 显示导出进度
+            showExportProgress();
+            
+            // 使用setTimeout让UI有时间更新
+            setTimeout(() => {
+                try {
+                    renderHighQualityImage(size, opacity, x, y, quality, format, antiAlias, jpegQuality);
+                } catch (error) {
+                    hideExportProgress();
+                    alert('导出失败：' + error.message);
+                }
+            }, 100);
+        }
+
+        // 渲染高质量图像
+        function renderHighQualityImage(size, opacity, x, y, quality, format, antiAlias, jpegQuality) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d', { 
+                alpha: format !== 'jpeg',
+                antialias: antiAlias 
+            });
+            
+            // 超采样渲染 - 关键优化！
+            const scaleFactor = quality;
+            const finalWidth = qrImage.width * scaleFactor;
+            const finalHeight = qrImage.height * scaleFactor;
+            
+            canvas.width = finalWidth;
+            canvas.height = finalHeight;
+            
+            // 启用高质量渲染设置
+            if (antiAlias) {
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+            }
+            
+            // 如果是JPEG格式，先填充白色背景
+            if (format === 'jpeg') {
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, finalWidth, finalHeight);
+            }
+            
+            // 绘制高分辨率二维码
+            ctx.drawImage(qrImage, 0, 0, finalWidth, finalHeight);
+            
+            // 计算AR码位置和大小（按比例放大）
+            const arSize = Math.min(finalWidth, finalHeight) * (size / 100);
+            const arX = (finalWidth * (x / 100)) - (arSize / 2);
+            const arY = (finalHeight * (y / 100)) - (arSize / 2);
+            
+            // 绘制高分辨率AR码
             ctx.globalAlpha = opacity / 100;
             ctx.drawImage(arImage, arX, arY, arSize, arSize);
             
-            // 下载
-            const link = document.createElement('a');
-            link.download = 'qr-ar-combined.png';
-            link.href = canvas.toDataURL();
-            link.click();
+            // 导出设置
+            let mimeType, fileName;
+            switch (format) {
+                case 'jpeg':
+                    mimeType = 'image/jpeg';
+                    fileName = `qr-ar-combined-${quality}x.jpg`;
+                    break;
+                case 'webp':
+                    mimeType = 'image/webp';
+                    fileName = `qr-ar-combined-${quality}x.webp`;
+                    break;
+                default:
+                    mimeType = 'image/png';
+                    fileName = `qr-ar-combined-${quality}x.png`;
+            }
+            
+            // 生成下载链接
+            canvas.toBlob((blob) => {
+                hideExportProgress();
+                const link = document.createElement('a');
+                link.download = fileName;
+                link.href = URL.createObjectURL(blob);
+                link.click();
+                
+                // 清理内存
+                setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+                
+                // 显示成功消息
+                showSuccessMessage(format, quality, blob.size);
+            }, mimeType, format === 'jpeg' ? jpegQuality : 1.0);
         }
 
-        // 复制到剪贴板
+        // 显示导出进度
+        function showExportProgress() {
+            const progress = document.createElement('div');
+            progress.id = 'exportProgress';
+            progress.style.cssText = `
+                position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                background: rgba(0,0,0,0.9); color: white; padding: 30px;
+                border-radius: 15px; z-index: 20000; text-align: center;
+            `;
+            progress.innerHTML = `
+                <div style="font-size: 2em; margin-bottom: 10px;">🎨</div>
+                <div style="font-size: 1.2em; font-weight: 600;">正在导出高质量图片...</div>
+                <div style="margin-top: 10px; opacity: 0.8;">请稍候，正在进行抗锯齿处理</div>
+            `;
+            document.body.appendChild(progress);
+        }
+
+        // 隐藏导出进度
+        function hideExportProgress() {
+            const progress = document.getElementById('exportProgress');
+            if (progress) progress.remove();
+        }
+
+        // 显示成功消息
+        function showSuccessMessage(format, quality, fileSize) {
+            const message = document.createElement('div');
+            message.style.cssText = `
+                position: fixed; top: 20px; right: 20px; background: #28a745;
+                color: white; padding: 15px 20px; border-radius: 10px;
+                z-index: 10000; font-weight: 600; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            `;
+            
+            const sizeStr = (fileSize / 1024 / 1024).toFixed(2);
+            message.innerHTML = `
+                ✅ 导出成功！<br>
+                <small>格式: ${format.toUpperCase()} | 质量: ${quality}x | 大小: ${sizeStr}MB</small>
+            `;
+            
+            document.body.appendChild(message);
+            setTimeout(() => message.remove(), 4000);
+        }
+
+        // 复制到剪贴板 (高质量版本)
         async function copyToClipboard() {
             if (!qrImage || !arImage) {
                 alert('请先上传二维码和AR码图片！');
                 return;
             }
 
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            canvas.width = qrImage.width;
-            canvas.height = qrImage.height;
-            
-            ctx.drawImage(qrImage, 0, 0);
-            
-            const size = parseInt(document.getElementById('sizeSlider').value);
-            const opacity = parseInt(document.getElementById('opacitySlider').value);
-            const x = parseInt(document.getElementById('xSlider').value);
-            const y = parseInt(document.getElementById('ySlider').value);
-            
-            const arSize = Math.min(qrImage.width, qrImage.height) * (size / 100);
-            const arX = (qrImage.width * (x / 100)) - (arSize / 2);
-            const arY = (qrImage.height * (y / 100)) - (arSize / 2);
-            
-            ctx.globalAlpha = opacity / 100;
-            ctx.drawImage(arImage, arX, arY, arSize, arSize);
-            
             try {
+                // 使用2x分辨率进行复制
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d', { 
+                    alpha: true,
+                    antialias: true 
+                });
+                
+                const scaleFactor = 2; // 2倍分辨率
+                canvas.width = qrImage.width * scaleFactor;
+                canvas.height = qrImage.height * scaleFactor;
+                
+                // 启用抗锯齿
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                
+                // 绘制高分辨率二维码
+                ctx.drawImage(qrImage, 0, 0, canvas.width, canvas.height);
+                
+                // 获取当前设置
+                const size = parseInt(document.getElementById('sizeSlider').value);
+                const opacity = parseInt(document.getElementById('opacitySlider').value);
+                const x = parseInt(document.getElementById('xSlider').value);
+                const y = parseInt(document.getElementById('ySlider').value);
+                
+                // 计算AR码位置和大小
+                const arSize = Math.min(canvas.width, canvas.height) * (size / 100);
+                const arX = (canvas.width * (x / 100)) - (arSize / 2);
+                const arY = (canvas.height * (y / 100)) - (arSize / 2);
+                
+                // 绘制高分辨率AR码
+                ctx.globalAlpha = opacity / 100;
+                ctx.drawImage(arImage, arX, arY, arSize, arSize);
+                
+                // 复制到剪贴板
                 canvas.toBlob(async (blob) => {
                     const item = new ClipboardItem({ 'image/png': blob });
                     await navigator.clipboard.write([item]);
-                    alert('图片已复制到剪贴板！');
+                    
+                    // 显示成功消息
+                    const message = document.createElement('div');
+                    message.style.cssText = `
+                        position: fixed; top: 20px; right: 20px; background: #17a2b8;
+                        color: white; padding: 15px 20px; border-radius: 10px;
+                        z-index: 10000; font-weight: 600; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                    `;
+                    message.innerHTML = '📋 高质量图片已复制到剪贴板！';
+                    document.body.appendChild(message);
+                    setTimeout(() => message.remove(), 3000);
                 });
+                
             } catch (err) {
-                alert('复制失败，请尝试下载功能。');
+                console.error('复制失败:', err);
+                alert('复制失败，请尝试下载功能。浏览器可能不支持剪贴板API。');
             }
         }
 

@@ -121,7 +121,7 @@
             let qrImage = null;
             let arImage = null;
             let arMarkerScale = 0.25; // Initial scale of AR marker relative to QR code width
-            let arMarkerOffset = { x: 0, y: 0 }; // Offset from the center
+            let arMarkerOffset = { x: 0, y: 0 }; // Offset from the center in canvas pixels
             let isDragging = false;
             let dragStart = { x: 0, y: 0 };
 
@@ -205,29 +205,40 @@
             function drawCanvas() {
                 if (!qrImage) return;
                 
-                // Set canvas resolution to match QR image for high quality
-                canvas.width = qrImage.width;
-                canvas.height = qrImage.height;
+                // --- MODIFICATION START: Improve Resolution and Quality ---
+                // We render the canvas at a higher resolution (e.g., 2x) and then scale it down with CSS.
+                // This is a standard technique for achieving crisp, anti-aliased graphics.
+                const scaleFactor = 2; 
+
+                // Set the canvas's internal bitmap resolution to be higher than its display size.
+                canvas.width = qrImage.width * scaleFactor;
+                canvas.height = qrImage.height * scaleFactor;
+
+                // Explicitly enable and set high-quality image smoothing.
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                // --- MODIFICATION END ---
                 
                 // Clear canvas
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                // Draw QR code
+                // Draw QR code onto the high-resolution canvas.
                 ctx.drawImage(qrImage, 0, 0, canvas.width, canvas.height);
 
                 if (arImage) {
-                    // Calculate AR marker dimensions
+                    // All calculations are now relative to the high-resolution canvas.
                     const arWidth = canvas.width * arMarkerScale;
                     const arHeight = arImage.height * (arWidth / arImage.width); // Maintain aspect ratio
 
-                    // Calculate position (center + offset)
+                    // Calculate position (center + offset) on the high-res canvas.
                     const centerX = (canvas.width - arWidth) / 2;
                     const centerY = (canvas.height - arHeight) / 2;
                     
+                    // The offset is already in canvas pixels, so it scales correctly with the high-res canvas.
                     const drawX = centerX + arMarkerOffset.x;
                     const drawY = centerY + arMarkerOffset.y;
 
-                    // Draw AR marker
+                    // Draw AR marker.
                     ctx.drawImage(arImage, drawX, drawY, arWidth, arHeight);
                 }
             }
@@ -277,20 +288,23 @@
                 e.preventDefault();
                 isDragging = true;
                 const coords = getEventCoordinates(e);
-                dragStart.x = coords.x - arMarkerOffset.x * (canvas.clientWidth / canvas.width);
-                dragStart.y = coords.y - arMarkerOffset.y * (canvas.clientHeight / canvas.height);
+                // The drag logic correctly converts screen coordinates to canvas coordinates,
+                // so it works with the new high-resolution canvas without changes.
+                const scaleX = canvas.width / canvas.clientWidth;
+                const scaleY = canvas.height / canvas.clientHeight;
+                dragStart.x = coords.x * scaleX - arMarkerOffset.x;
+                dragStart.y = coords.y * scaleY - arMarkerOffset.y;
             }
 
             function onDragMove(e) {
                 if (!isDragging || !arImage) return;
                 e.preventDefault();
                 const coords = getEventCoordinates(e);
-                // Convert client scale to canvas resolution scale
                 const scaleX = canvas.width / canvas.clientWidth;
                 const scaleY = canvas.height / canvas.clientHeight;
 
-                arMarkerOffset.x = (coords.x - dragStart.x) * scaleX;
-                arMarkerOffset.y = (coords.y - dragStart.y) * scaleY;
+                arMarkerOffset.x = coords.x * scaleX - dragStart.x;
+                arMarkerOffset.y = coords.y * scaleY - dragStart.y;
                 drawCanvas();
             }
 

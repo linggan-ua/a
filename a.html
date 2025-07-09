@@ -1584,7 +1584,7 @@ function updateDockButtons() {
     }
 }
 
-// =============== 启动系统 (恢复您的原始逻辑) ===============
+// =============== 启动系统 ===============
 function createStartOverlay() {
     startOverlay = document.getElementById('start-overlay');
     const device = getDeviceInfo();
@@ -1617,16 +1617,55 @@ function createStartOverlay() {
     }
 }
 
+// ====================================================================
+// 已修改：startAR 函数 - 增加了前置摄像头权限检查
+// ====================================================================
 function startAR() {
     if (isARStarted) return;
-    console.log('启动AR体验');
-    isARStarted = true;
-    
-    startOverlay.classList.add('hidden');
-    document.getElementById('ar-scene').classList.add('active');
-    document.getElementById('dock-container').classList.add('active');
-    
-    applyIOSVideoFix();
+    console.log('尝试启动AR体验...');
+
+    // 检查浏览器是否支持getUserMedia
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showNotification('您的浏览器不支持摄像头访问功能。', true);
+        return;
+    }
+
+    // 在启动AR场景前，先显式请求摄像头权限
+    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+        .then(stream => {
+            // 用户已授权
+            console.log('摄像头权限已获取。');
+            // 立即停止我们刚刚请求的媒体流，因为AR.js会自己管理一个新的流
+            stream.getTracks().forEach(track => track.stop());
+            
+            // 权限获取成功，继续执行原有的启动逻辑
+            console.log('正式启动AR场景。');
+            isARStarted = true;
+            
+            startOverlay.classList.add('hidden');
+            document.getElementById('ar-scene').classList.add('active');
+            document.getElementById('dock-container').classList.add('active');
+            
+            applyIOSVideoFix();
+        })
+        .catch(err => {
+            // 用户拒绝或发生其他错误
+            console.error('摄像头权限请求失败:', err.name, err.message);
+
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                // 用户明确拒绝了权限，完全按照您的要求实现
+                showNotification('权限被拒绝，无法使用AR功能！请先同意摄像头权限以使用AR功能。', true);
+                setTimeout(() => {
+                    window.location.reload(); // 2秒后刷新页面
+                }, 2500);
+            } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                // 未找到可用的摄像头设备
+                showNotification('未找到可用的摄像头设备。', true);
+            } else {
+                // 其他未知错误
+                showNotification('启动摄像头时发生错误: ' + err.name, true);
+            }
+        });
 }
 
 function applyIOSVideoFix() {
@@ -1667,6 +1706,7 @@ function applyIOSVideoFix() {
     setTimeout(fixVideoElements, 500);
 }
 
+// 注意：此函数及其相关UI现在未被新的权限流程使用，但按要求保留
 function handlePermissionDenied() {
     console.log('检测到权限被拒绝');
     const device = getDeviceInfo();
@@ -1702,6 +1742,7 @@ function handlePermissionDenied() {
     document.body.appendChild(deniedOverlay);
 }
 
+// 注意：此函数未被新的权限流程使用，但按要求保留
 function retryPermission() {
     const deniedUI = document.querySelector('.permission-denied-overlay');
     if (deniedUI) deniedUI.remove();
@@ -1711,6 +1752,7 @@ function retryPermission() {
 
 function refreshPage() { window.location.reload(); }
 
+// 注意：此函数未被新的权限流程使用，但按要求保留
 function backToStart() {
     const deniedUI = document.querySelector('.permission-denied-overlay');
     if (deniedUI) deniedUI.remove();
@@ -1721,16 +1763,14 @@ function backToStart() {
     isARStarted = false;
 }
 
+// ====================================================================
+// 已修改：DOMContentLoaded 事件监听器 - 移除了旧的权限处理逻辑
+// ====================================================================
 document.addEventListener('DOMContentLoaded', function() {
     console.log('页面加载完成，准备启动AR。');
     createStartOverlay();
-    window.addEventListener('unhandledrejection', function(event) {
-        if (isARStarted && event.reason && (event.reason.name === 'NotAllowedError' || (event.reason.message && event.reason.message.includes('not allowed')))) {
-            console.log('捕获到权限拒绝错误');
-            event.preventDefault();
-            setTimeout(handlePermissionDenied, 500);
-        }
-    });
+    // 权限检查逻辑现已整合到 startAR() 函数中，
+    // 此处不再需要 'unhandledrejection' 监听器。
 });
 
   </script>

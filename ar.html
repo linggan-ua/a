@@ -336,11 +336,6 @@
             display: block;
         }
         
-        /* 启动覆盖层默认显示 */
-        .start-overlay {
-            display: flex;
-        }
-        
         .hidden {
             display: none !important;
         }
@@ -1042,298 +1037,44 @@ function c3() {
     return /MicroMessenger/i.test(navigator.userAgent);
 }
 
-// =============== 流式资源管理器 ===============
-class StreamingResourceManager {
-    constructor() {
-        this.loadedAudio = new Map();
-        this.loadedModels = new Map();
-        this.loadingPromises = new Map();
-        this.currentLoadingMarker = null;
-        
-        // 内存监控
-        this.memoryUsage = 0;
-        this.maxMemoryUsage = 150 * 1024 * 1024; // 150MB内存限制
-        
-        // 创建加载UI
-        this.createLoadingUI();
-    }
-    
-    // 创建加载UI组件
-    createLoadingUI() {
-        // 全局加载遮罩
-        const loadingOverlay = document.createElement('div');
-        loadingOverlay.id = 'resource-loading-overlay';
-        loadingOverlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 2000;
-            color: white;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        `;
-        
-        loadingOverlay.innerHTML = `
-            <div style="text-align: center; max-width: 300px;">
-                <div class="loading-spinner" style="
-                    width: 60px;
-                    height: 60px;
-                    border: 4px solid rgba(255, 255, 255, 0.3);
-                    border-top: 4px solid #FFE082;
-                    border-radius: 50%;
-                    animation: spin 1s linear infinite;
-                    margin: 0 auto 20px;
-                "></div>
-                <div id="loading-text" style="font-size: 18px; font-weight: 600; margin-bottom: 10px;">
-                    正在加载资源...
-                </div>
-                <div id="loading-progress" style="
-                    width: 200px;
-                    height: 4px;
-                    background: rgba(255, 255, 255, 0.2);
-                    border-radius: 2px;
-                    margin: 0 auto 10px;
-                    overflow: hidden;
-                ">
-                    <div id="progress-bar" style="
-                        width: 0%;
-                        height: 100%;
-                        background: linear-gradient(90deg, #FFE082, #FFC107);
-                        border-radius: 2px;
-                        transition: width 0.3s ease;
-                    "></div>
-                </div>
-                <div id="loading-detail" style="font-size: 14px; opacity: 0.8;">
-                    准备中...
-                </div>
-            </div>
-        `;
-        
-        // 添加旋转动画
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-        `;
-        document.head.appendChild(style);
-        document.body.appendChild(loadingOverlay);
-    }
-    
-    // 显示加载界面
-    showLoading(text = '正在加载资源...', detail = '准备中...') {
-        const overlay = document.getElementById('resource-loading-overlay');
-        const loadingText = document.getElementById('loading-text');
-        const loadingDetail = document.getElementById('loading-detail');
-        
-        loadingText.textContent = text;
-        loadingDetail.textContent = detail;
-        overlay.style.display = 'flex';
-        
-        // 重置进度条
-        this.updateProgress(0);
-    }
-    
-    // 隐藏加载界面
-    hideLoading() {
-        const overlay = document.getElementById('resource-loading-overlay');
-        overlay.style.display = 'none';
-    }
-    
-    // 更新进度条
-    updateProgress(percentage, detail = '') {
-        const progressBar = document.getElementById('progress-bar');
-        const loadingDetail = document.getElementById('loading-detail');
-        
-        if (progressBar) {
-            progressBar.style.width = `${percentage}%`;
-        }
-        
-        if (detail && loadingDetail) {
-            loadingDetail.textContent = detail;
-        }
-    }
-    
-    // 按需加载音频
-    async loadAudio(audioFileName, onProgress) {
-        const cacheKey = audioFileName;
-        
-        // 检查是否已加载
-        if (this.loadedAudio.has(cacheKey)) {
-            return this.loadedAudio.get(cacheKey);
-        }
-        
-        // 检查是否正在加载
-        if (this.loadingPromises.has(cacheKey)) {
-            return this.loadingPromises.get(cacheKey);
-        }
-        
-        // 开始加载
-        const loadingPromise = new Promise((resolve, reject) => {
-            const audio = new Audio();
-            const audioPath = `assets/audio/${audioFileName}`;
-            
-            // 进度监听
-            audio.addEventListener('progress', () => {
-                if (audio.buffered.length > 0) {
-                    const progress = (audio.buffered.end(0) / audio.duration) * 100;
-                    onProgress && onProgress(progress);
-                }
-            });
-            
-            audio.addEventListener('canplaythrough', () => {
-                console.log(`✅ 音频加载完成: ${audioFileName}`);
-                this.loadedAudio.set(cacheKey, { audio });
-                this.loadingPromises.delete(cacheKey);
-                resolve({ audio });
-            });
-            
-            audio.addEventListener('error', (error) => {
-                console.error(`❌ 音频加载失败: ${audioFileName}`, error);
-                this.loadingPromises.delete(cacheKey);
-                reject(error);
-            });
-            
-            audio.src = audioPath;
-            audio.preload = 'auto';
-            audio.load();
-        });
-        
-        this.loadingPromises.set(cacheKey, loadingPromise);
-        return loadingPromise;
-    }
-    
-    // 按需加载模型
-    async loadModel(markerId, modelPath, instrumentName, onProgress) {
-        const cacheKey = `${markerId}-${modelPath}`;
-        
-        // 检查是否已加载
-        if (this.loadedModels.has(cacheKey)) {
-            return this.loadedModels.get(cacheKey);
-        }
-        
-        // 检查是否正在加载
-        if (this.loadingPromises.has(cacheKey)) {
-            return this.loadingPromises.get(cacheKey);
-        }
-        
-        // 开始加载
-        const loadingPromise = new Promise((resolve, reject) => {
-            const modelElement = document.querySelector(`#${markerId.replace('marker', 'model')}`);
-            if (!modelElement) {
-                reject(new Error(`模型元素未找到: ${markerId}`));
-                return;
-            }
-            
-            // 监听模型加载事件
-            modelElement.addEventListener('model-loaded', () => {
-                console.log(`✅ 模型加载完成: ${modelPath}`);
-                this.loadedModels.set(cacheKey, true);
-                this.loadingPromises.delete(cacheKey);
-                resolve(true);
-            });
-            
-            modelElement.addEventListener('model-error', (error) => {
-                console.error(`❌ 模型加载失败: ${modelPath}`, error);
-                this.loadingPromises.delete(cacheKey);
-                reject(error);
-            });
-            
-            // 设置模型源（触发加载）
-            modelElement.setAttribute('gltf-model', `url(${modelPath})`);
-            
-            // 模拟进度更新
-            let progress = 0;
-            const progressInterval = setInterval(() => {
-                progress += 10;
-                onProgress && onProgress(progress);
-                if (progress >= 90) {
-                    clearInterval(progressInterval);
-                }
-            }, 200);
-        });
-        
-        this.loadingPromises.set(cacheKey, loadingPromise);
-        return loadingPromise;
-    }
-    
-    // 释放资源
-    releaseResources(markerId) {
-        // 释放音频
-        for (const [key, audioData] of this.loadedAudio.entries()) {
-            if (key.includes(markerId)) {
-                audioData.audio.pause();
-                audioData.audio.src = '';
-                this.loadedAudio.delete(key);
-            }
-        }
-        
-        // 释放模型
-        for (const [key] of this.loadedModels.entries()) {
-            if (key.includes(markerId)) {
-                this.loadedModels.delete(key);
-            }
-        }
-        
-        console.log(`🗑️ 已释放 ${markerId} 的资源`);
-    }
-    
-    // 获取内存使用情况
-    getMemoryUsage() {
-        if (performance.memory) {
-            return {
-                used: performance.memory.usedJSHeapSize,
-                total: performance.memory.totalJSHeapSize,
-                limit: performance.memory.jsHeapSizeLimit
-            };
-        }
-        return null;
-    }
-    
-    // 检查内存使用
-    checkMemoryUsage() {
-        const memory = this.getMemoryUsage();
-        if (memory && memory.used > this.maxMemoryUsage) {
-            console.warn('⚠️ 内存使用过高，开始释放资源');
-            this.releaseUnusedResources();
-        }
-    }
-    
-    // 释放未使用的资源
-    releaseUnusedResources() {
-        // 只保留当前活动的资源
-        const currentMarkerId = currentAudioManager?.markerId;
-        
-        for (const [key] of this.loadedAudio.entries()) {
-            if (!key.includes(currentMarkerId)) {
-                this.loadedAudio.delete(key);
-            }
-        }
-        
-        for (const [key] of this.loadedModels.entries()) {
-            if (!key.includes(currentMarkerId)) {
-                this.loadedModels.delete(key);
-            }
-        }
-        
-        // 强制垃圾回收（如果支持）
-        if (window.gc) {
-            window.gc();
-        }
-    }
-}
+// =============== 音频系统初始化 - 所有浏览器可用 ===============
+var audioCache = {};
 
-// 创建全局资源管理器实例
-const resourceManager = new StreamingResourceManager();
+document.addEventListener('DOMContentLoaded', function () {
+    console.log('🎵 音频系统初始化');
+    
+    var audioFiles = [
+        'audio-pipa.mp3',             // 琵琶
+        'audio-hulusi.mp3',           // 葫芦丝
+       /* 'audio-dongbei_dagu.mp3',     // 东北大鼓
+        'audio-dongbula.mp3',         // 冬不拉
+        'audio-gaohu.mp3',            // 高胡
+        'audio-huagu.mp3',            // 花鼓
+        'audio-huobusi.mp3',          // 火不思
+        'audio-matouqin.mp3',         // 马头琴
+        'audio-niujiaoqin.mp3',       // 牛角琴
+        'audio-suona.mp3',            // 唢呐
+        'audio-yueqin.mp3',           // 月琴
+        'audio-chaozhou_suona.mp3',   // 潮州唢呐
+        'audio-chaozhou_zheng.mp3',   // 潮州筝
+        'audio-dongxiao.mp3',         // 洞箫
+        'audio-houguan.mp3',          // 喉管
+        'audio-muyu.mp3',             // 木鱼
+        'audio-niujiaohao.mp3',       // 牛角号
+        'audio-qinqin.mp3',           // 秦琴
+        'audio-yehu.mp3',             // 椰胡
+        'audio-yugu.mp3',             // 渔鼓
+        'audio-zhuban.mp3',           // 竹板*/
+        'audio-huagudatong.mp3'      // 花鼓大筒
+    ]; 
+    audioFiles.forEach(function (filename) {
+        var audio = new Audio();
+        audio.src = 'assets/audio/' + filename; // 修正路径
+        audio.preload = 'auto';
+        audio.load();
+        audioCache[filename] = { audio: audio };
+    });
+});
 
 // =============== A-Frame组件注册 - 所有浏览器可用 ===============
 
@@ -1359,17 +1100,39 @@ AFRAME.registerComponent('o15', {
     }
 });
 
-// 流式加载的s19组件
+// Marker检测组件
+// 完整的s19组件修复版本
+// 替换您当前的s19组件为以下版本：
+
 AFRAME.registerComponent('s19', {
     init: function () {
         var markerElement = this.el;
         var markerId = markerElement.getAttribute('id');
         
         // ================== 乐器信息配置中心 ==================
-        const instrumentConfig = {
-            'marker1':  { name: '琵琶',       audio: 'audio-pipa.mp3',             model: 'assets/models/pipa.gltf',             markdown: 'pipa.md',             info: 'pipa.txt' },
-            'marker2':  { name: '葫芦丝',     audio: 'audio-hulusi.mp3',           model: 'assets/models/hulusi.gltf',           markdown: 'hulusi.md',           info: 'hulusi.txt' },
-            'marker22': { name: '花鼓大筒',   audio: 'audio-huagudatong.mp3',      model: 'assets/models/huagudatong.gltf',      markdown: 'huagudatong.md',      info: 'huagudatong.txt' }
+                const instrumentConfig = {
+            'marker1':  { name: '琵琶',       audio: 'pipa.mp3',             markdown: 'pipa.md',             info: 'pipa.txt' },
+            'marker2':  { name: '葫芦丝',     audio: 'hulusi.mp3',           markdown: 'hulusi.md',           info: 'hulusi.txt' },
+          /*  'marker3':  { name: '东北大鼓',   audio: 'dongbei_dagu.mp3',     markdown: 'dongbei_dagu.md',     info: 'dongbei_dagu.txt' },
+            'marker4':  { name: '冬不拉',     audio: 'dongbula.mp3',         markdown: 'dongbula.md',         info: 'dongbula.txt' },
+            'marker5':  { name: '高胡',       audio: 'gaohu.mp3',            markdown: 'gaohu.md',            info: 'gaohu.txt' },
+            'marker6':  { name: '花鼓',       audio: 'huagu.mp3',            markdown: 'huagu.md',            info: 'huagu.txt' },
+            'marker7':  { name: '火不思',     audio: 'huobusi.mp3',          markdown: 'huobusi.md',          info: 'huobusi.txt' },
+            'marker8':  { name: '马头琴',     audio: 'matouqin.mp3',         markdown: 'matouqin.md',         info: 'matouqin.txt' },
+            'marker9':  { name: '牛角琴',     audio: 'niujiaoqin.mp3',       markdown: 'niujiaoqin.md',       info: 'niujiaoqin.txt' },
+            'marker10': { name: '唢呐',       audio: 'suona.mp3',            markdown: 'suona.md',            info: 'suona.txt' },
+            'marker11': { name: '月琴',       audio: 'yueqin.mp3',           markdown: 'yueqin.md',           info: 'yueqin.txt' },
+            'marker12': { name: '潮州唢呐',   audio: 'chaozhou_suona.mp3',   markdown: 'chaozhou_suona.md',   info: 'chaozhou_suona.txt' },
+            'marker13': { name: '潮州筝',     audio: 'chaozhou_zheng.mp3',   markdown: 'chaozhou_zheng.md',   info: 'chaozhou_zheng.txt' },
+            'marker14': { name: '洞箫',       audio: 'dongxiao.mp3',         markdown: 'dongxiao.md',         info: 'dongxiao.txt' },
+            'marker15': { name: '喉管',       audio: 'houguan.mp3',          markdown: 'houguan.md',          info: 'houguan.txt' },
+            'marker16': { name: '木鱼',       audio: 'muyu.mp3',             markdown: 'muyu.md',             info: 'muyu.txt' },
+            'marker17': { name: '牛角号',     audio: 'niujiaohao.mp3',       markdown: 'niujiaohao.md',       info: 'niujiaohao.txt' },
+            'marker18': { name: '秦琴',       audio: 'qinqin.mp3',           markdown: 'qinqin.md',           info: 'qinqin.txt' },
+            'marker19': { name: '椰胡',       audio: 'yehu.mp3',             markdown: 'yehu.md',             info: 'yehu.txt' },
+            'marker20': { name: '渔鼓',       audio: 'yugu.mp3',             markdown: 'yugu.md',             info: 'yugu.txt' },
+            'marker21': { name: '竹板',       audio: 'zhuban.mp3',           markdown: 'zhuban.md',           info: 'zhuban.txt' },*/
+            'marker22': { name: '花鼓大筒',   audio: 'huagudatong.mp3',      markdown: 'huagudatong.md',      info: 'huagudatong.txt' }
         };
         // =======================================================
 
@@ -1378,6 +1141,9 @@ AFRAME.registerComponent('s19', {
             console.warn(`markerId "${markerId}" 暂未配置，跳过初始化`);
             return;
         }
+
+        const audioFile = 'assets/audio/' + config.audio;
+        const markdownFile = 'assets/markdown/' + config.markdown;
         
         console.log(`=== s19组件初始化: ${markerId} (${config.name}) ===`);
         
@@ -1391,14 +1157,21 @@ AFRAME.registerComponent('s19', {
         // 确保模型初始状态为隐藏
         modelElement.setAttribute('visible', 'false');
         
-        // 移除静态的gltf-model属性，改为动态加载
-        modelElement.removeAttribute('gltf-model');
+        // 获取或创建音频元素
+        var audioElement = audioCache[config.audio];
+        if (!audioElement) {
+            console.error(`音频文件 ${config.audio} 未在缓存中找到!`);
+            audioElement = { audio: new Audio() };
+            audioElement.audio.src = audioFile; 
+            audioElement.audio.preload = 'auto';
+            audioElement.audio.load();
+            audioCache[config.audio] = audioElement;
+        }
         
         // 加载对应的信息文本
         var infoText = '';
         var infoFile = 'assets/info/' + config.info;
         
-        // 异步加载信息文本（不阻塞主流程）
         fetch(infoFile)
             .then(function (response) {
                 return response.ok ? response.text() : '';
@@ -1411,84 +1184,9 @@ AFRAME.registerComponent('s19', {
                 infoText = `岭南乐器：${config.name || '未知乐器'}`;
             });
         
-        // 资源加载状态
-        var resourcesLoaded = {
-            audio: false,
-            model: false
-        };
-        
-        var loadedAudio = null;
-        var isResourceLoading = false;
-        
-        // 检测状态
+        // 原始的简单检测逻辑 - 但加入模型控制
         var wasVisible = false;
         
-        // 加载资源的函数
-        async function loadResources() {
-            if (isResourceLoading) return;
-            isResourceLoading = true;
-            
-            try {
-                // 显示加载界面
-                resourceManager.showLoading(`正在加载 ${config.name}`, '准备资源...');
-                
-                let totalProgress = 0;
-                
-                // 并行加载音频和模型
-                const audioPromise = resourceManager.loadAudio(config.audio, (progress) => {
-                    totalProgress = (progress * 0.5); // 音频占50%
-                    resourceManager.updateProgress(totalProgress, `加载音频: ${Math.round(progress)}%`);
-                });
-                
-                const modelPromise = resourceManager.loadModel(markerId, config.model, config.name, (progress) => {
-                    totalProgress = 50 + (progress * 0.5); // 模型占50%
-                    resourceManager.updateProgress(totalProgress, `加载模型: ${Math.round(progress)}%`);
-                });
-                
-                // 等待资源加载完成
-                const [audioResult, modelResult] = await Promise.all([audioPromise, modelPromise]);
-                
-                loadedAudio = audioResult;
-                resourcesLoaded.audio = true;
-                resourcesLoaded.model = true;
-                
-                // 完成加载
-                resourceManager.updateProgress(100, '加载完成！');
-                
-                // 延迟一点隐藏加载界面，让用户看到完成状态
-                setTimeout(() => {
-                    resourceManager.hideLoading();
-                    
-                    // 显示模型
-                    modelElement.setAttribute('visible', 'true');
-                    
-                    // 设置当前音频管理器
-                    currentAudioManager = {
-                        markerId: markerId,
-                        audio: loadedAudio.audio,
-                        markdownFile: 'assets/markdown/' + config.markdown,
-                        infoText: infoText,
-                        isPlaying: false
-                    };
-                    
-                    // 更新UI
-                    updateInfoDisplay();
-                    updateDockButtons();
-                    
-                    showNotification(`🎯 ${config.name} 已就绪`);
-                    
-                }, 500);
-                
-            } catch (error) {
-                console.error('资源加载失败:', error);
-                resourceManager.hideLoading();
-                showNotification(`❌ ${config.name} 加载失败`);
-            } finally {
-                isResourceLoading = false;
-            }
-        }
-        
-        // 原始的简单检测逻辑
         this.tick = AFRAME.utils.throttleTick(function () {
             var isVisible = markerElement.object3D.visible;
             
@@ -1496,16 +1194,11 @@ AFRAME.registerComponent('s19', {
             if (isVisible && !wasVisible) {
                 wasVisible = true;
                 
-                console.log('Marker发现: ' + markerId);
-                
-                // 如果资源未加载，开始加载
-                if (!resourcesLoaded.audio || !resourcesLoaded.model) {
-                    loadResources();
-                    return;
-                }
-                
-                // 如果资源已加载，直接显示
+                // 显示模型
                 modelElement.setAttribute('visible', 'true');
+                
+                // marker被发现 - 立即响应
+                console.log('Marker发现: ' + markerId);
                 
                 // 如果有其他乐器在播放，先停止
                 if (currentAudioManager && currentAudioManager.markerId !== markerId && 
@@ -1516,8 +1209,8 @@ AFRAME.registerComponent('s19', {
                 // 设置当前音频管理器
                 currentAudioManager = {
                     markerId: markerId,
-                    audio: loadedAudio.audio,
-                    markdownFile: 'assets/markdown/' + config.markdown,
+                    audio: audioElement.audio,
+                    markdownFile: markdownFile,
                     infoText: infoText,
                     isPlaying: currentAudioManager && currentAudioManager.markerId === markerId ? 
                               currentAudioManager.isPlaying : false
@@ -1529,7 +1222,8 @@ AFRAME.registerComponent('s19', {
                 // 立即更新UI状态
                 updateDockButtons();
                 
-                showNotification(`🎯 检测到${config.name}`);
+                const instrumentName = config.name || '未知乐器';
+                showNotification(`🎯 检测到${instrumentName}`);
                 
             } else if (!isVisible && wasVisible) {
                 wasVisible = false;
@@ -1540,12 +1234,11 @@ AFRAME.registerComponent('s19', {
                 
                 // 不清除状态，用户可以继续播放音乐和查看介绍
             }
-        }, 100); // 每100ms检查一次
+        }, 100); // 每100ms检查一次 - 快速响应
         
-        console.log('=== s19组件初始化完成 (流式加载版本) ===');
+        console.log('=== s19组件初始化完成 ===');
     }
 });
-
 // ====================================================================
 // =============== 模型触摸交互组件 (Touch Handler) ===============
 // ====================================================================
@@ -1665,9 +1358,10 @@ AFRAME.registerComponent('touch-handler', {
     }
 });
 
+
 // =============== Dock栏功能 - 所有浏览器可用 ===============
 
-// 修改后的音频播放控制
+// 音频播放控制
 function toggleAudio() {
     const playBtn = document.getElementById('play-btn');
     
@@ -1679,7 +1373,7 @@ function toggleAudio() {
     const audio = currentAudioManager.audio;
     
     if (audio.readyState < 2) {
-        showNotification('🔄 音频准备中...');
+        showNotification('🔄 音频加载中...');
         return;
     }
     
@@ -1740,6 +1434,7 @@ function resetModel() {
         console.error('复位失败：无法在模型上找到 touch-handler 组件或初始状态', modelId);
     }
 }
+
 
 // 加载Markdown内容
 async function loadMarkdownContent(filename) {
@@ -1925,12 +1620,6 @@ function fixARjsPortraitStretching() {
 
 // 创建启动覆盖层
 function createStartOverlay() {
-    // 检查是否已经存在启动层
-    const existingOverlay = document.getElementById('start-overlay');
-    if (existingOverlay) {
-        existingOverlay.remove();
-    }
-    
     startOverlay = document.createElement('div');
     startOverlay.className = 'start-overlay';
     startOverlay.id = 'start-overlay';
@@ -2018,11 +1707,6 @@ function createStartOverlay() {
     `;
     
     document.body.appendChild(startOverlay);
-    
-    // 确保启动页面显示
-    startOverlay.style.display = 'flex';
-    
-    console.log('启动页面已创建并显示');
 }
 
 // 启动AR函数
@@ -2033,21 +1717,11 @@ function startAR() {
     isARStarted = true;
     
     // 隐藏启动覆盖层
-    if (startOverlay) {
-        startOverlay.classList.add('hidden');
-    }
-    
-    // 隐藏预加载提示
-    const hint = document.getElementById('preload-hint');
-    if (hint) {
-        hint.style.display = 'none';
-    }
+    startOverlay.classList.add('hidden');
     
     // 显示AR场景
     const arScene = document.getElementById('ar-scene');
-    if (arScene) {
-        arScene.classList.add('active');
-    }
+    arScene.classList.add('active');
     
     // 显示dock栏
     const dockContainer = document.getElementById('dock-container');
@@ -2062,8 +1736,8 @@ function startAR() {
     applyIOSVideoFix();
     
     console.log('AR体验启动完成，已应用竖屏拉伸修复');
-    console.log('Dock栏应该已显示:', dockContainer ? dockContainer.classList.contains('active') : '找不到dock容器');
 }
+
 
 // iOS视频修复
 function applyIOSVideoFix() {
@@ -2206,50 +1880,10 @@ function backToStart() {
     isARStarted = false;
 }
 
-// =============== 内存管理优化 ===============
-// 在页面隐藏时释放资源
-document.addEventListener('visibilitychange', function() {
-    if (document.hidden) {
-        console.log('🔧 页面隐藏，释放未使用资源');
-        resourceManager.releaseUnusedResources();
-    }
-});
-
-// 在页面卸载时清理所有资源
-window.addEventListener('beforeunload', function() {
-    console.log('🔧 页面卸载，清理所有资源');
-    if (currentAudioManager && currentAudioManager.audio) {
-        currentAudioManager.audio.pause();
-        currentAudioManager.audio.src = '';
-    }
-});
-
-// 定期检查内存使用
-setInterval(() => {
-    resourceManager.checkMemoryUsage();
-}, 30000); // 每30秒检查一次
-
 // 页面加载完成后显示启动覆盖层
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('页面加载完成，启用流式加载系统');
-    
-    // 重置AR状态
-    isARStarted = false;
-    
-    // 确保启动页面正确显示
+    console.log('页面加载完成，准备AR竖屏拉伸修复');
     createStartOverlay();
-    
-    // 确保AR场景初始是隐藏的
-    const arScene = document.getElementById('ar-scene');
-    if (arScene) {
-        arScene.classList.remove('active');
-    }
-    
-    // 确保dock按钮初始是隐藏的
-    const dockContainer = document.getElementById('dock-container');
-    if (dockContainer) {
-        dockContainer.classList.remove('active');
-    }
     
     // 监听权限被拒绝错误
     window.addEventListener('unhandledrejection', function(event) {
@@ -2264,8 +1898,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log(`设备信息: 屏幕尺寸 ${window.innerWidth}x${window.innerHeight}`);
     console.log(`设备方向: ${window.innerHeight > window.innerWidth ? '竖屏' : '横屏'}`);
-    console.log('启动页面状态:', document.getElementById('start-overlay') ? '已创建' : '未创建');
-    console.log('Dock栏状态:', document.getElementById('dock-container') ? '已存在' : '未存在');
 });
 
   </script>
@@ -2298,23 +1930,6 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
   </div>
   
-  <!-- 可选：添加预加载提示 -->
-  <div id="preload-hint" style="
-    position: fixed;
-    bottom: 140px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 10px 20px;
-    border-radius: 20px;
-    font-size: 14px;
-    z-index: 50;
-    display: none;
-  ">
-    💡 首次使用需要加载资源，请耐心等待
-  </div>
-  
   <!-- AR场景：初始隐藏，用户点击启动后才显示 -->
   <a-scene 
     id="ar-scene" 
@@ -2322,13 +1937,12 @@ document.addEventListener('DOMContentLoaded', function() {
     embedded="" 
     vr-mode-ui="enabled: false">
 
-   <!-- 修改：移除gltf-model属性，改为动态加载 -->
    <a-marker id="marker1" preset="custom" s19="" url="assets/patterns/pattern-pipa.patt">
-    <a-entity id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
+    <a-entity gltf-model="url(assets/models/pipa.gltf)" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-marker id="marker2" preset="custom" s19="" url="assets/patterns/pattern-hulusi.patt">
-    <a-entity id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.010 0.010 0.010" touch-handler visible="false">
+    <a-entity gltf-model="url(assets/models/hulusi.gltf)" id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.010 0.010 0.010" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-marker id="marker3" preset="custom" s19="" url="assets/patterns/pattern-dongbei_dagu.patt">
@@ -2407,9 +2021,8 @@ document.addEventListener('DOMContentLoaded', function() {
     <a-entity gltf-model="url(assets/models/zhuban.gltf)" id="model21" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
-    <!-- 修改：移除gltf-model属性，改为动态加载 -->
     <a-marker id="marker22" preset="custom" s19="" url="assets/patterns/pattern-huagudatong.patt">
-    <a-entity id="model22" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
+    <a-entity gltf-model="url(assets/models/huagudatong.gltf)" id="model22" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-entity camera="">
@@ -2419,21 +2032,6 @@ document.addEventListener('DOMContentLoaded', function() {
   <script>
    // 页面增强功能
    document.addEventListener('DOMContentLoaded', function () {
-        console.log('页面DOM加载完成');
-        
-        // 显示预加载提示（延迟显示，让启动页面先显示）
-        setTimeout(() => {
-            const hint = document.getElementById('preload-hint');
-            if (hint && !isARStarted) {
-                hint.style.display = 'block';
-                
-                // 5秒后自动隐藏
-                setTimeout(() => {
-                    hint.style.display = 'none';
-                }, 5000);
-            }
-        }, 1000);
-        
         var audioElements = document.querySelectorAll('audio');
         var playbackRate = 1.0;
 

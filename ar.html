@@ -1,30 +1,1635 @@
 <!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>AR.js 自定义图案测试</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="en">
+ <head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"/>
+  <title>
+   岭南乐器AR (最终重构完整版)
+  </title>
+  
+  <!-- 使用已被证明可靠的公共CDN库 -->
+  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  
+  <!-- 使用CDN加载marked.js以确保可用性 -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  
+  <style>
+        /* =============== 您的所有原始CSS样式都已完整保留 =============== */
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        /* 启动覆盖层 - iOS/HyperOS风格高斯模糊 */
+        .start-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(25px) saturate(1.8);
+            -webkit-backdrop-filter: blur(25px) saturate(1.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        .start-overlay::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(102, 126, 234, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(118, 75, 162, 0.3) 0%, transparent 50%);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            z-index: -1;
+        }
+        
+        .start-button {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1.5px solid rgba(255, 255, 255, 0.25);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 20px;
+            backdrop-filter: blur(20px) saturate(1.8);
+            -webkit-backdrop-filter: blur(20px) saturate(1.8);
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .start-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .start-button:hover {
+            background: rgba(255, 255, 255, 0.18);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 
+                0 12px 40px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+        
+        .start-button:hover::before {
+            left: 100%;
+        }
+        
+        .start-title {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+            font-weight: 700;
+        }
+        
+        .start-subtitle {
+            font-size: 1.2em;
+            opacity: 0.85;
+            margin-bottom: 30px;
+            text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .permission-guide {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 20px;
+            margin: 20px 0;
+            backdrop-filter: blur(20px) saturate(1.5);
+            -webkit-backdrop-filter: blur(20px) saturate(1.5);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            max-width: 95%;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        .guide-title {
+            font-size: 1em;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #FFE082;
+        }
+        
+        .guide-text {
+            font-size: 0.85em;
+            margin-bottom: 12px;
+            opacity: 0.9;
+        }
+        
+        .permission-step {
+            margin: 10px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+        }
+        
+        .step-title {
+            font-size: 0.8em;
+            font-weight: bold;
+            color: #81C784;
+            margin-bottom: 8px;
+        }
+        
+        .mock-permission-dialog {
+            position: relative;
+            margin: 10px auto;
+            width: 240px;
+        }
+        
+        .mock-dialog-content {
+            border-radius: 16px;
+            padding: 15px;
+            color: #333;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+            text-align: center;
+        }
+        
+        .camera-permission {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(30px) saturate(1.8);
+            -webkit-backdrop-filter: blur(30px) saturate(1.8);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+        
+        .sensor-permission {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .mock-dialog-text {
+            font-size: 12px;
+            line-height: 1.4;
+            margin-bottom: 15px;
+            color: #333;
+            font-weight: 400;
+        }
+        
+        .mock-dialog-buttons {
+            display: flex;
+            margin: 10px -15px -15px -15px;
+        }
+        
+        .camera-permission .mock-dialog-buttons {
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .camera-permission .mock-deny-btn,
+        .camera-permission .mock-allow-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 0;
+            font-size: 14px;
+            font-weight: 400;
+            cursor: default;
+            background: transparent;
+            color: #007AFF;
+            transition: background-color 0.2s;
+        }
+        
+        .camera-permission .mock-deny-btn {
+            border-right: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .camera-permission .mock-allow-btn {
+            font-weight: 600;
+        }
+        
+        .sensor-permission .mock-dialog-buttons {
+            gap: 10px;
+            margin: 15px 0 0 0;
+        }
+        
+        .sensor-permission .mock-deny-btn,
+        .sensor-permission .mock-allow-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: default;
+        }
+        
+        .sensor-permission .mock-deny-btn {
+            background: #FF3B30;
+            color: white;
+        }
+        
+        .sensor-permission .mock-allow-btn {
+            background: #007AFF;
+            color: white;
+        }
+        
+        .camera-allow {
+            animation: cameraButtonGlow 2s infinite;
+        }
+        
+        .sensor-allow {
+            animation: sensorButtonGlow 2s infinite 1s;
+        }
+        
+        @keyframes cameraButtonGlow {
+            0%, 100% { 
+                background-color: rgba(0, 122, 255, 0.1);
+            }
+            50% { 
+                background-color: rgba(0, 122, 255, 0.2);
+            }
+        }
+        
+        @keyframes sensorButtonGlow {
+            0%, 100% { 
+                box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.7);
+            }
+            50% { 
+                box-shadow: 0 0 0 8px rgba(0, 122, 255, 0);
+            }
+        }
+        
+        .permission-arrow {
+            position: absolute;
+            right: -30px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .arrow-line {
+            width: 20px;
+            height: 2px;
+            background: #FFE082;
+            position: relative;
+        }
+        
+        .arrow-head {
+            position: absolute;
+            right: -1px;
+            top: -2px;
+            width: 0;
+            height: 0;
+            border-left: 6px solid #FFE082;
+            border-top: 3px solid transparent;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .permission-hint {
+            position: absolute;
+            right: -35px;
+            top: 100%;
+            margin-top: 3px;
+            font-size: 10px;
+            color: #FFE082;
+            font-weight: bold;
+            white-space: nowrap;
+            animation: hintBlink 1.5s infinite;
+        }
+        
+        @keyframes hintBlink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.7; }
+        }
+        
+        #ar-scene {
+            display: none;
+        }
+        
+        #ar-scene.active {
+            display: block;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .permission-denied-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(25px) saturate(1.8);
+            -webkit-backdrop-filter: blur(25px) saturate(1.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+            color: white;
+            text-align: center;
+        }
+        
+        .permission-denied-overlay::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 30% 20%, rgba(244, 67, 54, 0.2) 0%, transparent 50%),
+                radial-gradient(circle at 70% 80%, rgba(156, 39, 176, 0.2) 0%, transparent 50%);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            z-index: -1;
+        }
+        
+        .reauth-steps {
+            margin: 15px 0;
+        }
+        
+        .reauth-step {
+            display: flex;
+            align-items: flex-start;
+            margin: 12px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 15px;
+            border-left: 3px solid #FFE082;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            box-shadow: 
+                0 4px 20px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        .step-number {
+            min-width: 24px;
+            height: 24px;
+            background: #FFE082;
+            color: #333;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        
+        .step-content {
+            flex: 1;
+        }
+        
+        .step-text {
+            font-weight: bold;
+            font-size: 0.9em;
+            margin-bottom: 3px;
+            color: white;
+        }
+        
+        .step-desc {
+            font-size: 0.8em;
+            opacity: 0.8;
+            color: #E0E0E0;
+        }
+        
+        .simple-steps {
+            margin: 10px 0;
+        }
+        
+        .simple-steps div {
+            padding: 6px 0;
+            font-size: 0.85em;
+            opacity: 0.9;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .simple-steps div:last-child {
+            border-bottom: none;
+        }
+        
+        .denied-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 25px;
+        }
+        
+        .retry-btn {
+            background: rgba(76, 175, 80, 0.15);
+            border: 1.5px solid rgba(76, 175, 80, 0.4);
+            backdrop-filter: blur(20px) saturate(1.5);
+            -webkit-backdrop-filter: blur(20px) saturate(1.5);
+            box-shadow: 
+                0 4px 20px rgba(76, 175, 80, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        .retry-btn:hover {
+            background: rgba(76, 175, 80, 0.25);
+            border-color: rgba(76, 175, 80, 0.6);
+            transform: translateY(-2px);
+        }
+        
+        .refresh-btn {
+            background: rgba(33, 150, 243, 0.15);
+            border: 1.5px solid rgba(33, 150, 243, 0.4);
+            backdrop-filter: blur(20px) saturate(1.5);
+            -webkit-backdrop-filter: blur(20px) saturate(1.5);
+            box-shadow: 
+                0 4px 20px rgba(33, 150, 243, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        .refresh-btn:hover {
+            background: rgba(33, 150, 243, 0.25);
+            border-color: rgba(33, 150, 243, 0.6);
+            transform: translateY(-2px);
+        }
+        
+        .back-btn {
+            background: rgba(255, 152, 0, 0.15);
+            border: 1.5px solid rgba(255, 152, 0, 0.4);
+            backdrop-filter: blur(20px) saturate(1.5);
+            -webkit-backdrop-filter: blur(20px) saturate(1.5);
+            box-shadow: 
+                0 4px 20px rgba(255, 152, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        .back-btn:hover {
+            background: rgba(255, 152, 0, 0.25);
+            border-color: rgba(255, 152, 0, 0.6);
+            transform: translateY(-2px);
+        }
+        
+        .dock-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        
+        .dock-container.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .dock-bar {
+            background: 
+                linear-gradient(135deg, 
+                    rgba(255, 255, 255, 0.3) 0%, 
+                    rgba(255, 255, 255, 0.18) 25%,
+                    rgba(255, 255, 255, 0.28) 50%,
+                    rgba(255, 255, 255, 0.15) 75%,
+                    rgba(255, 255, 255, 0.35) 100%),
+                linear-gradient(45deg, 
+                    rgba(255, 255, 255, 0.2),
+                    rgba(255, 255, 255, 0.15)),
+                rgba(255, 255, 255, 0.2);
+            border-radius: 56px;
+            padding: 18px 32px;
+            box-shadow: 
+                0 8px 40px rgba(0, 0, 0, 0.25),
+                0 2px 16px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.45),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.2);
+            border: 1.5px solid rgba(255, 255, 255, 0.35);
+            display: flex;
+            gap: 22px;
+            align-items: center;
+            transform: translateZ(0);
+            will-change: transform;
+        }
+        
+        .dock-button {
+            border: none;
+            border-radius: 50%;
+            width: 68px;
+            height: 68px;
+            color: white;
+            font-size: 24px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.3) 0%, 
+                rgba(255, 255, 255, 0.18) 50%, 
+                rgba(255, 255, 255, 0.35) 100%);
+            box-shadow: 
+                0 4px 20px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.6),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.2);
+            border: 1.5px solid rgba(255, 255, 255, 0.4);
+            transform: translateZ(0);
+            will-change: transform;
+        }
+        
+        .dock-button:hover {
+            transform: translateY(-4px) scale(1.05) translateZ(0);
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.4) 0%, 
+                rgba(255, 255, 255, 0.25) 50%, 
+                rgba(255, 255, 255, 0.45) 100%);
+            box-shadow: 
+                0 10px 35px rgba(0, 0, 0, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.7),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .dock-button:active {
+            transform: translateY(-2px) scale(1.02);
+        }
+        
+        #play-btn {
+            background: linear-gradient(135deg, 
+                rgba(255, 193, 7, 0.9) 0%,
+                rgba(255, 193, 7, 0.7) 50%,
+                rgba(255, 193, 7, 0.95) 100%),
+                linear-gradient(45deg, 
+                rgba(255, 255, 255, 0.2),
+                rgba(255, 255, 255, 0.12));
+        }
+        
+        #play-btn:hover {
+            background: linear-gradient(135deg, 
+                rgba(255, 193, 7, 0.98) 0%,
+                rgba(255, 193, 7, 0.85) 50%,
+                rgba(255, 193, 7, 1.0) 100%),
+                linear-gradient(45deg, 
+                rgba(255, 255, 255, 0.3),
+                rgba(255, 255, 255, 0.2));
+            box-shadow: 
+                0 10px 35px rgba(255, 193, 7, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.7),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.3);
+        }
+        
+        #play-btn.playing {
+            background: linear-gradient(135deg, 
+                rgba(255, 152, 0, 0.95) 0%,
+                rgba(255, 152, 0, 0.75) 50%,
+                rgba(255, 152, 0, 1.0) 100%),
+                linear-gradient(45deg, 
+                rgba(255, 255, 255, 0.2),
+                rgba(255, 255, 255, 0.12));
+        }
+        
+        #play-btn.playing:hover {
+            background: linear-gradient(135deg, 
+                rgba(255, 152, 0, 1.0) 0%,
+                rgba(255, 152, 0, 0.9) 50%,
+                rgba(255, 152, 0, 1.0) 100%),
+                linear-gradient(45deg, 
+                rgba(255, 255, 255, 0.3),
+                rgba(255, 255, 255, 0.2));
+            box-shadow: 
+                0 10px 35px rgba(255, 152, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.7),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.3);
+        }
+        
+        #info-btn {
+            background: linear-gradient(135deg, 
+                rgba(3, 169, 244, 0.9) 0%,
+                rgba(3, 169, 244, 0.7) 50%,
+                rgba(3, 169, 244, 0.95) 100%),
+                linear-gradient(45deg, 
+                rgba(255, 255, 255, 0.2),
+                rgba(255, 255, 255, 0.12));
+        }
+        
+        #info-btn:hover {
+            background: linear-gradient(135deg, 
+                rgba(3, 169, 244, 0.98) 0%,
+                rgba(3, 169, 244, 0.85) 50%,
+                rgba(3, 169, 244, 1.0) 100%),
+                linear-gradient(45deg, 
+                rgba(255, 255, 255, 0.3),
+                rgba(255, 255, 255, 0.2));
+            box-shadow: 
+                0 10px 35px rgba(3, 169, 244, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.7),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.3);
+        }
+        
+        #reset-btn {
+            background: linear-gradient(135deg, 
+                rgba(255, 111, 97, 0.9) 0%,
+                rgba(255, 111, 97, 0.7) 50%,
+                rgba(255, 111, 97, 0.95) 100%),
+                linear-gradient(45deg, 
+                rgba(255, 255, 255, 0.2),
+                rgba(255, 255, 255, 0.12));
+        }
+        
+        #reset-btn:hover {
+            background: linear-gradient(135deg, 
+                rgba(255, 111, 97, 0.98) 0%,
+                rgba(255, 111, 97, 0.85) 50%,
+                rgba(255, 111, 97, 1.0) 100%),
+                linear-gradient(45deg, 
+                rgba(255, 255, 255, 0.3),
+                rgba(255, 255, 255, 0.2));
+            box-shadow: 
+                0 10px 35px rgba(255, 111, 97, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.7),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.3);
+        }
+        
+        .dock-button.disabled {
+            background: linear-gradient(135deg, 
+                rgba(158, 158, 158, 0.8) 0%,
+                rgba(158, 158, 158, 0.6) 50%,
+                rgba(158, 158, 158, 0.85) 100%),
+                linear-gradient(45deg, 
+                rgba(255, 255, 255, 0.15),
+                rgba(255, 255, 255, 0.08));
+            cursor: not-allowed;
+            box-shadow: 
+                0 4px 15px rgba(158, 158, 158, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.2);
+        }
+        
+        .dock-button.disabled:hover {
+            background: linear-gradient(135deg, 
+                rgba(158, 158, 158, 0.8) 0%,
+                rgba(158, 158, 158, 0.6) 50%,
+                rgba(158, 158, 158, 0.85) 100%),
+                linear-gradient(45deg, 
+                rgba(255, 255, 255, 0.15),
+                rgba(255, 255, 255, 0.08));
+            transform: translateZ(0);
+            box-shadow: 
+                0 4px 15px rgba(158, 158, 158, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.2);
+        }
+        
+        .emoji {
+            font-size: 34px;
+        }
+        
+        .info-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 80vh;
+            background: rgba(255, 255, 255, 0.95);
+            border-top-left-radius: 25px;
+            border-top-right-radius: 25px;
+            box-shadow: 
+                0 -8px 40px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+            z-index: 200;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .info-panel.active {
+            transform: translateY(0);
+        }
+        
+        .info-panel-header {
+            background: rgba(102, 126, 234, 0.9);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .info-panel-header::before {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 2px;
+        }
+        
+        .info-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .close-btn {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            width: 36px;
+            height: 36px;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: scale(1.1);
+        }
+        
+        .info-content {
+            padding: 20px;
+            height: calc(100% - 70px);
+            overflow-y: auto;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            -webkit-overflow-scrolling: touch;
+            transform: translateZ(0);
+            will-change: scroll-position;
+            scroll-behavior: smooth;
+        }
+        
+        .markdown-content h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 16px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 8px;
+        }
+        
+        .markdown-content h2 {
+            color: #444;
+            font-size: 18px;
+            margin: 20px 0 12px 0;
+        }
+        
+        .markdown-content h3 {
+            color: #555;
+            font-size: 16px;
+            margin: 16px 0 8px 0;
+        }
+        
+        .markdown-content p {
+            line-height: 1.6;
+            margin-bottom: 12px;
+            color: #333;
+        }
+        
+        .markdown-content ul, .markdown-content ol {
+            margin: 12px 0;
+            padding-left: 20px;
+        }
+        
+        .markdown-content li {
+            margin: 6px 0;
+            line-height: 1.5;
+        }
+        
+        .markdown-content strong {
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        .markdown-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 12px 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .markdown-content hr {
+            border: none;
+            border-top: 1px solid #eee;
+            margin: 20px 0;
+        }
+        
+        .markdown-content blockquote {
+            border-left: 4px solid #667eea;
+            margin: 16px 0;
+            padding: 8px 16px;
+            background: #f8f9fa;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .info-display {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: calc(100% - 40px);
+            min-width: 280px;
+            background: 
+                linear-gradient(135deg, 
+                    rgba(0, 0, 0, 0.7) 0%, 
+                    rgba(0, 0, 0, 0.5) 25%,
+                    rgba(0, 0, 0, 0.65) 50%,
+                    rgba(0, 0, 0, 0.45) 75%,
+                    rgba(0, 0, 0, 0.75) 100%),
+                linear-gradient(45deg, 
+                    rgba(255, 255, 255, 0.12),
+                    rgba(255, 255, 255, 0.06)),
+                rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+            z-index: 150;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            line-height: 1.4;
+            transform: translateX(-50%) translateZ(0);
+            will-change: transform, opacity;
+        }
+        
+        .info-display.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .info-display .instrument-name {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 4px;
+            color: #FFE082;
+        }
+        
+        .info-display .instrument-desc {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        @media (max-width: 480px) {
+            .start-title { font-size: 2em; }
+            .start-subtitle { font-size: 1em; }
+            .permission-guide { padding: 15px; margin: 15px 0; max-width: 98%; }
+            .info-display { top: 15px; max-width: calc(100% - 30px); min-width: 250px; padding: 10px 16px; font-size: 13px; }
+            .info-display .instrument-name { font-size: 15px; }
+            .info-display .instrument-desc { font-size: 13px; }
+            .dock-bar { padding: 16px 26px; gap: 18px; border-radius: 48px; }
+            .dock-button { width: 60px; height: 60px; }
+            .emoji { font-size: 30px; }
+            .info-content { padding: 15px; }
+            .markdown-content h1 { font-size: 20px; }
+            .markdown-content h2 { font-size: 16px; }
+        }
+  </style>
+  <script>
+
+// =============== 全局变量和状态管理 ===============
+let isARStarted = false;
+let startOverlay;
+let currentAudioManager = null;
+const audioCache = {};
+const infoCache = {};
+const markdownCache = {};
+
+// ====================================================================
+// 乐器配置中心 (全局)
+// ====================================================================
+const instrumentConfig = {
+    'marker1':  { name: '琵琶',       model: 'assets/models/pipa.gltf',             audio: 'assets/audio/audio-pipa.mp3',             markdown: 'assets/markdown/pipa.md',             info: 'assets/info/pipa.txt',             isLoaded: false },
+    'marker2':  { name: '葫芦丝',     model: 'assets/models/hulusi.gltf',           audio: 'assets/audio/audio-hulusi.mp3',           markdown: 'assets/markdown/hulusi.md',           info: 'assets/info/hulusi.txt',           isLoaded: false },
+    'marker3':  { name: '东北大鼓',   model: 'assets/models/dongbei_dagu.gltf',     audio: 'assets/audio/audio-dongbei_dagu.mp3',     markdown: 'assets/markdown/dongbei_dagu.md',     info: 'assets/info/dongbei_dagu.txt',     isLoaded: false },
+    'marker4':  { name: '冬不拉',     model: 'assets/models/dongbula.gltf',         audio: 'assets/audio/audio-dongbula.mp3',         markdown: 'assets/markdown/dongbula.md',         info: 'assets/info/dongbula.txt',         isLoaded: false },
+    'marker5':  { name: '高胡',       model: 'assets/models/gaohu.gltf',            audio: 'assets/audio/audio-gaohu.mp3',            markdown: 'assets/markdown/gaohu.md',            info: 'assets/info/gaohu.txt',            isLoaded: false },
+    'marker6':  { name: '花鼓',       model: 'assets/models/huagu.gltf',            audio: 'assets/audio/audio-huagu.mp3',            markdown: 'assets/markdown/huagu.md',            info: 'assets/info/huagu.txt',            isLoaded: false },
+    'marker7':  { name: '火不思',     model: 'assets/models/huobusi.gltf',          audio: 'assets/audio/audio-huobusi.mp3',          markdown: 'assets/markdown/huobusi.md',          info: 'assets/info/huobusi.txt',          isLoaded: false },
+    'marker8':  { name: '马头琴',     model: 'assets/models/matouqin.gltf',         audio: 'assets/audio/audio-matouqin.mp3',         markdown: 'assets/markdown/matouqin.md',         info: 'assets/info/matouqin.txt',         isLoaded: false },
+    'marker9':  { name: '牛角琴',     model: 'assets/models/niujiaoqin.gltf',       audio: 'assets/audio/audio-niujiaoqin.mp3',       markdown: 'assets/markdown/niujiaoqin.md',       info: 'assets/info/niujiaoqin.txt',       isLoaded: false },
+    'marker10': { name: '唢呐',       model: 'assets/models/suona.gltf',            audio: 'assets/audio/audio-suona.mp3',            markdown: 'assets/markdown/suona.md',            info: 'assets/info/suona.txt',            isLoaded: false },
+    'marker11': { name: '月琴',       model: 'assets/models/yueqin.gltf',           audio: 'assets/audio/audio-yueqin.mp3',           markdown: 'assets/markdown/yueqin.md',           info: 'assets/info/yueqin.txt',           isLoaded: false },
+    'marker12': { name: '潮州唢呐',   model: 'assets/models/chaozhou_suona.gltf',   audio: 'assets/audio/audio-chaozhou_suona.mp3',   markdown: 'assets/markdown/chaozhou_suona.md',   info: 'assets/info/chaozhou_suona.txt',   isLoaded: false },
+    'marker13': { name: '潮州筝',     model: 'assets/models/chaozhou_zheng.gltf',   audio: 'assets/audio/audio-chaozhou_zheng.mp3',   markdown: 'assets/markdown/chaozhou_zheng.md',   info: 'assets/info/chaozhou_zheng.txt',   isLoaded: false },
+    'marker14': { name: '洞箫',       model: 'assets/models/dongxiao.gltf',         audio: 'assets/audio/audio-dongxiao.mp3',         markdown: 'assets/markdown/dongxiao.md',         info: 'assets/info/dongxiao.txt',         isLoaded: false },
+    'marker15': { name: '喉管',       model: 'assets/models/houguan.gltf',          audio: 'assets/audio/audio-houguan.mp3',          markdown: 'assets/markdown/houguan.md',          info: 'assets/info/houguan.txt',          isLoaded: false },
+    'marker16': { name: '木鱼',       model: 'assets/models/muyu.gltf',             audio: 'assets/audio/audio-muyu.mp3',             markdown: 'assets/markdown/muyu.md',             info: 'assets/info/muyu.txt',             isLoaded: false },
+    'marker17': { name: '牛角号',     model: 'assets/models/niujiaohao.gltf',       audio: 'assets/audio/audio-niujiaohao.mp3',       markdown: 'assets/markdown/niujiaohao.md',       info: 'assets/info/niujiaohao.txt',       isLoaded: false },
+    'marker18': { name: '秦琴',       model: 'assets/models/qinqin.gltf',           audio: 'assets/audio/audio-qinqin.mp3',           markdown: 'assets/markdown/qinqin.md',           info: 'assets/info/qinqin.txt',           isLoaded: false },
+    'marker19': { name: '椰胡',       model: 'assets/models/yehu.gltf',             audio: 'assets/audio/audio-yehu.mp3',             markdown: 'assets/markdown/yehu.md',             info: 'assets/info/yehu.txt',             isLoaded: false },
+    'marker20': { name: '渔鼓',       model: 'assets/models/yugu.gltf',             audio: 'assets/audio/audio-yugu.mp3',             markdown: 'assets/markdown/yugu.md',             info: 'assets/info/yugu.txt',             isLoaded: false },
+    'marker21': { name: '竹板',       model: 'assets/models/zhuban.gltf',           audio: 'assets/audio/audio-zhuban.mp3',           markdown: 'assets/markdown/zhuban.md',           info: 'assets/info/zhuban.txt',           isLoaded: false },
+    'marker22': { name: '花鼓大筒',   model: 'assets/models/huagudatong.gltf',      audio: 'assets/audio/audio-huagudatong.mp3',      markdown: 'assets/markdown/huagudatong.md',      info: 'assets/info/huagudatong.txt',      isLoaded: false }
+};
+
+// 工具函数
+function getDeviceInfo() {
+    const ua = navigator.userAgent;
+    return {
+        isIOS: /iPhone|iPad|iPod/i.test(ua),
+        isWeChat: /MicroMessenger/i.test(ua),
+        isAndroid: /Android/i.test(ua),
+        isDesktop: !/iPhone|iPad|iPod|Android/i.test(ua)
+    };
+}
+
+// =============== A-Frame 组件注册 ===============
+
+// 旋转组件 (o15)
+AFRAME.registerComponent('o15', {
+    schema: {
+        x: { type: 'number', default: 0 },
+        y: { type: 'number', default: 0 },
+        z: { type: 'number', default: 0 }
+    },
+    init: function () {
+        this.el.addEventListener('model-loaded', () => {
+            const mesh = this.el.getObject3D('mesh');
+            if (!mesh) return;
+            mesh.rotation.set(
+                THREE.Math.degToRad(this.data.x),
+                THREE.Math.degToRad(this.data.y),
+                THREE.Math.degToRad(this.data.z)
+            );
+        });
+    }
+});
+
+// 按需加载与事件处理组件 (instrument-handler)
+AFRAME.registerComponent('instrument-handler', {
+    init: function () {
+        this.marker = this.el;
+        this.markerId = this.marker.id;
+        this.config = instrumentConfig[this.markerId];
+        
+        if (!this.config) {
+            console.warn(`No config found for ${this.markerId}, skipping initialization.`);
+            return;
+        }
+
+        this.modelEntity = this.marker.querySelector('[touch-handler]');
+        this.loaderEntity = this.marker.querySelector('.loader');
+
+        this.modelEntity.setAttribute('visible', false);
+        this.loaderEntity.setAttribute('visible', false);
+
+        this.marker.addEventListener('markerFound', this.onMarkerFound.bind(this));
+        this.marker.addEventListener('markerLost', this.onMarkerLost.bind(this));
+    },
+
+    onMarkerFound: function () {
+        console.log(`Marker found: ${this.markerId} (${this.config.name})`);
+        this.setActiveInstrument();
+        if (this.config.isLoaded) {
+            this.modelEntity.setAttribute('visible', true);
+        } else {
+            this.loaderEntity.setAttribute('visible', true);
+            this.loadResources();
+        }
+    },
+
+    onMarkerLost: function () {
+        console.log(`Marker lost: ${this.markerId}`);
+        this.modelEntity.setAttribute('visible', false);
+        this.loaderEntity.setAttribute('visible', false);
+        
+        if (currentAudioManager && currentAudioManager.markerId === this.markerId) {
+            if (currentAudioManager.audio && !currentAudioManager.audio.paused) {
+                 currentAudioManager.audio.pause();
+                 currentAudioManager.isPlaying = false;
+            }
+            currentAudioManager = null;
+            updateInfoDisplay();
+            updateDockButtons();
+        }
+    },
     
-    <!-- 我们继续使用已被证明可靠的公共CDN库 -->
-    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-</head>
+    loadResources: function() {
+        showNotification(`正在加载 ${this.config.name}...`);
+        this.modelEntity.setAttribute('gltf-model', `url(${this.config.model})`);
+        
+        this.modelEntity.addEventListener('model-loaded', () => {
+            console.log(`${this.config.name} model loaded.`);
+            this.config.isLoaded = true;
+            this.loaderEntity.setAttribute('visible', false);
+            if (this.marker.object3D.visible) {
+                 this.modelEntity.setAttribute('visible', true);
+            }
+            showNotification(`${this.config.name} 加载完成!`);
+        }, { once: true });
 
-<body style="margin : 0px; overflow: hidden;">
+        this.modelEntity.addEventListener('model-error', (e) => {
+            console.error(`Error loading model for ${this.markerId}:`, e.detail);
+            this.loaderEntity.setAttribute('visible', false);
+            showNotification(`${this.config.name} 模型加载失败`, true);
+        }, { once: true });
 
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: true; detectionMode: mono_and_matrix; matrixCodeType: 3x3;">
+        if (!audioCache[this.markerId]) {
+            const audio = new Audio(this.config.audio);
+            audio.preload = 'auto';
+            audio.load();
+            audioCache[this.markerId] = audio;
+        }
 
-        <!-- 
-          诊断修改:
-          - 从 preset="hiro" 改为 type="pattern"
-          - 添加 url 属性，指向您的琵琶图案 .patt 文件
-          - 请确保这个路径是正确的！
-        -->
-        <a-marker type="pattern" url="assets/patterns/pattern-pipa.patt">
-            <a-box position="0 0.5 0" material="color: green;"></a-box>
-        </a-marker>
+        if (!infoCache[this.markerId]) {
+            fetch(this.config.info)
+                .then(response => response.ok ? response.text() : '')
+                .then(text => {
+                    infoCache[this.markerId] = text;
+                    if (currentAudioManager && currentAudioManager.markerId === this.markerId) {
+                        updateInfoDisplay();
+                    }
+                })
+                .catch(err => console.error(`Failed to load info for ${this.markerId}:`, err));
+        }
+        if (!markdownCache[this.markerId]) {
+             fetch(this.config.markdown)
+                .then(response => response.ok ? response.text() : `## 无法加载内容\n\n无法找到 ${this.config.name} 的介绍文件。`)
+                .then(text => markdownCache[this.markerId] = text)
+                .catch(err => {
+                    console.error(`Failed to load markdown for ${this.markerId}:`, err);
+                    markdownCache[this.markerId] = `## 加载错误\n\n加载介绍内容时发生网络错误。`;
+                });
+        }
+    },
 
-        <a-entity camera></a-entity>
-    </a-scene>
-</body>
+    setActiveInstrument: function() {
+        if (currentAudioManager && currentAudioManager.markerId !== this.markerId && currentAudioManager.audio && !currentAudioManager.audio.paused) {
+            currentAudioManager.audio.pause();
+            currentAudioManager.isPlaying = false;
+        }
+        
+        currentAudioManager = {
+            markerId: this.markerId,
+            config: this.config,
+            get audio() { return audioCache[this.markerId]; },
+            isPlaying: (currentAudioManager && currentAudioManager.markerId === this.markerId) ? currentAudioManager.isPlaying : false
+        };
+        
+        updateInfoDisplay();
+        updateDockButtons();
+    }
+});
+
+// 模型触摸交互组件 (touch-handler)
+AFRAME.registerComponent('touch-handler', {
+    schema: {
+        rotateSensitivity: { type: 'number', default: 0.006 },
+        minScale: { type: 'number', default: 0.3 },
+        maxScale: { type: 'number', default: 3.0 }
+    },
+    init: function () {
+        this.onTouchStart = this.onTouchStart.bind(this);
+        this.onTouchMove = this.onTouchMove.bind(this);
+        this.onTouchEnd = this.onTouchEnd.bind(this);
+        this.el.sceneEl.addEventListener('touchstart', this.onTouchStart);
+        this.el.sceneEl.addEventListener('touchmove', this.onTouchMove);
+        this.el.sceneEl.addEventListener('touchend', this.onTouchEnd);
+        this.isDragging = false;
+        this.isPinching = false;
+        this.previousTouchPosition = { x: 0, y: 0 };
+        this.initialPinchDistance = 0;
+        this.model = this.el.object3D;
+        this.markerId = this.el.parentElement.id;
+        this.initialScale = new THREE.Vector3();
+        this.initialRotation = new THREE.Euler();
+        this.el.addEventListener('model-loaded', () => {
+            this.initialScale.copy(this.model.scale);
+            const o15Data = this.el.getAttribute('o15');
+            if (o15Data) {
+                 this.initialRotation.set(
+                    THREE.Math.degToRad(o15Data.x),
+                    THREE.Math.degToRad(o15Data.y),
+                    THREE.Math.degToRad(o15Data.z)
+                );
+            } else {
+                this.initialRotation.copy(this.model.rotation);
+            }
+        });
+    },
+    isThisMarkerActive: function() {
+        return currentAudioManager && currentAudioManager.markerId === this.markerId;
+    },
+    onTouchStart: function (e) {
+        if (!this.isThisMarkerActive() || !this.el.getAttribute('visible')) return;
+        if (e.touches.length === 1) {
+            this.isDragging = true;
+            this.isPinching = false;
+            this.previousTouchPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        } else if (e.touches.length === 2) {
+            this.isDragging = false;
+            this.isPinching = true;
+            this.initialPinchDistance = this.getDistance(e.touches[0], e.touches[1]);
+        }
+    },
+    onTouchMove: function (e) {
+        if (!this.isThisMarkerActive() || !this.el.getAttribute('visible')) return;
+        if (this.isDragging && e.touches.length === 1) {
+            const deltaX = e.touches[0].clientX - this.previousTouchPosition.x;
+            const deltaY = e.touches[0].clientY - this.previousTouchPosition.y;
+            this.model.rotation.y += deltaX * this.data.rotateSensitivity;
+            this.model.rotation.x += deltaY * this.data.rotateSensitivity;
+            this.previousTouchPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+        if (this.isPinching && e.touches.length === 2) {
+            if (this.initialPinchDistance <= 0) return;
+            const currentPinchDistance = this.getDistance(e.touches[0], e.touches[1]);
+            const scaleFactor = currentPinchDistance / this.initialPinchDistance;
+            const newScaleX = this.model.scale.x * scaleFactor;
+            const relativeScale = newScaleX / this.initialScale.x;
+            if (relativeScale >= this.data.minScale && relativeScale <= this.data.maxScale) {
+                 this.model.scale.multiplyScalar(scaleFactor);
+            }
+            this.initialPinchDistance = currentPinchDistance;
+        }
+    },
+    onTouchEnd: function (e) {
+        if (e.touches.length < 2) this.isPinching = false;
+        if (e.touches.length < 1) this.isDragging = false;
+    },
+    getDistance: function (touch1, touch2) {
+        const dx = touch1.clientX - touch2.clientX;
+        const dy = touch1.clientY - touch2.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    },
+    reset: function() {
+        if (this.initialScale && this.initialRotation) {
+            this.model.scale.copy(this.initialScale);
+            this.model.rotation.copy(this.initialRotation);
+        } else {
+            console.warn("Cannot reset model: initial state not saved.");
+        }
+    },
+    remove: function () {
+        this.el.sceneEl.removeEventListener('touchstart', this.onTouchStart);
+        this.el.sceneEl.removeEventListener('touchmove', this.onTouchMove);
+        this.el.sceneEl.removeEventListener('touchend', this.onTouchEnd);
+    }
+});
+
+
+// =============== UI 和交互逻辑 ===============
+
+function toggleAudio() {
+    const playBtn = document.getElementById('play-btn');
+    if (!currentAudioManager || !currentAudioManager.audio) {
+        showNotification('⚠️ 请先对准乐器码');
+        return;
+    }
+    const audio = currentAudioManager.audio;
+    if (audio.readyState < 2) {
+        showNotification('🔄 音频加载中...');
+        return;
+    }
+    if (audio.paused) {
+        audio.play().then(() => {
+            playBtn.innerHTML = '<span class="emoji">⏸️</span>';
+            playBtn.classList.add('playing');
+            currentAudioManager.isPlaying = true;
+        }).catch(error => {
+            console.error('Audio playback failed:', error);
+            showNotification('❌ 播放失败');
+        });
+    } else {
+        audio.pause();
+        playBtn.innerHTML = '<span class="emoji">🎵</span>';
+        playBtn.classList.remove('playing');
+        currentAudioManager.isPlaying = false;
+    }
+}
+
+function showInfo() {
+    if (!currentAudioManager) {
+        showNotification('⚠️ 请先对准乐器码');
+        return;
+    }
+    const markdownText = markdownCache[currentAudioManager.markerId];
+    if (typeof markdownText === 'string') {
+        loadMarkdownContent(currentAudioManager.config.name, markdownText);
+    } else {
+        showNotification('🔄 介绍内容加载中...');
+    }
+}
+
+function resetModel() {
+    if (!currentAudioManager) {
+        showNotification('⚠️ 请先对准一个乐器码');
+        return;
+    }
+    const modelId = `model${currentAudioManager.markerId.replace('marker', '')}`;
+    const modelEl = document.getElementById(modelId);
+    if (modelEl && modelEl.components['touch-handler']) {
+        modelEl.components['touch-handler'].reset();
+        showNotification('🔄 模型已复位');
+    } else {
+        console.error('复位失败：无法找到模型或touch-handler组件', modelId);
+    }
+}
+
+function loadMarkdownContent(title, markdownText) {
+    if (typeof marked === 'undefined') {
+        console.error('marked.js 未加载');
+        showNotification('❌ Markdown渲染器未加载');
+        return;
+    }
+    const htmlContent = marked.parse(markdownText);
+    showInfoPanel(`📖 ${title}`, `<div class="markdown-content">${htmlContent}</div>`);
+}
+
+function showInfoPanel(title, content) {
+    let infoPanel = document.getElementById('info-panel');
+    if (!infoPanel) return;
+    infoPanel.querySelector('.info-title').innerHTML = title;
+    infoPanel.querySelector('.info-content').innerHTML = content;
+    infoPanel.classList.add('active');
+}
+
+function hideInfoPanel() {
+    const infoPanel = document.getElementById('info-panel');
+    if (infoPanel) infoPanel.classList.remove('active');
+}
+
+function showNotification(message, isError = false) {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+        background: ${isError ? 'rgba(211, 47, 47, 0.8)' : 'rgba(0, 0, 0, 0.8)'};
+        color: white; padding: 12px 20px; border-radius: 25px;
+        font-size: 14px; z-index: 10000; pointer-events: none; transition: opacity 0.3s; opacity: 1;`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
+    }, 2500);
+}
+
+function updateInfoDisplay() {
+    const infoDisplay = document.getElementById('info-display');
+    const instrumentNameEl = infoDisplay.querySelector('.instrument-name');
+    const instrumentDescEl = infoDisplay.querySelector('.instrument-desc');
+    
+    if (currentAudioManager) {
+        const infoText = infoCache[currentAudioManager.markerId];
+        if (infoText) {
+            const lines = infoText.split('\n');
+            instrumentNameEl.textContent = lines[0] || currentAudioManager.config.name;
+            instrumentDescEl.textContent = lines[1] || '';
+            infoDisplay.classList.add('active');
+        } else {
+            instrumentNameEl.textContent = currentAudioManager.config.name;
+            instrumentDescEl.textContent = '正在加载描述...';
+            infoDisplay.classList.add('active');
+        }
+    } else {
+        infoDisplay.classList.remove('active');
+    }
+}
+
+function updateDockButtons() {
+    const playBtn = document.getElementById('play-btn');
+    const infoBtn = document.getElementById('info-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    
+    if (!playBtn || !infoBtn || !resetBtn) return;
+    
+    if (currentAudioManager) {
+        playBtn.classList.remove('disabled');
+        infoBtn.classList.remove('disabled');
+        resetBtn.classList.remove('disabled');
+        if (currentAudioManager.isPlaying) {
+            playBtn.innerHTML = '<span class="emoji">⏸️</span>';
+            playBtn.classList.add('playing');
+        } else {
+            playBtn.innerHTML = '<span class="emoji">🎵</span>';
+            playBtn.classList.remove('playing');
+        }
+    } else {
+        playBtn.classList.add('disabled');
+        infoBtn.classList.add('disabled');
+        resetBtn.classList.add('disabled');
+        playBtn.innerHTML = '<span class="emoji">🎵</span>';
+        playBtn.classList.remove('playing');
+    }
+}
+
+// =============== 启动系统 ===============
+function createStartOverlay() {
+    startOverlay = document.getElementById('start-overlay');
+    const device = getDeviceInfo();
+    const permissionGuideHTML = device.isIOS ? `
+        <div class="permission-guide">
+            <div class="guide-title">📱 权限授权指南</div>
+            <div class="guide-text">启动后会弹出两个权限窗口，请都点击"允许/Allow"</div>
+            <div class="permission-steps-compact">
+                <div class="permission-step">
+                    <div class="step-title">第1步：摄像头权限</div>
+                    <div class="mock-permission-dialog">
+                        <div class="mock-dialog-content camera-permission">
+                            <div class="mock-dialog-text">允许"linggan-ua.github.io"<br>使用您的摄像头？</div>
+                            <div class="mock-dialog-buttons">
+                                <button class="mock-deny-btn">不允许</button>
+                                <button class="mock-allow-btn camera-allow">允许</button>
+                            </div>
+                        </div>
+                        <div class="permission-arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+                        <div class="permission-hint">👆允许</div>
+                    </div>
+                </div>
+                <div class="permission-step">
+                    <div class="step-title">第2步：传感器权限</div>
+                    <div class="mock-permission-dialog">
+                        <div class="mock-dialog-content sensor-permission">
+                            <div class="mock-dialog-text">This immersive website requires<br>access to your device motion sensors.</div>
+                            <div class="mock-dialog-buttons">
+                                <button class="mock-deny-btn">Deny</button>
+                                <button class="mock-allow-btn sensor-allow">Allow</button>
+                            </div>
+                        </div>
+                        <div class="permission-arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+                        <div class="permission-hint">👆Allow</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    ` : device.isDesktop ? `
+        <div class="permission-guide">
+            <div class="guide-title">💻 桌面版体验</div>
+            <div class="guide-text">启动后请允许摄像头权限以使用AR功能</div>
+        </div>
+    ` : `
+        <div class="permission-guide">
+            <div class="guide-title">📷 权限提示</div>
+            <div class="guide-text">启动后请允许摄像头权限以使用AR功能</div>
+        </div>
+    `;
+    
+    const guideContainer = document.createElement('div');
+    guideContainer.innerHTML = permissionGuideHTML;
+    startOverlay.insertBefore(guideContainer, startOverlay.querySelector('.start-button'));
+}
+
+function startAR() {
+    if (isARStarted) return;
+    console.log('启动AR体验');
+    isARStarted = true;
+    startOverlay.classList.add('hidden');
+    document.getElementById('ar-scene').classList.add('active');
+    document.getElementById('dock-container').classList.add('active');
+    
+    // 触发摄像头，以便早期权限请求
+    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+        .catch(err => {
+            console.error("摄像头权限请求失败:", err);
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                handlePermissionDenied();
+            }
+        });
+}
+
+function handlePermissionDenied() {
+    console.log('检测到权限被拒绝');
+    const device = getDeviceInfo();
+    const deniedOverlay = document.createElement('div');
+    deniedOverlay.className = 'permission-denied-overlay';
+    deniedOverlay.innerHTML = `
+        <div class="start-title">📷 摄像头权限被拒绝</div>
+        <div class="start-subtitle">需要重新授权才能使用AR功能</div>
+        <div class="permission-guide">
+            <div class="guide-title">🔧 重新授权指南</div>
+            <div class="guide-text">请按照以下步骤重新授权摄像头权限</div>
+            ${device.isIOS ? `
+                <div class="reauth-steps">
+                    <div class="reauth-step"><div class="step-number">1</div><div class="step-content"><div class="step-text">点击地址栏左侧的🔒图标</div><div class="step-desc">或长按地址栏查看网站信息</div></div></div>
+                    <div class="reauth-step"><div class="step-number">2</div><div class="step-content"><div class="step-text">找到"摄像头"选项</div><div class="step-desc">将其设置为"允许"</div></div></div>
+                    <div class="reauth-step"><div class="step-number">3</div><div class="step-content"><div class="step-text">刷新页面重新开始</div><div class="step-desc">或点击下方"重新尝试"按钮</div></div></div>
+                </div>
+            ` : `
+                <div class="simple-steps">
+                    <div>• 点击地址栏左侧的摄像头图标</div>
+                    <div>• 选择"始终允许"或"允许"</div>
+                    <div>• 刷新页面重新开始</div>
+                </div>
+            `}
+        </div>
+        <div class="denied-buttons">
+            <button class="start-button retry-btn" onclick="retryPermission()">🔄 重新尝试</button>
+            <button class="start-button refresh-btn" onclick="refreshPage()">🔃 刷新页面</button>
+            <button class="start-button back-btn" onclick="backToStart()">⬅️ 返回开始</button>
+        </div>
+        <div style="font-size: 0.9em; opacity: 0.8; margin-top: 15px;">💡 如果问题持续存在，建议在Safari中打开</div>
+    `;
+    document.body.appendChild(deniedOverlay);
+}
+
+function retryPermission() {
+    const deniedUI = document.querySelector('.permission-denied-overlay');
+    if (deniedUI) deniedUI.remove();
+    isARStarted = false;
+    startAR();
+}
+
+function refreshPage() { window.location.reload(); }
+
+function backToStart() {
+    const deniedUI = document.querySelector('.permission-denied-overlay');
+    if (deniedUI) deniedUI.remove();
+    document.getElementById('ar-scene').classList.remove('active');
+    const dockContainer = document.getElementById('dock-container');
+    if (dockContainer) dockContainer.classList.remove('active');
+    startOverlay.classList.remove('hidden');
+    isARStarted = false;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('页面加载完成，准备启动AR。');
+    createStartOverlay();
+    window.addEventListener('unhandledrejection', function(event) {
+        if (isARStarted && event.reason && (event.reason.name === 'NotAllowedError' || (event.reason.message && event.reason.message.includes('not allowed')))) {
+            console.log('捕获到权限拒绝错误');
+            event.preventDefault();
+            setTimeout(handlePermissionDenied, 500);
+        }
+    });
+});
+
+  </script>
+ </head>
+ <body style="margin: 0; overflow: hidden;">
+  
+  <!-- UI元素 -->
+  <div id="start-overlay" class="start-overlay">
+    <div class="start-title">🎵 岭南乐器AR</div>
+    <div class="start-subtitle">沉浸式音乐文化体验</div>
+    <button class="start-button" onclick="startAR()">
+        ✨ 启动AR体验
+    </button>
+    <div style="font-size: 0.9em; opacity: 0.8; margin-top: 15px;">
+        💡 为了保护隐私，需要您的授权才能访问相应功能
+    </div>
+  </div>
+
+  <div id="info-display" class="info-display">
+    <div class="instrument-name"></div>
+    <div class="instrument-desc"></div>
+  </div>
+  
+  <div id="dock-container" class="dock-container">
+    <div class="dock-bar">
+      <button id="play-btn" class="dock-button disabled" onclick="toggleAudio()"><span class="emoji">🎵</span></button>
+      <button id="info-btn" class="dock-button disabled" onclick="showInfo()"><span class="emoji">📖</span></button>
+      <button id="reset-btn" class="dock-button disabled" onclick="resetModel()"><span class="emoji">🔄</span></button>
+    </div>
+  </div>
+  
+  <div id="info-panel" class="info-panel">
+      <div class="info-panel-header">
+          <h3 class="info-title"></h3>
+          <button class="close-btn" onclick="hideInfoPanel()">×</button>
+      </div>
+      <div class="info-content"></div>
+  </div>
+
+  <!-- AR场景 -->
+  <a-scene 
+    id="ar-scene" 
+    embedded
+    arjs="sourceType: webcam; detectionMode: mono_and_matrix; matrixCodeType: 3x3; debugUIEnabled: false;">
+
+   <!-- ==================================================================== -->
+   <!-- 所有22个Marker的完整结构 -->
+   <!-- ==================================================================== -->
+   <a-marker id="marker1" type="pattern" url="assets/patterns/pattern-pipa.patt" instrument-handler>
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
+   </a-marker>
+   <a-marker id="marker2" type="pattern" url="assets/patterns/pattern-hulusi.patt" instrument-handler>
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.010 0.010 0.010" touch-handler visible="false"></a-entity>
+   </a-marker>
+   <a-marker id="marker3" type="pattern" url="assets/patterns/pattern-dongbei_dagu.patt" instrument-handler>
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model3" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
+   </a-marker>
+   <a-marker id="marker4" type="pattern" url="assets/patterns/pattern-dongbula.patt" instrument-handler>
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model4" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
+   </a-marker>
+   <a-marker id="marker5" type="pattern" url="assets/patterns/pattern-gaohu.patt" instrument-handler>
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model5" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
+   </a-marker>
+   <a-marker id="marker6" type="pattern" url="assets/patterns/pattern-huagu.patt" instrument-handler>
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model6" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
+   </a-marker>
+   <a-marker id="marker7" type="pattern" url="assets/patterns/pattern-huobusi.patt" instrument-handler>
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model7" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
+   </a-marker>
+   <a-marker id="marker8" type="pattern" url="assets/patterns/pattern-matouqin.patt" instrument-handler>
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model8" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
+   </a-marker>
+   <a-marker id="marker9" type="pattern" url="assets/patterns/pattern-niujiaoqin.patt" instrument-handler>
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model9" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
+   </a-marker>
+   <a-marker id="marker10" type="pattern" url="assets/patterns/pattern-suona.patt" instrument-handler>
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model10" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
+   </a-marker>
+   <a-marker id="marker11" type="pattern" url="assets/patterns/pattern-yueqin.patt" instrument-handler>
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model11" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
+   </a-marker>
+   <a-marker id="marker12" type="pattern" url="assets/patterns/pattern-chaozhou_suona.patt" instrument-handler>
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model12" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
+   </a-marker>
+   <a-marker id="marker13" type="pattern" url="assets/patterns/pattern-chaozhou_zheng.patt" instrument-handler>
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model13" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
+   </a-marker>
+   <a-marker id="marker14" type="pattern" url="assets/patterns/pattern-dongxiao.patt" instrument-handler>
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model14" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
+   </a-marker>
+   <a-marker id="marker15" type="pattern" url="assets/patterns/pattern-houguan.patt" instrument-handler>
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model15" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
+   </a-marker>
+   <a-marker id="marker16" type="pattern" url="assets/patterns/pattern-muyu.patt" instrument-handler>
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model16" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
+   </a-marker>
+   <a-marker id="marker17" type="pattern" url="assets/patterns/pattern-niujiaohao.patt" instrument-handler>
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model17" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
+   </a-marker>
+   <a-marker id="marker18" type="pattern" url="assets/patterns/pattern-qinqin.patt" instrument-handler>
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model18" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
+   </a-marker>
+   <a-marker id="marker19" type="pattern" url="assets/patterns/pattern-yehu.patt" instrument-handler>
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model19" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
+   </a-marker>
+   <a-marker id="marker20" type="pattern" url="assets/patterns/pattern-yugu.patt" instrument-handler>
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model20" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
+   </a-marker>
+   <a-marker id="marker21" type="pattern" url="assets/patterns/pattern-zhuban.patt" instrument-handler>
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model21" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
+   </a-marker>
+   <a-marker id="marker22" type="pattern" url="assets/patterns/pattern-huagudatong.patt" instrument-handler>
+        <a-torus class="loader" color="#667eea" radius="0.3" radius-tubular="0.03" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000; easing: linear;"></a-torus>
+        <a-entity id="model22" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false"></a-entity>
+   </a-marker>
+
+   <a-entity camera></a-entity>
+  </a-scene>
+  
+ </body>
 </html>

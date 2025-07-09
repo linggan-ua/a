@@ -1139,8 +1139,8 @@ AFRAME.registerComponent('s19', {
             return;
         }
 
-        const audioFile = config.audio;
-        const markdownFile = config.markdown;
+        const audioFile = 'assets/audio/' + config.audio;
+        const markdownFile = 'assets/markdown/' + config.markdown;
         
         console.log(`=== s19组件初始化: ${markerId} (${config.name}) ===`);
         
@@ -1150,7 +1150,7 @@ AFRAME.registerComponent('s19', {
             console.error(`音频文件 ${audioFile} 未在缓存中找到!`);
             // 即使未预加载，也尝试创建一个
             audioElement = { audio: new Audio() };
-            audioElement.audio.src = 'assets/audio/' + audioFile; // 修正路径
+            audioElement.audio.src = audioFile; 
             audioElement.audio.preload = 'auto';
             audioElement.audio.load();
             audioCache[audioFile] = audioElement;

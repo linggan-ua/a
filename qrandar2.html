@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>二维码 + AR码叠加工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .editor-area {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            min-height: 600px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            background: white;
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .canvas-container.has-qr {
+            border: 2px solid #28a745;
+            background: #f8fff9;
+        }
+
+        .canvas {
+            position: relative;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .qr-image {
+            max-width: 100%;
+            max-height: 100%;
+            display: block;
+        }
+
+        .ar-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            cursor: move;
+            user-select: none;
+        }
+
+        .ar-overlay:hover {
+            border-color: #0056b3;
+            box-shadow: 0 0 20px rgba(0, 123, 255, 0.3);
+        }
+
+        .ar-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 6px;
+        }
+
+        .resize-handle {
+            position: absolute;
+            bottom: -5px;
+            right: -5px;
+            width: 15px;
+            height: 15px;
+            background: #007bff;
+            border: 2px solid white;
+            border-radius: 50%;
+            cursor: se-resize;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .controls-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .upload-section {
+            margin-bottom: 25px;
+        }
+
+        .upload-area {
+            border: 2px dashed #007bff;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+            background: #f8f9ff;
+        }
+
+        .upload-area:hover {
+            border-color: #0056b3;
+            background: #e7f3ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+            color: #007bff;
+        }
+
+        .upload-text {
+            font-size: 1.1em;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .upload-hint {
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+
+        .section-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #343a40;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 5px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #495057;
+        }
+
+        .control-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .control-input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slider {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: #e9ecef;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #007bff;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #007bff;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .slider-value {
+            min-width: 50px;
+            text-align: center;
+            font-weight: 600;
+            color: #007bff;
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .preset-btn {
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .preset-btn:hover {
+            border-color: #007bff;
+            background: #f8f9ff;
+        }
+
+        .preset-btn.active {
+            border-color: #007bff;
+            background: #007bff;
+            color: white;
+        }
+
+        .action-buttons {
+            display: grid;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #1e7e34;
+            transform: translateY(-1px);
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #545b62;
+            transform: translateY(-1px);
+        }
+
+        .tips-section {
+            background: #e7f3ff;
+            border: 1px solid #b8daff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .tips-title {
+            font-weight: 600;
+            color: #004085;
+            margin-bottom: 8px;
+        }
+
+        .tips-list {
+            font-size: 0.9em;
+            color: #004085;
+            line-height: 1.4;
+        }
+
+        .quality-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        .quality-good {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .quality-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .quality-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .placeholder-text {
+            color: #6c757d;
+            font-size: 1.1em;
+            text-align: center;
+        }
+
+        .file-info {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #495057;
+        }
+
+        .grid-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .grid-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.3;
+            background-image: 
+                linear-gradient(to right, #007bff 1px, transparent 1px),
+                linear-gradient(to bottom, #007bff 1px, transparent 1px);
+            background-size: 20px 20px;
+            display: none;
+        }
+
+        .grid-overlay.show {
+            display: block;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls-panel {
+                order: -1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .main-content {
+                padding: 20px;
+            }
+            
+            .preset-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔲 二维码 + AR码叠加工具</h1>
+            <p>轻松创建二维码与AR码的完美结合，支持拖拽上传和可视化编辑</p>
+        </div>
+
+        <div class="main-content">
+            <div class="editor-area">
+                <div class="grid-toggle">
+                    <input type="checkbox" id="gridToggle">
+                    <label for="gridToggle">显示网格对齐</label>
+                </div>
+                
+                <div class="canvas-container" id="canvasContainer">
+                    <div class="grid-overlay" id="gridOverlay"></div>
+                    <div class="placeholder-text">
+                        📱 请先上传二维码图片<br>
+                        <small>支持拖拽上传或点击上传</small>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-success" onclick="downloadResult()">📥 下载合成图片</button>
+                    <button class="btn btn-warning" onclick="copyToClipboard()">📋 复制到剪贴板</button>
+                    <button class="btn btn-secondary" onclick="resetAll()">🔄 重置所有</button>
+                </div>
+            </div>
+
+            <div class="controls-panel">
+                <div class="upload-section">
+                    <div class="section-title">📂 上传文件</div>
+                    
+                    <div class="upload-area" id="qrUpload">
+                        <div class="upload-icon">📱</div>
+                        <div class="upload-text">上传二维码</div>
+                        <div class="upload-hint">拖拽文件到此处或点击选择</div>
+                    </div>
+                    <input type="file" id="qrFileInput" accept="image/*" style="display: none;">
+                    <div id="qrFileInfo" class="file-info" style="display: none;"></div>
+
+                    <div class="upload-area" id="arUpload">
+                        <div class="upload-icon">🎯</div>
+                        <div class="upload-text">上传AR码</div>
+                        <div class="upload-hint">拖拽文件到此处或点击选择</div>
+                    </div>
+                    <input type="file" id="arFileInput" accept="image/*" style="display: none;">
+                    <div id="arFileInfo" class="file-info" style="display: none;"></div>
+                </div>
+
+                <div class="control-group">
+                    <div class="section-title">📐 预设方案</div>
+                    <div class="preset-buttons">
+                        <div class="preset-btn active" onclick="applyPreset('optimal')">
+                            <div>🎯 最佳平衡</div>
+                            <small>20% 大小</small>
+                        </div>
+                        <div class="preset-btn" onclick="applyPreset('minimal')">
+                            <div>🔍 最小影响</div>
+                            <small>15% 大小</small>
+                        </div>
+                        <div class="preset-btn" onclick="applyPreset('prominent')">
+                            <div>👁️ 突出显示</div>
+                            <small>25% 大小</small>
+                        </div>
+                        <div class="preset-btn" onclick="applyPreset('custom')">
+                            <div>⚙️ 自定义</div>
+                            <small>手动调节</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">AR码大小 (相对于二维码)</label>
+                    <div class="slider-group">
+                        <input type="range" class="slider" id="sizeSlider" min="10" max="40" value="20">
+                        <span class="slider-value" id="sizeValue">20%</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">透明度</label>
+                    <div class="slider-group">
+                        <input type="range" class="slider" id="opacitySlider" min="50" max="100" value="90">
+                        <span class="slider-value" id="opacityValue">90%</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">水平位置</label>
+                    <div class="slider-group">
+                        <input type="range" class="slider" id="xSlider" min="0" max="100" value="50">
+                        <span class="slider-value" id="xValue">50%</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">垂直位置</label>
+                    <div class="slider-group">
+                        <input type="range" class="slider" id="ySlider" min="0" max="100" value="50">
+                        <span class="slider-value" id="yValue">50%</span>
+                    </div>
+                </div>
+
+                <div id="qualityIndicator" class="quality-indicator quality-good">
+                    ✅ 配置良好：二维码和AR码都能正常识别
+                </div>
+
+                <div class="tips-section">
+                    <div class="tips-title">💡 使用建议</div>
+                    <div class="tips-list">
+                        • 建议AR码大小为二维码的15-25%<br>
+                        • 保持透明度在85-95%之间<br>
+                        • AR码居中放置效果最佳<br>
+                        • 确保二维码边缘有足够空白<br>
+                        • 使用高对比度的AR码图案
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let qrImage = null;
+        let arImage = null;
+        let arOverlay = null;
+        let isDragging = false;
+        let isResizing = false;
+        let dragOffset = { x: 0, y: 0 };
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            setupFileUpload();
+            setupSliders();
+            setupCanvas();
+            setupGridToggle();
+        });
+
+        // 设置文件上传
+        function setupFileUpload() {
+            const qrUpload = document.getElementById('qrUpload');
+            const arUpload = document.getElementById('arUpload');
+            const qrFileInput = document.getElementById('qrFileInput');
+            const arFileInput = document.getElementById('arFileInput');
+
+            // 二维码上传
+            qrUpload.addEventListener('click', () => qrFileInput.click());
+            qrUpload.addEventListener('dragover', handleDragOver);
+            qrUpload.addEventListener('drop', (e) => handleFileDrop(e, 'qr'));
+            qrFileInput.addEventListener('change', (e) => handleFileSelect(e, 'qr'));
+
+            // AR码上传
+            arUpload.addEventListener('click', () => arFileInput.click());
+            arUpload.addEventListener('dragover', handleDragOver);
+            arUpload.addEventListener('drop', (e) => handleFileDrop(e, 'ar'));
+            arFileInput.addEventListener('change', (e) => handleFileSelect(e, 'ar'));
+        }
+
+        // 处理拖拽
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('dragover');
+        }
+
+        function handleFileDrop(e, type) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                loadImage(files[0], type);
+            }
+        }
+
+        function handleFileSelect(e, type) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                loadImage(files[0], type);
+            }
+        }
+
+        // 加载图片
+        function loadImage(file, type) {
+            if (!file.type.startsWith('image/')) {
+                alert('请选择图片文件！');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    if (type === 'qr') {
+                        loadQRImage(img, file);
+                    } else {
+                        loadARImage(img, file);
+                    }
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // 加载二维码
+        function loadQRImage(img, file) {
+            qrImage = img;
+            const container = document.getElementById('canvasContainer');
+            container.innerHTML = '<div class="grid-overlay" id="gridOverlay"></div>';
+            
+            const canvas = document.createElement('div');
+            canvas.className = 'canvas';
+            
+            const qrImg = document.createElement('img');
+            qrImg.className = 'qr-image';
+            qrImg.src = img.src;
+            
+            canvas.appendChild(qrImg);
+            container.appendChild(canvas);
+            container.classList.add('has-qr');
+
+            // 显示文件信息
+            const fileInfo = document.getElementById('qrFileInfo');
+            fileInfo.innerHTML = `📱 ${file.name} (${img.width}×${img.height})`;
+            fileInfo.style.display = 'block';
+
+            // 如果已有AR码，重新创建叠加层
+            if (arImage) {
+                createAROverlay();
+            }
+
+            setupGridToggle();
+            updateQualityIndicator();
+        }
+
+        // 加载AR码
+        function loadARImage(img, file) {
+            arImage = img;
+
+            // 显示文件信息
+            const fileInfo = document.getElementById('arFileInfo');
+            fileInfo.innerHTML = `🎯 ${file.name} (${img.width}×${img.height})`;
+            fileInfo.style.display = 'block';
+
+            // 如果已有二维码，创建叠加层
+            if (qrImage) {
+                createAROverlay();
+            }
+
+            updateQualityIndicator();
+        }
+
+        // 创建AR叠加层
+        function createAROverlay() {
+            // 移除现有叠加层
+            if (arOverlay) {
+                arOverlay.remove();
+            }
+
+            const canvas = document.querySelector('.canvas');
+            if (!canvas) return;
+
+            arOverlay = document.createElement('div');
+            arOverlay.className = 'ar-overlay';
+            
+            const arImg = document.createElement('img');
+            arImg.className = 'ar-image';
+            arImg.src = arImage.src;
+            
+            const resizeHandle = document.createElement('div');
+            resizeHandle.className = 'resize-handle';
+            
+            arOverlay.appendChild(arImg);
+            arOverlay.appendChild(resizeHandle);
+            canvas.appendChild(arOverlay);
+
+            // 应用当前设置
+            updateAROverlay();
+            
+            // 绑定拖拽事件
+            setupDragAndResize();
+        }
+
+        // 设置拖拽和调整大小
+        function setupDragAndResize() {
+            if (!arOverlay) return;
+
+            const resizeHandle = arOverlay.querySelector('.resize-handle');
+
+            // 拖拽移动
+            arOverlay.addEventListener('mousedown', function(e) {
+                if (e.target === resizeHandle) return;
+                isDragging = true;
+                const rect = arOverlay.getBoundingClientRect();
+                const parentRect = arOverlay.parentElement.getBoundingClientRect();
+                dragOffset.x = e.clientX - rect.left - rect.width / 2;
+                dragOffset.y = e.clientY - rect.top - rect.height / 2;
+                e.preventDefault();
+            });
+
+            // 调整大小
+            resizeHandle.addEventListener('mousedown', function(e) {
+                isResizing = true;
+                e.stopPropagation();
+                e.preventDefault();
+            });
+
+            // 全局鼠标事件
+            document.addEventListener('mousemove', function(e) {
+                if (isDragging) {
+                    const parentRect = arOverlay.parentElement.getBoundingClientRect();
+                    const x = ((e.clientX - dragOffset.x - parentRect.left) / parentRect.width) * 100;
+                    const y = ((e.clientY - dragOffset.y - parentRect.top) / parentRect.height) * 100;
+                    
+                    document.getElementById('xSlider').value = Math.max(0, Math.min(100, x));
+                    document.getElementById('ySlider').value = Math.max(0, Math.min(100, y));
+                    updateSliderValues();
+                    updateAROverlay();
+                }
+                
+                if (isResizing) {
+                    const rect = arOverlay.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+                    const distance = Math.sqrt(Math.pow(e.clientX - centerX, 2) + Math.pow(e.clientY - centerY, 2));
+                    const parentRect = arOverlay.parentElement.getBoundingClientRect();
+                    const parentSize = Math.min(parentRect.width, parentRect.height);
+                    const newSize = Math.max(10, Math.min(40, (distance * 2 / parentSize) * 100));
+                    
+                    document.getElementById('sizeSlider').value = newSize;
+                    updateSliderValues();
+                    updateAROverlay();
+                }
+            });
+
+            document.addEventListener('mouseup', function() {
+                isDragging = false;
+                isResizing = false;
+            });
+        }
+
+        // 设置滑块
+        function setupSliders() {
+            const sliders = ['sizeSlider', 'opacitySlider', 'xSlider', 'ySlider'];
+            sliders.forEach(id => {
+                const slider = document.getElementById(id);
+                slider.addEventListener('input', function() {
+                    updateSliderValues();
+                    updateAROverlay();
+                    updateQualityIndicator();
+                });
+            });
+            updateSliderValues();
+        }
+
+        // 更新滑块显示值
+        function updateSliderValues() {
+            document.getElementById('sizeValue').textContent = document.getElementById('sizeSlider').value + '%';
+            document.getElementById('opacityValue').textContent = document.getElementById('opacitySlider').value + '%';
+            document.getElementById('xValue').textContent = document.getElementById('xSlider').value + '%';
+            document.getElementById('yValue').textContent = document.getElementById('ySlider').value + '%';
+        }
+
+        // 更新AR叠加层
+        function updateAROverlay() {
+            if (!arOverlay) return;
+
+            const size = document.getElementById('sizeSlider').value;
+            const opacity = document.getElementById('opacitySlider').value;
+            const x = document.getElementById('xSlider').value;
+            const y = document.getElementById('ySlider').value;
+
+            const parentRect = arOverlay.parentElement.getBoundingClientRect();
+            const overlaySize = Math.min(parentRect.width, parentRect.height) * (size / 100);
+
+            arOverlay.style.width = overlaySize + 'px';
+            arOverlay.style.height = overlaySize + 'px';
+            arOverlay.style.opacity = opacity / 100;
+            arOverlay.style.left = x + '%';
+            arOverlay.style.top = y + '%';
+        }
+
+        // 应用预设
+        function applyPreset(preset) {
+            // 移除所有active类
+            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+            
+            // 添加active类到当前按钮
+            event.currentTarget.classList.add('active');
+
+            const presets = {
+                optimal: { size: 20, opacity: 90, x: 50, y: 50 },
+                minimal: { size: 15, opacity: 85, x: 50, y: 50 },
+                prominent: { size: 25, opacity: 95, x: 50, y: 50 },
+                custom: { size: 20, opacity: 90, x: 50, y: 50 }
+            };
+
+            const config = presets[preset];
+            if (config) {
+                document.getElementById('sizeSlider').value = config.size;
+                document.getElementById('opacitySlider').value = config.opacity;
+                document.getElementById('xSlider').value = config.x;
+                document.getElementById('ySlider').value = config.y;
+                
+                updateSliderValues();
+                updateAROverlay();
+                updateQualityIndicator();
+            }
+        }
+
+        // 设置画布
+        function setupCanvas() {
+            const container = document.getElementById('canvasContainer');
+            
+            // 支持拖拽上传到画布
+            container.addEventListener('dragover', handleDragOver);
+            container.addEventListener('drop', function(e) {
+                e.preventDefault();
+                container.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    if (!qrImage) {
+                        loadImage(files[0], 'qr');
+                    } else if (!arImage) {
+                        loadImage(files[0], 'ar');
+                    }
+                }
+            });
+        }
+
+        // 设置网格切换
+        function setupGridToggle() {
+            const gridToggle = document.getElementById('gridToggle');
+            const gridOverlay = document.getElementById('gridOverlay');
+            
+            if (gridToggle && gridOverlay) {
+                gridToggle.addEventListener('change', function() {
+                    if (this.checked) {
+                        gridOverlay.classList.add('show');
+                    } else {
+                        gridOverlay.classList.remove('show');
+                    }
+                });
+            }
+        }
+
+        // 更新质量指示器
+        function updateQualityIndicator() {
+            const indicator = document.getElementById('qualityIndicator');
+            if (!qrImage || !arImage) {
+                indicator.className = 'quality-indicator quality-warning';
+                indicator.innerHTML = '⚠️ 请先上传二维码和AR码图片';
+                return;
+            }
+
+            const size = parseInt(document.getElementById('sizeSlider').value);
+            const opacity = parseInt(document.getElementById('opacitySlider').value);
+            const x = parseInt(document.getElementById('xSlider').value);
+            const y = parseInt(document.getElementById('ySlider').value);
+
+            // 检查是否在安全区域
+            const isCentered = Math.abs(x - 50) < 25 && Math.abs(y - 50) < 25;
+            const isOptimalSize = size >= 15 && size <= 25;
+            const isOptimalOpacity = opacity >= 85;
+
+            if (isOptimalSize && isOptimalOpacity && isCentered) {
+                indicator.className = 'quality-indicator quality-good';
+                indicator.innerHTML = '✅ 配置优秀：二维码和AR码都能完美识别';
+            } else if (size < 10 || size > 35) {
+                indicator.className = 'quality-indicator quality-error';
+                indicator.innerHTML = '❌ AR码尺寸不当：可能影响识别效果';
+            } else if (opacity < 70) {
+                indicator.className = 'quality-indicator quality-error';
+                indicator.innerHTML = '❌ 透明度过低：AR码可能不够清晰';
+            } else if (!isCentered) {
+                indicator.className = 'quality-indicator quality-warning';
+                indicator.innerHTML = '⚠️ 位置偏离中心：建议调整到中央区域';
+            } else {
+                indicator.className = 'quality-indicator quality-good';
+                indicator.innerHTML = '✅ 配置良好：二维码和AR码都能正常识别';
+            }
+        }
+
+        // 下载结果
+        function downloadResult() {
+            if (!qrImage || !arImage) {
+                alert('请先上传二维码和AR码图片！');
+                return;
+            }
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // 设置画布大小为二维码大小
+            canvas.width = qrImage.width;
+            canvas.height = qrImage.height;
+            
+            // 绘制二维码
+            ctx.drawImage(qrImage, 0, 0);
+            
+            // 计算AR码位置和大小
+            const size = parseInt(document.getElementById('sizeSlider').value);
+            const opacity = parseInt(document.getElementById('opacitySlider').value);
+            const x = parseInt(document.getElementById('xSlider').value);
+            const y = parseInt(document.getElementById('ySlider').value);
+            
+            const arSize = Math.min(qrImage.width, qrImage.height) * (size / 100);
+            const arX = (qrImage.width * (x / 100)) - (arSize / 2);
+            const arY = (qrImage.height * (y / 100)) - (arSize / 2);
+            
+            // 绘制AR码
+            ctx.globalAlpha = opacity / 100;
+            ctx.drawImage(arImage, arX, arY, arSize, arSize);
+            
+            // 下载
+            const link = document.createElement('a');
+            link.download = 'qr-ar-combined.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        // 复制到剪贴板
+        async function copyToClipboard() {
+            if (!qrImage || !arImage) {
+                alert('请先上传二维码和AR码图片！');
+                return;
+            }
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = qrImage.width;
+            canvas.height = qrImage.height;
+            
+            ctx.drawImage(qrImage, 0, 0);
+            
+            const size = parseInt(document.getElementById('sizeSlider').value);
+            const opacity = parseInt(document.getElementById('opacitySlider').value);
+            const x = parseInt(document.getElementById('xSlider').value);
+            const y = parseInt(document.getElementById('ySlider').value);
+            
+            const arSize = Math.min(qrImage.width, qrImage.height) * (size / 100);
+            const arX = (qrImage.width * (x / 100)) - (arSize / 2);
+            const arY = (qrImage.height * (y / 100)) - (arSize / 2);
+            
+            ctx.globalAlpha = opacity / 100;
+            ctx.drawImage(arImage, arX, arY, arSize, arSize);
+            
+            try {
+                canvas.toBlob(async (blob) => {
+                    const item = new ClipboardItem({ 'image/png': blob });
+                    await navigator.clipboard.write([item]);
+                    alert('图片已复制到剪贴板！');
+                });
+            } catch (err) {
+                alert('复制失败，请尝试下载功能。');
+            }
+        }
+
+        // 重置所有
+        function resetAll() {
+            if (confirm('确定要重置所有设置吗？')) {
+                qrImage = null;
+                arImage = null;
+                arOverlay = null;
+                
+                const container = document.getElementById('canvasContainer');
+                container.innerHTML = `
+                    <div class="grid-overlay" id="gridOverlay"></div>
+                    <div class="placeholder-text">
+                        📱 请先上传二维码图片<br>
+                        <small>支持拖拽上传或点击上传</small>
+                    </div>
+                `;
+                container.classList.remove('has-qr');
+                
+                document.getElementById('qrFileInfo').style.display = 'none';
+                document.getElementById('arFileInfo').style.display = 'none';
+                document.getElementById('qrFileInput').value = '';
+                document.getElementById('arFileInput').value = '';
+                
+                // 重置为最佳预设
+                applyPreset('optimal');
+                document.querySelector('.preset-btn').classList.add('active');
+                
+                updateQualityIndicator();
+                setupGridToggle();
+            }
+        }
+
+        // 初始化预设
+        applyPreset('optimal');
+    </script>
+</body>
+</html>

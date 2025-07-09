@@ -1046,7 +1046,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var audioFiles = [
         'pipa.mp3',             // 琵琶
         'hulusi.mp3',           // 葫芦丝
-        /*'dongbei_dagu.mp3',     // 东北大鼓
+        'dongbei_dagu.mp3',     // 东北大鼓
         'dongbula.mp3',         // 冬不拉
         'gaohu.mp3',            // 高胡
         'huagu.mp3',            // 花鼓
@@ -1064,7 +1064,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'qinqin.mp3',           // 秦琴
         'yehu.mp3',             // 椰胡
         'yugu.mp3',             // 渔鼓
-        'zhuban.mp3',           // 竹板*/
+        'zhuban.mp3',           // 竹板
         'huagudatong.mp3'      // 花鼓大筒
     ]; 
     audioFiles.forEach(function (filename) {
@@ -1110,7 +1110,7 @@ AFRAME.registerComponent('s19', {
         const instrumentConfig = {
             'marker1':  { name: '琵琶',       audio: 'pipa.mp3',             markdown: 'pipa.md',             info: 'pipa.txt' },
             'marker2':  { name: '葫芦丝',     audio: 'hulusi.mp3',           markdown: 'hulusi.md',           info: 'hulusi.txt' },
-            /*'marker3':  { name: '东北大鼓',   audio: 'dongbei_dagu.mp3',     markdown: 'dongbei_dagu.md',     info: 'dongbei_dagu.txt' },
+            'marker3':  { name: '东北大鼓',   audio: 'dongbei_dagu.mp3',     markdown: 'dongbei_dagu.md',     info: 'dongbei_dagu.txt' },
             'marker4':  { name: '冬不拉',     audio: 'dongbula.mp3',         markdown: 'dongbula.md',         info: 'dongbula.txt' },
             'marker5':  { name: '高胡',       audio: 'gaohu.mp3',            markdown: 'gaohu.md',            info: 'gaohu.txt' },
             'marker6':  { name: '花鼓',       audio: 'huagu.mp3',            markdown: 'huagu.md',            info: 'huagu.txt' },
@@ -1128,7 +1128,7 @@ AFRAME.registerComponent('s19', {
             'marker18': { name: '秦琴',       audio: 'qinqin.mp3',           markdown: 'qinqin.md',           info: 'qinqin.txt' },
             'marker19': { name: '椰胡',       audio: 'yehu.mp3',             markdown: 'yehu.md',             info: 'yehu.txt' },
             'marker20': { name: '渔鼓',       audio: 'yugu.mp3',             markdown: 'yugu.md',             info: 'yugu.txt' },
-            'marker21': { name: '竹板',       audio: 'zhuban.mp3',           markdown: 'zhuban.md',           info: 'zhuban.txt' },*/
+            'marker21': { name: '竹板',       audio: 'zhuban.mp3',           markdown: 'zhuban.md',           info: 'zhuban.txt' },
             'marker22': { name: '花鼓大筒',   audio: 'huagudatong.mp3',      markdown: 'huagudatong.md',      info: 'huagudatong.txt' }
         };
         // =======================================================
@@ -1926,80 +1926,80 @@ document.addEventListener('DOMContentLoaded', function() {
     <a-entity gltf-model="url(assets/models/hulusi.gltf)" id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.010 0.010 0.010" touch-handler>
     </a-entity>
    </a-marker>
-   <!-- <a-marker id="marker3" preset="custom" s19="" url="dongbei_dagu.patt">
-    <a-entity gltf-model="url(dongbei_dagu.gltf)" id="model3" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+   <a-marker id="marker3" preset="custom" s19="" url="assets/patterns/dongbei_dagu.patt">
+    <a-entity gltf-model="url(assets/models/dongbei_dagu.gltf)" id="model3" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>
-   <a-marker id="marker4" preset="custom" s19="" url="dongbula.patt">
-    <a-entity gltf-model="url(dongbula.gltf)" id="model4" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+   <a-marker id="marker4" preset="custom" s19="" url="assets/patterns/dongbula.patt">
+    <a-entity gltf-model="url(assets/models/dongbula.gltf)" id="model4" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>
-   <a-marker id="marker5" preset="custom" s19="" url="gaohu.patt">
-    <a-entity gltf-model="url(gaohu.gltf)" id="model5" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+   <a-marker id="marker5" preset="custom" s19="" url="assets/patterns/gaohu.patt">
+    <a-entity gltf-model="url(assets/models/gaohu.gltf)" id="model5" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>
-   <a-marker id="marker6" preset="custom" s19="" url="huagu.patt">
-    <a-entity gltf-model="url(huagu.gltf)" id="model6" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+   <a-marker id="marker6" preset="custom" s19="" url="assets/patterns/huagu.patt">
+    <a-entity gltf-model="url(assets/models/huagu.gltf)" id="model6" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>
-   <a-marker id="marker7" preset="custom" s19="" url="huobusi.patt">
-    <a-entity gltf-model="url(huobusi.gltf)" id="model7" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+   <a-marker id="marker7" preset="custom" s19="" url="assets/patterns/huobusi.patt">
+    <a-entity gltf-model="url(assets/models/huobusi.gltf)" id="model7" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>
-   <a-marker id="marker8" preset="custom" s19="" url="matouqin.patt">
-    <a-entity gltf-model="url(matouqin.gltf)" id="model8" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+   <a-marker id="marker8" preset="custom" s19="" url="assets/patterns/matouqin.patt">
+    <a-entity gltf-model="url(assets/models/matouqin.gltf)" id="model8" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>
-   <a-marker id="marker9" preset="custom" s19="" url="niujiaoqin.patt">
-    <a-entity gltf-model="url(niujiaoqin.gltf)" id="model9" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+   <a-marker id="marker9" preset="custom" s19="" url="assets/patterns/niujiaoqin.patt">
+    <a-entity gltf-model="url(assets/models/niujiaoqin.gltf)" id="model9" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>
-   <a-marker id="marker10" preset="custom" s19="" url="suona.patt">
-    <a-entity gltf-model="url(suona.gltf)" id="model10" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+   <a-marker id="marker10" preset="custom" s19="" url="assets/patterns/suona.patt">
+    <a-entity gltf-model="url(assets/models/suona.gltf)" id="model10" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>
-   <a-marker id="marker11" preset="custom" s19="" url="yueqin.patt">
-    <a-entity gltf-model="url(yueqin.gltf)" id="model11" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+   <a-marker id="marker11" preset="custom" s19="" url="assets/patterns/yueqin.patt">
+    <a-entity gltf-model="url(assets/models/yueqin.gltf)" id="model11" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>
-   <a-marker id="marker12" preset="custom" s19="" url="chaozhou_suona.patt">
-    <a-entity gltf-model="url(chaozhou_suona.gltf)" id="model12" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+   <a-marker id="marker12" preset="custom" s19="" url="assets/patterns/chaozhou_suona.patt">
+    <a-entity gltf-model="url(assets/models/chaozhou_suona.gltf)" id="model12" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>
-   <a-marker id="marker13" preset="custom" s19="" url="chaozhou_zheng.patt">
-    <a-entity gltf-model="url(chaozhou_zheng.gltf)" id="model13" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+   <a-marker id="marker13" preset="custom" s19="" url="assets/patterns/chaozhou_zheng.patt">
+    <a-entity gltf-model="url(assets/models/chaozhou_zheng.gltf)" id="model13" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>
-   <a-marker id="marker14" preset="custom" s19="" url="dongxiao.patt">
-    <a-entity gltf-model="url(dongxiao.gltf)" id="model14" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+   <a-marker id="marker14" preset="custom" s19="" url="assets/patterns/dongxiao.patt">
+    <a-entity gltf-model="url(assets/models/dongxiao.gltf)" id="model14" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>
-   <a-marker id="marker15" preset="custom" s19="" url="houguan.patt">
-    <a-entity gltf-model="url(houguan.gltf)" id="model15" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+   <a-marker id="marker15" preset="custom" s19="" url="assets/patterns/houguan.patt">
+    <a-entity gltf-model="url(assets/models/houguan.gltf)" id="model15" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>
-   <a-marker id="marker16" preset="custom" s19="" url="muyu.patt">
-    <a-entity gltf-model="url(muyu.gltf)" id="model16" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+   <a-marker id="marker16" preset="custom" s19="" url="assets/patterns/muyu.patt">
+    <a-entity gltf-model="url(assets/models/muyu.gltf)" id="model16" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>
-   <a-marker id="marker17" preset="custom" s19="" url="niujiaohao.patt">
-    <a-entity gltf-model="url(niujiaohao.gltf)" id="model17" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+   <a-marker id="marker17" preset="custom" s19="" url="assets/patterns/niujiaohao.patt">
+    <a-entity gltf-model="url(assets/models/niujiaohao.gltf)" id="model17" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>
-   <a-marker id="marker18" preset="custom" s19="" url="qinqin.patt">
-    <a-entity gltf-model="url(qinqin.gltf)" id="model18" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+   <a-marker id="marker18" preset="custom" s19="" url="assets/patterns/qinqin.patt">
+    <a-entity gltf-model="url(assets/models/qinqin.gltf)" id="model18" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>
-   <a-marker id="marker19" preset="custom" s19="" url="yehu.patt">
-    <a-entity gltf-model="url(yehu.gltf)" id="model19" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+   <a-marker id="marker19" preset="custom" s19="" url="assets/patterns/yehu.patt">
+    <a-entity gltf-model="url(assets/models/yehu.gltf)" id="model19" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>
-   <a-marker id="marker20" preset="custom" s19="" url="yugu.patt">
-    <a-entity gltf-model="url(yugu.gltf)" id="model20" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+   <a-marker id="marker20" preset="custom" s19="" url="assets/patterns/yugu.patt">
+    <a-entity gltf-model="url(assets/models/yugu.gltf)" id="model20" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>
-   <a-marker id="marker21" preset="custom" s19="" url="zhuban.patt">
-    <a-entity gltf-model="url(zhuban.gltf)" id="model21" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+   <a-marker id="marker21" preset="custom" s19="" url="assets/patterns/zhuban.patt">
+    <a-entity gltf-model="url(assets/models/zhuban.gltf)" id="model21" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
     </a-entity>
    </a-marker>-->
     <a-marker id="marker22" preset="custom" s19="" url="assets/patterns/huagudatong.patt">

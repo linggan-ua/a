@@ -1405,7 +1405,7 @@ function showLoadingOverlay(instrumentName) {
 
     title.textContent = `正在加载 ${instrumentName} 模型`;
     progressBar.style.width = '0%';
-    text.textContent = '0% - 预计需要 5-15 秒...';
+    text.textContent = '0% - 预计需要 5-10 秒...';
     overlay.classList.remove('hidden');
 
     let progress = 0;
@@ -1498,18 +1498,18 @@ function createStartOverlay() {
     const device = getDeviceInfo();
     const permissionGuideHTML = device.isIOS ? `
         <div class="permission-guide">
-            <div class="guide-title">📱 权限授权指南</div>
-            <div class="guide-text">启动后会弹出两个权限窗口，请都点击"允许/Allow"以使用AR功能</div>
-            <div class="guide-text">如果没有弹出，请点击地址栏左侧的🔒图标，选择"摄像头"选项</div>
+            <div class="guide-title">📱 星海音乐学院师生团队温馨提示：</div>
+            <div class="guide-text">启动后会弹出权限窗口，请都点击"允许/Allow"以使用AR功能</div>
+        
         </div>
     ` : device.isDesktop ? `
         <div class="permission-guide">
-            <div class="guide-title">💻 桌面版体验</div>
+            <div class="guide-title">📱 星海音乐学院师生团队温馨提示：</div>
             <div class="guide-text">启动后请允许摄像头权限以使用AR功能</div>
         </div>
     ` : `
         <div class="permission-guide">
-            <div class="guide-title">📷 权限提示</div>
+            <div class="guide-title">📱 星海音乐学院师生团队温馨提示：</div>
             <div class="guide-text">启动后请允许摄像头权限以使用AR功能</div>
         </div>
     `;
@@ -1642,12 +1642,13 @@ document.addEventListener('DOMContentLoaded', function() {
   <!-- UI元素 -->
   <div id="start-overlay" class="start-overlay">
     <div class="start-title">中国传统音乐与乐器增强现实（AR）视听云平台</div>
-    <div class="start-subtitle">让传统音乐“带在口袋里”</div>
+    <div class="start-subtitle">————让传统音乐“带在口袋里”</div>
+    
     <button class="start-button" onclick="startAR()">
-        ✨ 启动AR体验
+        ✨ 点我启动AR体验
     </button>
     <div style="font-size: 0.9em; opacity: 0.8; margin-top: 15px;">
-        💡 为了保护隐私，需要您的授权才能访问相应功能
+        🪈 小提示：可用手指对乐器模型进行旋转缩放~
     </div>
   </div>
 

@@ -4,7 +4,7 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"/>
   <title>
-   岭南乐器AR (最终重构完整版)
+   岭南乐器AR (最终修复版)
   </title>
   
   <!-- 使用已被证明可靠的公共CDN库 -->
@@ -1353,7 +1353,7 @@ function updateDockButtons() {
     }
 }
 
-// =============== 启动系统 ===============
+// =============== 启动系统 (恢复您的原始逻辑) ===============
 function createStartOverlay() {
     startOverlay = document.getElementById('start-overlay');
     const device = getDeviceInfo();
@@ -1413,18 +1413,56 @@ function startAR() {
     if (isARStarted) return;
     console.log('启动AR体验');
     isARStarted = true;
+    
     startOverlay.classList.add('hidden');
     document.getElementById('ar-scene').classList.add('active');
     document.getElementById('dock-container').classList.add('active');
     
-    // 触发摄像头，以便早期权限请求
-    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-        .catch(err => {
-            console.error("摄像头权限请求失败:", err);
-            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                handlePermissionDenied();
-            }
-        });
+    // 关键修复：调用iOS视频修复函数
+    applyIOSVideoFix();
+    
+    // 不再手动调用getUserMedia，让AR.js自行处理
+}
+
+// 关键修复：恢复您的iOS视频修复函数
+function applyIOSVideoFix() {
+    const device = getDeviceInfo();
+    if (!device.isIOS) {
+        return;
+    }
+    console.log("Applying iOS video fix...");
+    let fixAttempts = 0;
+    const maxAttempts = 20; // 增加尝试次数
+    
+    const fixVideoElements = () => {
+        fixAttempts++;
+        const videos = document.querySelectorAll('video');
+        
+        if (videos.length > 0) {
+            console.log(`Found ${videos.length} video element(s). Applying attributes.`);
+            videos.forEach(video => {
+                if (!video.hasAttribute('data-ios-fixed')) {
+                    video.setAttribute('playsinline', '');
+                    video.setAttribute('webkit-playsinline', '');
+                    video.setAttribute('muted', ''); // 静音是自动播放的关键
+                    video.setAttribute('autoplay', ''); // 尝试添加autoplay
+                    video.setAttribute('data-ios-fixed', 'true');
+                    // 尝试手动播放一次
+                    video.play().catch(e => console.warn("Initial video play failed, this is often expected.", e));
+                }
+            });
+            return; // 找到并修复后停止
+        }
+        
+        if (fixAttempts < maxAttempts) {
+            setTimeout(fixVideoElements, 300);
+        } else {
+            console.warn("Could not find video element to apply iOS fix after multiple attempts.");
+        }
+    };
+    
+    // 稍作延迟，等待AR.js创建video元素
+    setTimeout(fixVideoElements, 500);
 }
 
 function handlePermissionDenied() {
@@ -1534,7 +1572,9 @@ document.addEventListener('DOMContentLoaded', function() {
   <a-scene 
     id="ar-scene" 
     embedded
-    arjs="sourceType: webcam; detectionMode: mono_and_matrix; matrixCodeType: 3x3; debugUIEnabled: false;">
+    arjs="sourceType: webcam; detectionMode: mono_and_matrix; matrixCodeType: 3x3; debugUIEnabled: false;"
+    vr-mode-ui="enabled: false"
+    renderer="logarithmicDepthBuffer: true;">
 
    <!-- ==================================================================== -->
    <!-- 所有22个Marker的完整结构 -->

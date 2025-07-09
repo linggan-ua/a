@@ -1028,20 +1028,14 @@ AFRAME.registerComponent('instrument-handler', {
         }
     },
 
+    // ====================================================================
+    // **核心修复 2**: 修改 onMarkerLost 逻辑以保持状态
+    // ====================================================================
     onMarkerLost: function () {
-        console.log(`Marker lost: ${this.markerId}`);
+        console.log(`Marker lost: ${this.markerId}. State will be preserved.`);
+        // 只隐藏3D模型，不清除或修改任何状态
         this.modelEntity.setAttribute('visible', false);
         this.loaderEntity.setAttribute('visible', false);
-        
-        if (currentAudioManager && currentAudioManager.markerId === this.markerId) {
-            if (currentAudioManager.audio && !currentAudioManager.audio.paused) {
-                 currentAudioManager.audio.pause();
-                 currentAudioManager.isPlaying = false;
-            }
-            currentAudioManager = null;
-            updateInfoDisplay();
-            updateDockButtons();
-        }
     },
     
     loadResources: function() {
@@ -1094,15 +1088,18 @@ AFRAME.registerComponent('instrument-handler', {
     },
 
     setActiveInstrument: function() {
+        // 如果当前有正在播放的乐器，并且不是我们刚刚识别到的这个，就停止它
         if (currentAudioManager && currentAudioManager.markerId !== this.markerId && currentAudioManager.audio && !currentAudioManager.audio.paused) {
             currentAudioManager.audio.pause();
             currentAudioManager.isPlaying = false;
         }
         
+        // 设置当前激活的乐器
         currentAudioManager = {
             markerId: this.markerId,
             config: this.config,
             get audio() { return audioCache[this.markerId]; },
+            // 如果是同一个乐器再次被识别，保持其播放状态，否则重置为未播放
             isPlaying: (currentAudioManager && currentAudioManager.markerId === this.markerId) ? currentAudioManager.isPlaying : false
         };
         
@@ -1418,13 +1415,9 @@ function startAR() {
     document.getElementById('ar-scene').classList.add('active');
     document.getElementById('dock-container').classList.add('active');
     
-    // 关键修复：调用iOS视频修复函数
     applyIOSVideoFix();
-    
-    // 不再手动调用getUserMedia，让AR.js自行处理
 }
 
-// 关键修复：恢复您的iOS视频修复函数
 function applyIOSVideoFix() {
     const device = getDeviceInfo();
     if (!device.isIOS) {
@@ -1432,7 +1425,7 @@ function applyIOSVideoFix() {
     }
     console.log("Applying iOS video fix...");
     let fixAttempts = 0;
-    const maxAttempts = 20; // 增加尝试次数
+    const maxAttempts = 20;
     
     const fixVideoElements = () => {
         fixAttempts++;
@@ -1444,14 +1437,13 @@ function applyIOSVideoFix() {
                 if (!video.hasAttribute('data-ios-fixed')) {
                     video.setAttribute('playsinline', '');
                     video.setAttribute('webkit-playsinline', '');
-                    video.setAttribute('muted', ''); // 静音是自动播放的关键
-                    video.setAttribute('autoplay', ''); // 尝试添加autoplay
+                    video.setAttribute('muted', '');
+                    video.setAttribute('autoplay', '');
                     video.setAttribute('data-ios-fixed', 'true');
-                    // 尝试手动播放一次
                     video.play().catch(e => console.warn("Initial video play failed, this is often expected.", e));
                 }
             });
-            return; // 找到并修复后停止
+            return;
         }
         
         if (fixAttempts < maxAttempts) {
@@ -1461,7 +1453,6 @@ function applyIOSVideoFix() {
         }
     };
     
-    // 稍作延迟，等待AR.js创建video元素
     setTimeout(fixVideoElements, 500);
 }
 
@@ -1572,9 +1563,9 @@ document.addEventListener('DOMContentLoaded', function() {
   <a-scene 
     id="ar-scene" 
     embedded
-    arjs="sourceType: webcam; detectionMode: mono_and_matrix; matrixCodeType: 3x3; debugUIEnabled: false;"
     vr-mode-ui="enabled: false"
-    renderer="logarithmicDepthBuffer: true;">
+    renderer="logarithmicDepthBuffer: true;"
+    arjs="sourceType: webcam; detectionMode: mono_and_matrix; matrixCodeType: 3x3; debugUIEnabled: false; patternRatio: 0.85; minConfidence: 0.85;">
 
    <!-- ==================================================================== -->
    <!-- 所有22个Marker的完整结构 -->

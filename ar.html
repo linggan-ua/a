@@ -1101,7 +1101,9 @@ AFRAME.registerComponent('o15', {
 });
 
 // Marker检测组件
-// 恢复原逻辑的Marker检测组件 - 在原基础上最小化改进
+// 完整的s19组件修复版本
+// 替换您当前的s19组件为以下版本：
+
 AFRAME.registerComponent('s19', {
     init: function () {
         var markerElement = this.el;
@@ -1117,7 +1119,7 @@ AFRAME.registerComponent('s19', {
 
         const config = instrumentConfig[markerId];
         if (!config) {
-            console.error(`未找到 markerId "${markerId}" 的配置信息`);
+            console.warn(`markerId "${markerId}" 暂未配置，跳过初始化`);
             return;
         }
 
@@ -1126,16 +1128,25 @@ AFRAME.registerComponent('s19', {
         
         console.log(`=== s19组件初始化: ${markerId} (${config.name}) ===`);
         
+        // 获取模型元素
+        const modelElement = markerElement.querySelector('a-entity');
+        if (!modelElement) {
+            console.error(`无法找到 ${markerId} 的模型元素`);
+            return;
+        }
+        
+        // 确保模型初始状态为隐藏
+        modelElement.setAttribute('visible', 'false');
+        
         // 获取或创建音频元素
-        var audioElement = audioCache[audioFile];
+        var audioElement = audioCache[config.audio];
         if (!audioElement) {
-            console.error(`音频文件 ${audioFile} 未在缓存中找到!`);
-            // 即使未预加载，也尝试创建一个
+            console.error(`音频文件 ${config.audio} 未在缓存中找到!`);
             audioElement = { audio: new Audio() };
             audioElement.audio.src = audioFile; 
             audioElement.audio.preload = 'auto';
             audioElement.audio.load();
-            audioCache[audioFile] = audioElement;
+            audioCache[config.audio] = audioElement;
         }
         
         // 加载对应的信息文本
@@ -1154,69 +1165,57 @@ AFRAME.registerComponent('s19', {
                 infoText = `岭南乐器：${config.name || '未知乐器'}`;
             });
         
-        // ===== 恢复您原来的逻辑，只加入最小的稳定性检查 =====
+        // 原始的简单检测逻辑 - 但加入模型控制
         var wasVisible = false;
-        var stableVisibleCount = 0;  // 新增：稳定可见计数
-        var stableHiddenCount = 0;   // 新增：稳定隐藏计数
-        
-        // 稳定性参数 - 很小的值，不影响响应速度
-        var STABLE_SHOW_THRESHOLD = 2;  // 连续2次可见才触发显示
-        var STABLE_HIDE_THRESHOLD = 3;  // 连续3次隐藏才触发隐藏
         
         this.tick = AFRAME.utils.throttleTick(function () {
             var isVisible = markerElement.object3D.visible;
             
-            if (isVisible) {
-                // 当前可见
-                stableHiddenCount = 0;  // 重置隐藏计数
-                stableVisibleCount++;
+            // 只在marker从不可见变为可见时处理（激活状态）
+            if (isVisible && !wasVisible) {
+                wasVisible = true;
                 
-                // 稳定性检查：连续几次可见才认为是真正的激活
-                if (!wasVisible && stableVisibleCount >= STABLE_SHOW_THRESHOLD) {
-                    // 从不可见变为稳定可见 - 执行原来的激活逻辑
-                    wasVisible = true;
-                    
-                    console.log('Marker发现: ' + markerId);
-                    
-                    // 如果有其他乐器在播放，先停止
-                    if (currentAudioManager && currentAudioManager.markerId !== markerId && 
-                        currentAudioManager.audio && !currentAudioManager.audio.paused) {
-                        currentAudioManager.audio.pause();
-                    }
-                    
-                    // 设置当前音频管理器
-                    currentAudioManager = {
-                        markerId: markerId,
-                        audio: audioElement.audio,
-                        markdownFile: markdownFile,
-                        infoText: infoText,
-                        isPlaying: currentAudioManager && currentAudioManager.markerId === markerId ? 
-                                  currentAudioManager.isPlaying : false
-                    };
-                    
-                    // 更新信息显示框
-                    updateInfoDisplay();
-                    
-                    // 立即更新UI状态
-                    updateDockButtons();
-                    
-                    const instrumentName = config.name || '未知乐器';
-                    showNotification(`🎯 检测到${instrumentName}`);
-                }
-            } else {
-                // 当前不可见
-                stableVisibleCount = 0;  // 重置可见计数
-                stableHiddenCount++;
+                // 显示模型
+                modelElement.setAttribute('visible', 'true');
                 
-                // 稳定性检查：连续几次不可见才认为是真正的丢失
-                if (wasVisible && stableHiddenCount >= STABLE_HIDE_THRESHOLD) {
-                    wasVisible = false;
-                    console.log('Marker丢失: ' + markerId + ' (状态保持)');
-                    // 不清除状态，用户可以继续播放音乐和查看介绍
+                // marker被发现 - 立即响应
+                console.log('Marker发现: ' + markerId);
+                
+                // 如果有其他乐器在播放，先停止
+                if (currentAudioManager && currentAudioManager.markerId !== markerId && 
+                    currentAudioManager.audio && !currentAudioManager.audio.paused) {
+                    currentAudioManager.audio.pause();
                 }
+                
+                // 设置当前音频管理器
+                currentAudioManager = {
+                    markerId: markerId,
+                    audio: audioElement.audio,
+                    markdownFile: markdownFile,
+                    infoText: infoText,
+                    isPlaying: currentAudioManager && currentAudioManager.markerId === markerId ? 
+                              currentAudioManager.isPlaying : false
+                };
+                
+                // 更新信息显示框
+                updateInfoDisplay();
+                
+                // 立即更新UI状态
+                updateDockButtons();
+                
+                const instrumentName = config.name || '未知乐器';
+                showNotification(`🎯 检测到${instrumentName}`);
+                
+            } else if (!isVisible && wasVisible) {
+                wasVisible = false;
+                console.log('Marker丢失: ' + markerId + ' (状态保持)');
+                
+                // 隐藏模型
+                modelElement.setAttribute('visible', 'false');
+                
+                // 不清除状态，用户可以继续播放音乐和查看介绍
             }
-            
-        }, 100); // 保持原来的100ms检查间隔
+        }, 100); // 每100ms检查一次 - 快速响应
         
         console.log('=== s19组件初始化完成 ===');
     }
@@ -1920,91 +1919,91 @@ document.addEventListener('DOMContentLoaded', function() {
     vr-mode-ui="enabled: false">
 
    <a-marker id="marker1" preset="custom" s19="" url="assets/patterns/pattern-pipa.patt">
-    <a-entity gltf-model="url(assets/models/pipa.gltf)" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    <a-entity gltf-model="url(assets/models/pipa.gltf)" id="model1" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-marker id="marker2" preset="custom" s19="" url="assets/patterns/pattern-hulusi.patt">
-    <a-entity gltf-model="url(assets/models/hulusi.gltf)" id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.010 0.010 0.010" touch-handler>
+    <a-entity gltf-model="url(assets/models/hulusi.gltf)" id="model2" o15="x:0; y:0; z:0" position="0 0 0" scale="0.010 0.010 0.010" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-marker id="marker3" preset="custom" s19="" url="assets/patterns/pattern-dongbei_dagu.patt">
-    <a-entity gltf-model="url(assets/models/dongbei_dagu.gltf)" id="model3" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    <a-entity gltf-model="url(assets/models/dongbei_dagu.gltf)" id="model3" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-marker id="marker4" preset="custom" s19="" url="assets/patterns/pattern-dongbula.patt">
-    <a-entity gltf-model="url(assets/models/dongbula.gltf)" id="model4" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    <a-entity gltf-model="url(assets/models/dongbula.gltf)" id="model4" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-marker id="marker5" preset="custom" s19="" url="assets/patterns/pattern-gaohu.patt">
-    <a-entity gltf-model="url(assets/models/gaohu.gltf)" id="model5" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    <a-entity gltf-model="url(assets/models/gaohu.gltf)" id="model5" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-marker id="marker6" preset="custom" s19="" url="assets/patterns/pattern-huagu.patt">
-    <a-entity gltf-model="url(assets/models/huagu.gltf)" id="model6" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    <a-entity gltf-model="url(assets/models/huagu.gltf)" id="model6" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-marker id="marker7" preset="custom" s19="" url="assets/patterns/pattern-huobusi.patt">
-    <a-entity gltf-model="url(assets/models/huobusi.gltf)" id="model7" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    <a-entity gltf-model="url(assets/models/huobusi.gltf)" id="model7" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-marker id="marker8" preset="custom" s19="" url="assets/patterns/pattern-matouqin.patt">
-    <a-entity gltf-model="url(assets/models/matouqin.gltf)" id="model8" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    <a-entity gltf-model="url(assets/models/matouqin.gltf)" id="model8" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-marker id="marker9" preset="custom" s19="" url="assets/patterns/pattern-niujiaoqin.patt">
-    <a-entity gltf-model="url(assets/models/niujiaoqin.gltf)" id="model9" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    <a-entity gltf-model="url(assets/models/niujiaoqin.gltf)" id="model9" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-marker id="marker10" preset="custom" s19="" url="assets/patterns/pattern-suona.patt">
-    <a-entity gltf-model="url(assets/models/suona.gltf)" id="model10" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    <a-entity gltf-model="url(assets/models/suona.gltf)" id="model10" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-marker id="marker11" preset="custom" s19="" url="assets/patterns/pattern-yueqin.patt">
-    <a-entity gltf-model="url(assets/models/yueqin.gltf)" id="model11" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    <a-entity gltf-model="url(assets/models/yueqin.gltf)" id="model11" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-marker id="marker12" preset="custom" s19="" url="assets/patterns/pattern-chaozhou_suona.patt">
-    <a-entity gltf-model="url(assets/models/chaozhou_suona.gltf)" id="model12" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    <a-entity gltf-model="url(assets/models/chaozhou_suona.gltf)" id="model12" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-marker id="marker13" preset="custom" s19="" url="assets/patterns/pattern-chaozhou_zheng.patt">
-    <a-entity gltf-model="url(assets/models/chaozhou_zheng.gltf)" id="model13" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    <a-entity gltf-model="url(assets/models/chaozhou_zheng.gltf)" id="model13" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-marker id="marker14" preset="custom" s19="" url="assets/patterns/pattern-dongxiao.patt">
-    <a-entity gltf-model="url(assets/models/dongxiao.gltf)" id="model14" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    <a-entity gltf-model="url(assets/models/dongxiao.gltf)" id="model14" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-marker id="marker15" preset="custom" s19="" url="assets/patterns/pattern-houguan.patt">
-    <a-entity gltf-model="url(assets/models/houguan.gltf)" id="model15" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    <a-entity gltf-model="url(assets/models/houguan.gltf)" id="model15" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-marker id="marker16" preset="custom" s19="" url="assets/patterns/pattern-muyu.patt">
-    <a-entity gltf-model="url(assets/models/muyu.gltf)" id="model16" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    <a-entity gltf-model="url(assets/models/muyu.gltf)" id="model16" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-marker id="marker17" preset="custom" s19="" url="assets/patterns/pattern-niujiaohao.patt">
-    <a-entity gltf-model="url(assets/models/niujiaohao.gltf)" id="model17" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    <a-entity gltf-model="url(assets/models/niujiaohao.gltf)" id="model17" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-marker id="marker18" preset="custom" s19="" url="assets/patterns/pattern-qinqin.patt">
-    <a-entity gltf-model="url(assets/models/qinqin.gltf)" id="model18" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    <a-entity gltf-model="url(assets/models/qinqin.gltf)" id="model18" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-marker id="marker19" preset="custom" s19="" url="assets/patterns/pattern-yehu.patt">
-    <a-entity gltf-model="url(assets/models/yehu.gltf)" id="model19" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    <a-entity gltf-model="url(assets/models/yehu.gltf)" id="model19" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-marker id="marker20" preset="custom" s19="" url="assets/patterns/pattern-yugu.patt">
-    <a-entity gltf-model="url(assets/models/yugu.gltf)" id="model20" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    <a-entity gltf-model="url(assets/models/yugu.gltf)" id="model20" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-marker id="marker21" preset="custom" s19="" url="assets/patterns/pattern-zhuban.patt">
-    <a-entity gltf-model="url(assets/models/zhuban.gltf)" id="model21" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    <a-entity gltf-model="url(assets/models/zhuban.gltf)" id="model21" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
     <a-marker id="marker22" preset="custom" s19="" url="assets/patterns/pattern-huagudatong.patt">
-    <a-entity gltf-model="url(assets/models/huagudatong.gltf)" id="model22" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler>
+    <a-entity gltf-model="url(assets/models/huagudatong.gltf)" id="model22" o15="x:0; y:0; z:0" position="0 0 0" scale="0.02 0.02 0.02" touch-handler visible="false">
     </a-entity>
    </a-marker>
    <a-entity camera="">

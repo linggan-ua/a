@@ -1657,8 +1657,6 @@ function startAR() {
         .then(stream => {
             // 用户已授权
             console.log('摄像头权限已获取。');
-            // 立即停止我们刚刚请求的媒体流，因为AR.js会自己管理一个新的流
-            stream.getTracks().forEach(track => track.stop());
             
             // 权限获取成功，继续执行原有的启动逻辑
             console.log('正式启动AR场景。');

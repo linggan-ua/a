@@ -1587,19 +1587,19 @@ function createStartOverlay() {
     const permissionGuideHTML = device.isIOS ? `
         <div class="permission-guide">
             <div class="guide-title">星海音乐学院师生团队温馨提示：</div>
-            <div class="guide-text">请点击"允许/Allow"授权摄像头、传感器以使用AR功能</div>
+            <div class="guide-text">请点击"允许/Allow"授权以使用AR功能</div>
             <div class="guide-text">进入AR界面后可用手指对乐器模型进行旋转缩放~</div>
         </div>
     ` : device.isDesktop ? `
         <div class="permission-guide">
             <div class="guide-title">星海音乐学院师生团队温馨提示：</div>
-            <div class="guide-text">请点击"允许/Allow"授权摄像头以使用AR功能</div>
+            <div class="guide-text">请点击"允许/Allow"授权以使用AR功能</div>
             <div class="guide-text">进入AR界面后可用鼠标对乐器模型进行旋转缩放~</div>
         </div>
     ` : `
         <div class="permission-guide">
             <div class="guide-title">星海音乐学院师生团队温馨提示：</div>
-            <div class="guide-text">请点击"允许/Allow"授权摄像头以使用AR功能</div>
+            <div class="guide-text">请点击"允许/Allow"授权以使用AR功能</div>
             <div class="guide-text">进入AR界面后可用手指对乐器模型进行旋转缩放~</div>
         </div>
     `;
@@ -1739,11 +1739,11 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="start-subtitle">————把传统乐器“装在口袋里”</div>
     
     <button class="start-button" onclick="startAR()">
-        ✨ 点我启动AR体验
+         点我✨启动AR体验
     </button>
     
     <!-- 新增一个容器来包裹所有按钮下方的提示信息 -->
-    <div id="start-info-container" style="text-align: center; margin-top: 35px;">
+    <div id="start-info-container" style="text-align: bottom; margin-top: 20x;">
         <!-- “温馨提示”会由JS动态插入到这里 -->
         
     </div>

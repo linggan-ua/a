@@ -1158,7 +1158,7 @@ AFRAME.registerComponent('s19', {
         
         // 加载对应的信息文本
         var infoText = '';
-        var infoFile = config.info;
+        var infoFile = 'assets/info/' + config.info;
         
         fetch(infoFile)
             .then(function (response) {

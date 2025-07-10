@@ -1640,7 +1640,7 @@ function createStartOverlay() {
 }
 
 // ====================================================================
-// 已修改：startAR 函数 - 更新了权限拒绝后的处理方式
+// 已修改：startAR 函数 - 修复了iOS上的摄像头白屏问题
 // ====================================================================
 function startAR() {
     if (isARStarted) return;
@@ -1657,6 +1657,11 @@ function startAR() {
         .then(stream => {
             // 用户已授权
             console.log('摄像头权限已获取。');
+            
+            // 关键修复：不要在这里停止媒体流(stream.getTracks()...)。
+            // 我们让AR.js自己去处理摄像头，我们这里的调用主要目的是为了触发浏览器的权限请求。
+            // 如果我们在这里停止它，iOS/Safari可能会在AR.js尝试获取摄像头时出现资源冲突，导致白屏。
+            // 让这个初始的流继续存在是无害的，AR.js会正确地接管。
             
             // 权限获取成功，继续执行原有的启动逻辑
             console.log('正式启动AR场景。');
@@ -1829,7 +1834,8 @@ document.addEventListener('DOMContentLoaded', function() {
   <div id="permission-denied-overlay" class="loading-overlay hidden">
     <div id="permission-panel" class="loading-panel">
         <h3 id="permission-title">📷 摄像头权限被拒绝</h3>
-        <p id="permission-text">您需要重新扫码进入，并在弹出的窗口中点击“允许”，才能使用AR功能。</p>
+        <p id="permission-text">您需要手动刷新页面，或重新扫码进入，并在弹出的窗口中点击“允许”，才能使用AR功能。</p>
+        <button class="start-button refresh-btn" style="margin-top: 20px;" onclick="window.location.reload()">手动刷新页面</button>
     </div>
   </div>
 

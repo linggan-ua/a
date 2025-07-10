@@ -1640,54 +1640,49 @@ function createStartOverlay() {
 }
 
 // ====================================================================
-// 已修改：startAR 函数 - 修复了iOS上的摄像头白屏问题
+// 已修改：startAR 函数 - 再次修复iOS上的摄像头白屏问题
 // ====================================================================
 function startAR() {
     if (isARStarted) return;
     console.log('尝试启动AR体验...');
 
-    // 检查浏览器是否支持getUserMedia
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         showNotification('您的浏览器不支持摄像头访问功能。', true);
         return;
     }
 
-    // 在启动AR场景前，先显式请求摄像头权限
     navigator.mediaDevices.getUserMedia({ video: true, audio: false })
         .then(stream => {
-            // 用户已授权
-            console.log('摄像头权限已获取。');
+            console.log('摄像头权限已获取。正在释放临时摄像头流...');
             
-            // 关键修复：不要在这里停止媒体流(stream.getTracks()...)。
-            // 我们让AR.js自己去处理摄像头，我们这里的调用主要目的是为了触发浏览器的权限请求。
-            // 如果我们在这里停止它，iOS/Safari可能会在AR.js尝试获取摄像头时出现资源冲突，导致白屏。
-            // 让这个初始的流继续存在是无害的，AR.js会正确地接管。
-            
+            // 关键修复：立即停止我们刚刚获取的流，以释放摄像头资源给AR.js使用。
+            stream.getTracks().forEach(track => track.stop());
+
             // 权限获取成功，继续执行原有的启动逻辑
-            console.log('正式启动AR场景。');
-            isARStarted = true;
-            
-            startOverlay.classList.add('hidden');
-            document.getElementById('ar-scene').classList.add('active');
-            document.getElementById('dock-container').classList.add('active');
-            
-            applyIOSVideoFix();
+            // 使用一个极短的延时来确保摄像头资源已完全释放，避免在iOS上出现竞争条件
+            setTimeout(() => {
+                console.log('正式启动AR场景。');
+                isARStarted = true;
+                
+                startOverlay.classList.add('hidden');
+                document.getElementById('ar-scene').classList.add('active');
+                document.getElementById('dock-container').classList.add('active');
+                
+                applyIOSVideoFix();
+            }, 100); // 100毫秒的延迟
+
         })
         .catch(err => {
-            // 用户拒绝或发生其他错误
             console.error('摄像头权限请求失败:', err.name, err.message);
 
             if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                // 用户明确拒绝了权限，显示常驻提示窗口
                 const overlay = document.getElementById('permission-denied-overlay');
                 if (overlay) {
                     overlay.classList.remove('hidden');
                 }
             } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-                // 未找到可用的摄像头设备
                 showNotification('未找到可用的摄像头设备。', true);
             } else {
-                // 其他未知错误
                 showNotification('启动摄像头时发生错误: ' + err.name, true);
             }
         });

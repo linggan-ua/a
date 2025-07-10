@@ -902,7 +902,7 @@
             opacity: 0.9;
         }
         
-        /* =============== 加载覆盖层样式 =============== */
+        /* =============== 新增：加载覆盖层样式 =============== */
         .loading-overlay {
             position: fixed;
             top: 0;
@@ -962,29 +962,7 @@
             opacity: 0.9;
             color: #eee;
         }
-        
-        /* =============== 新增：权限拒绝面板样式 =============== */
-        #permission-panel {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(244, 67, 54, 0.4); /* 红色边框 */
-            box-shadow: 0 8px 32px rgba(244, 67, 54, 0.2); /* 红色阴影 */
-        }
-
-        #permission-title {
-            color: #ffcdd2; /* 浅红色标题 */
-            font-size: 18px;
-            font-weight: 600;
-            margin-top: 0;
-            margin-bottom: 15px;
-        }
-
-        #permission-text {
-            font-size: 14px;
-            margin: 0;
-            opacity: 0.9;
-            color: #eee;
-            line-height: 1.6;
-        }
+        /* =============== 结束：新增样式 =============== */
         
         @media (max-width: 480px) {
             .start-title { font-size: 2em; }
@@ -1640,49 +1618,51 @@ function createStartOverlay() {
 }
 
 // ====================================================================
-// 已修改：startAR 函数 - 再次修复iOS上的摄像头白屏问题
+// 已修改：startAR 函数 - 增加了前置摄像头权限检查
 // ====================================================================
 function startAR() {
     if (isARStarted) return;
     console.log('尝试启动AR体验...');
 
+    // 检查浏览器是否支持getUserMedia
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         showNotification('您的浏览器不支持摄像头访问功能。', true);
         return;
     }
 
+    // 在启动AR场景前，先显式请求摄像头权限
     navigator.mediaDevices.getUserMedia({ video: true, audio: false })
         .then(stream => {
-            console.log('摄像头权限已获取。正在释放临时摄像头流...');
-            
-            // 关键修复：立即停止我们刚刚获取的流，以释放摄像头资源给AR.js使用。
+            // 用户已授权
+            console.log('摄像头权限已获取。');
+            // 立即停止我们刚刚请求的媒体流，因为AR.js会自己管理一个新的流
             stream.getTracks().forEach(track => track.stop());
-
+            
             // 权限获取成功，继续执行原有的启动逻辑
-            // 使用一个极短的延时来确保摄像头资源已完全释放，避免在iOS上出现竞争条件
-            setTimeout(() => {
-                console.log('正式启动AR场景。');
-                isARStarted = true;
-                
-                startOverlay.classList.add('hidden');
-                document.getElementById('ar-scene').classList.add('active');
-                document.getElementById('dock-container').classList.add('active');
-                
-                applyIOSVideoFix();
-            }, 100); // 100毫秒的延迟
-
+            console.log('正式启动AR场景。');
+            isARStarted = true;
+            
+            startOverlay.classList.add('hidden');
+            document.getElementById('ar-scene').classList.add('active');
+            document.getElementById('dock-container').classList.add('active');
+            
+            applyIOSVideoFix();
         })
         .catch(err => {
+            // 用户拒绝或发生其他错误
             console.error('摄像头权限请求失败:', err.name, err.message);
 
             if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                const overlay = document.getElementById('permission-denied-overlay');
-                if (overlay) {
-                    overlay.classList.remove('hidden');
-                }
+                // 用户明确拒绝了权限，完全按照您的要求实现
+                showNotification('权限被拒绝，无法使用AR功能！请先同意摄像头权限以使用AR功能。', true);
+                setTimeout(() => {
+                    window.location.reload(); // 2秒后刷新页面
+                }, 2000);
             } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                // 未找到可用的摄像头设备
                 showNotification('未找到可用的摄像头设备。', true);
             } else {
+                // 其他未知错误
                 showNotification('启动摄像头时发生错误: ' + err.name, true);
             }
         });
@@ -1814,7 +1794,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   </div>
 
-  <!-- 加载弹窗UI -->
+  <!-- 新增：加载弹窗UI -->
   <div id="loading-overlay" class="loading-overlay hidden">
     <div class="loading-panel">
         <h3 id="loading-title"></h3>
@@ -1822,15 +1802,6 @@ document.addEventListener('DOMContentLoaded', function() {
             <div id="progress-bar" class="progress-bar"></div>
         </div>
         <p id="loading-text"></p>
-    </div>
-  </div>
-
-  <!-- 新增：权限拒绝提示UI -->
-  <div id="permission-denied-overlay" class="loading-overlay hidden">
-    <div id="permission-panel" class="loading-panel">
-        <h3 id="permission-title">📷 摄像头权限被拒绝</h3>
-        <p id="permission-text">您需要手动刷新页面，或重新扫码进入，并在弹出的窗口中点击“允许”，才能使用AR功能。</p>
-        <button class="start-button refresh-btn" style="margin-top: 20px;" onclick="window.location.reload()">手动刷新页面</button>
     </div>
   </div>
 

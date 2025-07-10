@@ -902,7 +902,7 @@
             opacity: 0.9;
         }
         
-        /* =============== 加载覆盖层样式 =============== */
+        /* =============== 新增：加载覆盖层样式 =============== */
         .loading-overlay {
             position: fixed;
             top: 0;
@@ -962,29 +962,106 @@
             opacity: 0.9;
             color: #eee;
         }
-        
-        /* =============== 新增：权限拒绝面板样式 =============== */
-        #permission-panel {
+
+        /* =============== 新增：权限拒绝弹窗样式 =============== */
+        .permission-error-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(25px) saturate(1.8);
+            -webkit-backdrop-filter: blur(25px) saturate(1.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+            color: white;
+            text-align: center;
+            transition: opacity 0.3s ease;
+        }
+
+        .permission-error-overlay::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 30% 20%, rgba(244, 67, 54, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 70% 80%, rgba(156, 39, 176, 0.3) 0%, transparent 50%);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            z-index: -1;
+        }
+
+        .permission-error-panel {
             background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(244, 67, 54, 0.4); /* 红色边框 */
-            box-shadow: 0 8px 32px rgba(244, 67, 54, 0.2); /* 红色阴影 */
+            padding: 30px 35px;
+            border-radius: 20px;
+            border: 2px solid rgba(244, 67, 54, 0.4);
+            box-shadow: 0 8px 32px rgba(244, 67, 54, 0.3);
+            width: 90%;
+            max-width: 400px;
         }
 
-        #permission-title {
-            color: #ffcdd2; /* 浅红色标题 */
-            font-size: 18px;
-            font-weight: 600;
-            margin-top: 0;
+        .permission-error-title {
+            font-size: 20px;
+            font-weight: 700;
             margin-bottom: 15px;
+            color: #FF6B6B;
         }
 
-        #permission-text {
-            font-size: 14px;
-            margin: 0;
+        .permission-error-text {
+            font-size: 16px;
+            margin-bottom: 20px;
             opacity: 0.9;
-            color: #eee;
-            line-height: 1.6;
+            line-height: 1.5;
         }
+
+        .permission-error-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 25px;
+        }
+
+        .permission-error-btn {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1.5px solid rgba(255, 255, 255, 0.25);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            backdrop-filter: blur(20px) saturate(1.8);
+            -webkit-backdrop-filter: blur(20px) saturate(1.8);
+            box-shadow: 
+                0 4px 20px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+
+        .permission-error-btn:hover {
+            background: rgba(255, 255, 255, 0.18);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-2px) scale(1.02);
+        }
+
+        .permission-error-btn.primary {
+            background: rgba(244, 67, 54, 0.8);
+            border-color: rgba(244, 67, 54, 0.6);
+        }
+
+        .permission-error-btn.primary:hover {
+            background: rgba(244, 67, 54, 0.9);
+            border-color: rgba(244, 67, 54, 0.8);
+        }
+        /* =============== 结束：新增样式 =============== */
         
         @media (max-width: 480px) {
             .start-title { font-size: 2em; }
@@ -1012,6 +1089,7 @@ const infoCache = {};
 const markdownCache = {};
 let loadingInterval = null; // 新增：用于管理加载动画的计时器
 let isAudioReloading = false; // 新增：防止重复触发音频重载
+let permissionCheckTimeout = null; // 新增：权限检测超时
 
 // ====================================================================
 // 乐器配置中心 (全局)
@@ -1051,6 +1129,129 @@ function getDeviceInfo() {
         isAndroid: /Android/i.test(ua),
         isDesktop: !/iPhone|iPad|iPod|Android/i.test(ua)
     };
+}
+
+// ====================================================================
+// 新增：权限检测相关函数
+// ====================================================================
+
+// 检查摄像头权限状态
+async function checkCameraPermission() {
+    try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            console.warn('getUserMedia not supported');
+            return 'unsupported';
+        }
+
+        // 尝试获取摄像头流
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: 'environment' }
+        });
+        
+        // 如果成功获取，立即关闭流并返回granted
+        stream.getTracks().forEach(track => track.stop());
+        return 'granted';
+        
+    } catch (error) {
+        console.log('Camera permission check failed:', error.name, error.message);
+        
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+            return 'denied';
+        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+            return 'no-camera';
+        } else {
+            return 'error';
+        }
+    }
+}
+
+// 显示权限错误弹窗
+function showPermissionErrorOverlay() {
+    // 检查是否已经存在弹窗
+    if (document.getElementById('permission-error-overlay')) {
+        return;
+    }
+
+    const device = getDeviceInfo();
+    
+    const overlay = document.createElement('div');
+    overlay.id = 'permission-error-overlay';
+    overlay.className = 'permission-error-overlay';
+    
+    overlay.innerHTML = `
+        <div class="permission-error-panel">
+            <div class="permission-error-title">📷 摄像头权限被拒绝</div>
+            <div class="permission-error-text">
+                AR功能需要使用摄像头来识别乐器码。<br>
+                请按照以下步骤重新授权：
+            </div>
+            <div class="permission-error-text">
+                ${device.isIOS ? 
+                    '• 点击地址栏左侧的🔒图标<br>• 将摄像头设置为"允许"<br>• 刷新页面重新开始' : 
+                    '• 点击地址栏的摄像头图标<br>• 选择"始终允许"<br>• 刷新页面重新开始'
+                }
+            </div>
+            <div class="permission-error-buttons">
+                <button class="permission-error-btn primary" onclick="refreshPage()">
+                    🔃 刷新页面
+                </button>
+                <button class="permission-error-btn" onclick="hidePermissionErrorOverlay()">
+                    ❌ 关闭提示
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(overlay);
+    console.log('Permission error overlay shown');
+}
+
+// 隐藏权限错误弹窗
+function hidePermissionErrorOverlay() {
+    const overlay = document.getElementById('permission-error-overlay');
+    if (overlay) {
+        overlay.remove();
+    }
+}
+
+// 监听AR.js场景错误
+function setupARSceneErrorHandling() {
+    const arScene = document.getElementById('ar-scene');
+    if (!arScene) return;
+
+    // 监听A-Frame的错误事件
+    arScene.addEventListener('ar-error', function(event) {
+        console.error('AR Error:', event.detail);
+        handleARError(event.detail);
+    });
+
+    // 监听A-Frame场景的加载错误
+    arScene.addEventListener('loaded', function() {
+        console.log('AR scene loaded successfully');
+        clearTimeout(permissionCheckTimeout);
+    });
+
+    // 设置超时检测，如果AR场景在一定时间内没有正常启动，可能是权限问题
+    arScene.addEventListener('renderstart', function() {
+        console.log('AR rendering started');
+        clearTimeout(permissionCheckTimeout);
+    });
+}
+
+// 处理AR错误
+function handleARError(error) {
+    console.error('Handling AR error:', error);
+    
+    // 检查是否是权限相关的错误
+    if (error && (
+        error.message && error.message.includes('Permission') ||
+        error.name === 'NotAllowedError' ||
+        error.toString().includes('permission')
+    )) {
+        setTimeout(() => {
+            showPermissionErrorOverlay();
+        }, 500);
+    }
 }
 
 // ====================================================================
@@ -1550,7 +1751,7 @@ function hideLoadingOverlay(isSuccess) {
         text.textContent = '加载完成!';
         setTimeout(() => {
             overlay.classList.add('hidden');
-        }, 500); // 延迟半秒关闭，让用户看到“加载完成”
+        }, 500); // 延迟半秒关闭，让用户看到"加载完成"
     } else {
         // 如果失败，立即隐藏
         overlay.classList.add('hidden');
@@ -1606,7 +1807,7 @@ function updateDockButtons() {
     }
 }
 
-// =============== 启动系统 ===============
+// =============== 启动系统 (恢复您的原始逻辑) ===============
 function createStartOverlay() {
     startOverlay = document.getElementById('start-overlay');
     const device = getDeviceInfo();
@@ -1639,46 +1840,49 @@ function createStartOverlay() {
     }
 }
 
-// ====================================================================
-// 已修改：startAR 函数 - 采用“事后监督”机制修复iOS白屏问题
-// ====================================================================
-function startAR() {
+// 修改：startAR 函数 - 添加权限检测
+async function startAR() {
     if (isARStarted) return;
-    console.log('尝试启动AR体验，将权限请求完全交由AR.js处理...');
-    isARStarted = true;
-
-    const arScene = document.getElementById('ar-scene');
+    console.log('启动AR体验');
     
-    // 定义权限检查失败的处理函数
-    const handlePermissionError = () => {
-        console.error('AR摄像头启动超时，判定为权限被拒绝。');
-        // 隐藏AR场景，避免白屏
-        arScene.classList.remove('active');
-        // 显示我们自定义的权限拒绝提示
-        const overlay = document.getElementById('permission-denied-overlay');
-        if (overlay) {
-            overlay.classList.remove('hidden');
-        }
-        // 隐藏Dock栏
-        const dock = document.getElementById('dock-container');
-        if (dock) {
-            dock.classList.remove('active');
-        }
-    };
-
-    // 设置一个“监督”计时器，如果在7秒内AR.js没有成功启动摄像头，就判定为失败
-    const permissionTimeout = setTimeout(handlePermissionError, 7000);
-
-    // 监听AR.js成功启动摄像头的事件
-    arScene.addEventListener('arjs-source-ready', () => {
-        console.log('AR.js摄像头已准备就绪，取消权限监督计时器。');
-        clearTimeout(permissionTimeout);
-    }, { once: true }); // { once: true }确保这个监听器只执行一次
-
-    // 正常启动流程
+    // 检查权限状态
+    const permissionStatus = await checkCameraPermission();
+    console.log('Permission status:', permissionStatus);
+    
+    if (permissionStatus === 'denied') {
+        console.log('Camera permission denied, showing error overlay');
+        showPermissionErrorOverlay();
+        return;
+    } else if (permissionStatus === 'no-camera') {
+        showNotification('❌ 未检测到摄像头设备', true);
+        return;
+    } else if (permissionStatus === 'unsupported') {
+        showNotification('❌ 浏览器不支持摄像头功能', true);
+        return;
+    } else if (permissionStatus === 'error') {
+        showNotification('⚠️ 摄像头访问出现错误，请重试', true);
+        return;
+    }
+    
+    // 权限正常，启动AR
+    isARStarted = true;
     startOverlay.classList.add('hidden');
-    arScene.classList.add('active');
+    document.getElementById('ar-scene').classList.add('active');
     document.getElementById('dock-container').classList.add('active');
+    
+    // 设置超时检测，防止权限在启动过程中被拒绝
+    permissionCheckTimeout = setTimeout(() => {
+        // 如果5秒后还没有成功启动，可能存在权限问题
+        const videos = document.querySelectorAll('video');
+        if (videos.length === 0 || !videos[0].srcObject) {
+            console.log('AR failed to start properly, checking permissions...');
+            checkCameraPermission().then(status => {
+                if (status === 'denied') {
+                    showPermissionErrorOverlay();
+                }
+            });
+        }
+    }, 5000);
     
     applyIOSVideoFix();
 }
@@ -1708,6 +1912,8 @@ function applyIOSVideoFix() {
                     video.play().catch(e => console.warn("Initial video play failed, this is often expected.", e));
                 }
             });
+            // 清除权限检测超时
+            clearTimeout(permissionCheckTimeout);
             return;
         }
         
@@ -1721,7 +1927,6 @@ function applyIOSVideoFix() {
     setTimeout(fixVideoElements, 500);
 }
 
-// 注意：此函数及其相关UI现在未被新的权限流程使用，但按要求保留
 function handlePermissionDenied() {
     console.log('检测到权限被拒绝');
     const device = getDeviceInfo();
@@ -1757,20 +1962,22 @@ function handlePermissionDenied() {
     document.body.appendChild(deniedOverlay);
 }
 
-// 注意：此函数未被新的权限流程使用，但按要求保留
 function retryPermission() {
     const deniedUI = document.querySelector('.permission-denied-overlay');
     if (deniedUI) deniedUI.remove();
+    hidePermissionErrorOverlay();
     isARStarted = false;
     startAR();
 }
 
-function refreshPage() { window.location.reload(); }
+function refreshPage() { 
+    window.location.reload(); 
+}
 
-// 注意：此函数未被新的权限流程使用，但按要求保留
 function backToStart() {
     const deniedUI = document.querySelector('.permission-denied-overlay');
     if (deniedUI) deniedUI.remove();
+    hidePermissionErrorOverlay();
     document.getElementById('ar-scene').classList.remove('active');
     const dockContainer = document.getElementById('dock-container');
     if (dockContainer) dockContainer.classList.remove('active');
@@ -1781,6 +1988,34 @@ function backToStart() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('页面加载完成，准备启动AR。');
     createStartOverlay();
+    
+    // 设置AR场景错误处理
+    setupARSceneErrorHandling();
+    
+    // 保留原有的错误监听器作为后备
+    window.addEventListener('unhandledrejection', function(event) {
+        if (isARStarted && event.reason && (event.reason.name === 'NotAllowedError' || (event.reason.message && event.reason.message.includes('not allowed')))) {
+            console.log('捕获到权限拒绝错误 (unhandledrejection)');
+            event.preventDefault();
+            setTimeout(() => {
+                showPermissionErrorOverlay();
+            }, 500);
+        }
+    });
+    
+    // 新增：监听getUserMedia错误
+    window.addEventListener('error', function(event) {
+        if (event.error && (
+            event.error.name === 'NotAllowedError' || 
+            event.error.message.includes('Permission') ||
+            event.error.message.includes('denied')
+        )) {
+            console.log('捕获到权限拒绝错误 (error event)');
+            setTimeout(() => {
+                showPermissionErrorOverlay();
+            }, 500);
+        }
+    });
 });
 
   </script>
@@ -1790,7 +2025,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <!-- UI元素 -->
   <div id="start-overlay" class="start-overlay">
     <div class="start-title"> 中国传统音乐与乐器<br>增强现实(AR)<br>视听云平台</div>
-    <div class="start-subtitle">————把传统音乐文化“装进口袋”</div>
+    <div class="start-subtitle">————把传统音乐文化"装进口袋"</div>
     
     <button class="start-button" onclick="startAR()">
          点我✨启动AR体验
@@ -1798,13 +2033,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     <!-- 新增一个容器来包裹所有按钮下方的提示信息 -->
     <div id="start-info-container" style="text-align: center; margin-top: 20px;">
-        <!-- “温馨提示”会由JS动态插入到这里 -->
+        <!-- "温馨提示"会由JS动态插入到这里 -->
         
     </div>
 
   </div>
 
-  <!-- 加载弹窗UI -->
+  <!-- 新增：加载弹窗UI -->
   <div id="loading-overlay" class="loading-overlay hidden">
     <div class="loading-panel">
         <h3 id="loading-title"></h3>
@@ -1812,15 +2047,6 @@ document.addEventListener('DOMContentLoaded', function() {
             <div id="progress-bar" class="progress-bar"></div>
         </div>
         <p id="loading-text"></p>
-    </div>
-  </div>
-
-  <!-- 新增：权限拒绝提示UI -->
-  <div id="permission-denied-overlay" class="loading-overlay hidden">
-    <div id="permission-panel" class="loading-panel">
-        <h3 id="permission-title">📷 摄像头权限被拒绝</h3>
-        <p id="permission-text">您需要手动刷新页面，或重新扫码进入，并在弹出的窗口中点击“允许”，才能使用AR功能。</p>
-        <button class="start-button refresh-btn" style="margin-top: 20px;" onclick="window.location.reload()">手动刷新页面</button>
     </div>
   </div>
 

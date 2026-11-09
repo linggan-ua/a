@@ -1371,7 +1371,7 @@ AFRAME.registerComponent('instrument-player', {
     },
     
     onMouseDown: function (evt) {
-        if (!this.isThisMarkerActive() || !this.el.getAttribute('visible')) return;
+        if (!this.isThisMarkerActive() || !this.el.parentElement.object3D.visible) return;
         if (evt.detail && evt.detail.mouseEvent) {
             this.mouseDownPos = {
                 x: evt.detail.mouseEvent.clientX,
@@ -1381,7 +1381,7 @@ AFRAME.registerComponent('instrument-player', {
     },
     
     onMouseUp: function (evt) {
-        if (!this.isThisMarkerActive() || !this.el.getAttribute('visible')) return;
+        if (!this.isThisMarkerActive() || !this.el.parentElement.object3D.visible) return;
         
         let mouseUpPos = { x: 0, y: 0 };
         if (evt.detail && evt.detail.mouseEvent) {
@@ -1472,24 +1472,15 @@ AFRAME.registerComponent('instrument-handler', {
         }
 
         this.modelEntity = this.marker.querySelector('[touch-handler]');
-        this.modelEntity.setAttribute('visible', false);
         this.marker.addEventListener('markerFound', this.onMarkerFound.bind(this));
-        this.marker.addEventListener('markerLost', this.onMarkerLost.bind(this));
     },
 
     onMarkerFound: function () {
         console.log(`Marker found: ${this.markerId} (${this.config.name})`);
         this.setActiveInstrument();
-        if (this.config.isLoaded) {
-            this.modelEntity.setAttribute('visible', true);
-        } else {
+        if (!this.config.isLoaded) {
             this.loadResources();
         }
-    },
-
-    onMarkerLost: function () {
-        console.log(`Marker lost: ${this.markerId}. State will be preserved.`);
-        this.modelEntity.setAttribute('visible', false);
     },
     
     // ====================================================================
@@ -1506,10 +1497,7 @@ AFRAME.registerComponent('instrument-handler', {
             console.log(`${this.config.name} model loaded.`);
             this.config.isLoaded = true;
             hideLoadingOverlay(true);
-            
-            if (this.marker.object3D.visible) {
-                 this.modelEntity.setAttribute('visible', true);
-            }
+
             // 成功后移除监听器，避免内存泄漏
             this.modelEntity.removeEventListener('model-loaded', modelLoadHandler);
             this.modelEntity.removeEventListener('model-error', modelErrorHandler);
@@ -1631,7 +1619,7 @@ AFRAME.registerComponent('touch-handler', {
         return currentAudioManager && currentAudioManager.markerId === this.markerId;
     },
     onTouchStart: function (e) {
-        if (!this.isThisMarkerActive() || !this.el.getAttribute('visible')) return;
+        if (!this.isThisMarkerActive() || !this.el.parentElement.object3D.visible) return;
         if (e.touches.length === 1) {
             this.isDragging = true;
             this.isPinching = false;
@@ -1643,7 +1631,7 @@ AFRAME.registerComponent('touch-handler', {
         }
     },
     onTouchMove: function (e) {
-        if (!this.isThisMarkerActive() || !this.el.getAttribute('visible')) return;
+        if (!this.isThisMarkerActive() || !this.el.parentElement.object3D.visible) return;
         if (this.isDragging && e.touches.length === 1) {
             const deltaX = e.touches[0].clientX - this.previousTouchPosition.x;
             const deltaY = e.touches[0].clientY - this.previousTouchPosition.y;
@@ -2243,79 +2231,79 @@ document.addEventListener('DOMContentLoaded', function() {
    <!-- 所有23个Marker的完整结构 (已移除旧的 <a-torus> 加载动画) -->
    <!-- ==================================================================== -->
    <a-marker id="marker1" type="pattern" url="assets/patterns/pattern-pipa.patt" instrument-handler>
-        <a-entity id="model1" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model1" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
    <a-marker id="marker2" type="pattern" url="assets/patterns/pattern-hulusi.patt" instrument-handler>
-        <a-entity id="model2" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.014 0.014 0.014" touch-handler visible="false"></a-entity>
+        <a-entity id="model2" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.014 0.014 0.014" touch-handler></a-entity>
    </a-marker>
    <a-marker id="marker3" type="pattern" url="assets/patterns/pattern-dongbei_dagu.patt" instrument-handler>
-        <a-entity id="model3" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model3" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
    <a-marker id="marker4" type="pattern" url="assets/patterns/pattern-dongbula.patt" instrument-handler>
-        <a-entity id="model4" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model4" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
    <a-marker id="marker5" type="pattern" url="assets/patterns/pattern-gaohu.patt" instrument-handler>
-        <a-entity id="model5" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model5" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
    <a-marker id="marker6" type="pattern" url="assets/patterns/pattern-huagu.patt" instrument-handler>
-        <a-entity id="model6" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model6" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
    <a-marker id="marker7" type="pattern" url="assets/patterns/pattern-huobusi.patt" instrument-handler>
-        <a-entity id="model7" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model7" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
    <a-marker id="marker8" type="pattern" url="assets/patterns/pattern-matouqin.patt" instrument-handler>
-        <a-entity id="model8" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model8" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
    <a-marker id="marker9" type="pattern" url="assets/patterns/pattern-niujiaoqin.patt" instrument-handler>
-        <a-entity id="model9" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model9" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
    <a-marker id="marker10" type="pattern" url="assets/patterns/pattern-suona.patt" instrument-handler>
-        <a-entity id="model10" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model10" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
    <a-marker id="marker11" type="pattern" url="assets/patterns/pattern-yueqin.patt" instrument-handler>
-        <a-entity id="model11" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model11" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
    <a-marker id="marker12" type="pattern" url="assets/patterns/pattern-chaozhou_suona.patt" instrument-handler>
-        <a-entity id="model12" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model12" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
    <a-marker id="marker13" type="pattern" url="assets/patterns/pattern-chaozhou_zheng.patt" instrument-handler>
-        <a-entity id="model13" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model13" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
    <a-marker id="marker14" type="pattern" url="assets/patterns/pattern-dongxiao.patt" instrument-handler>
-        <a-entity id="model14" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model14" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
    <a-marker id="marker15" type="pattern" url="assets/patterns/pattern-houguan.patt" instrument-handler>
-        <a-entity id="model15" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model15" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
    <a-marker id="marker16" type="pattern" url="assets/patterns/pattern-muyu.patt" instrument-handler>
-        <a-entity id="model16" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model16" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
    <a-marker id="marker17" type="pattern" url="assets/patterns/pattern-niujiaohao.patt" instrument-handler>
-        <a-entity id="model17" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model17" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
    <a-marker id="marker18" type="pattern" url="assets/patterns/pattern-qinqin.patt" instrument-handler>
-        <a-entity id="model18" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model18" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
    <a-marker id="marker19" type="pattern" url="assets/patterns/pattern-yehu.patt" instrument-handler>
-        <a-entity id="model19" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model19" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
    <a-marker id="marker20" type="pattern" url="assets/patterns/pattern-yugu.patt" instrument-handler>
-        <a-entity id="model20" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model20" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
    <a-marker id="marker21" type="pattern" url="assets/patterns/pattern-zhuban.patt" instrument-handler>
-        <a-entity id="model21" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model21" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
    <a-marker id="marker22" type="pattern" url="assets/patterns/pattern-huagudatong.patt" instrument-handler>
-        <a-entity id="model22" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model22" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
     <a-marker id="marker23" type="pattern" url="assets/patterns/pattern-koubidi.patt" instrument-handler>
-        <a-entity id="model23" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model23" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
    <a-marker id="marker24" type="pattern" url="assets/patterns/pattern-yangqin.patt" instrument-handler>
-        <a-entity id="model24" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model24" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
    <a-marker id="marker25" type="pattern" url="assets/patterns/pattern-sanxian.patt" instrument-handler>
-        <a-entity id="model25" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler visible="false"></a-entity>
+        <a-entity id="model25" class="playable" instrument-player o15="x:0; y:0; z:0" position="0 0 0" scale="0.03 0.03 0.03" touch-handler></a-entity>
    </a-marker>
    <a-entity camera cursor="rayOrigin: mouse; fuse: false" raycaster="objects: .playable"></a-entity>
   </a-scene>

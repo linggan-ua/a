@@ -1194,6 +1194,12 @@ function showPermissionErrorOverlay() {
                 1.重新扫描二维码进入该页面，在弹出的权限请求弹窗中点击“允许”或“Allow”按钮。<br>
             </div>
             <div class="permission-error-buttons">
+                <button class="permission-error-btn" onclick="retryPermission()">
+                    🔄 重新尝试
+                </button>
+                <button class="permission-error-btn" onclick="backToStart()">
+                    ⬅️ 返回开始
+                </button>
                 <button class="permission-error-btn primary" onclick="refreshPage()">
                     🔃 刷新页面<br>如刷新后没有看到权限请求弹窗<br>请重新扫码进入
                 </button>
@@ -1985,30 +1991,92 @@ function createStartOverlay() {
     }
 }
 
+// =============== AR 摄像头生命周期 ===============
+function getARSource() {
+    const scene = document.getElementById('ar-scene');
+    const system = scene && scene.systems && scene.systems.arjs;
+    const session = system && system._arSession;
+    return session && session.arSource ? session.arSource : null;
+}
+
+function hasLiveARStream() {
+    const source = getARSource();
+    const video = source && source.domElement;
+    if (!video || !video.srcObject || !video.srcObject.getTracks) return false;
+    return video.srcObject.getTracks().some(track => track.readyState === 'live');
+}
+
+function pauseARSource() {
+    const source = getARSource();
+    if (!source) return;
+    const video = source.domElement;
+    if (video) {
+        if (video.srcObject && video.srcObject.getTracks) {
+            video.srcObject.getTracks().forEach(track => track.stop());
+        }
+        video.srcObject = null;
+        video.pause();
+    }
+    source.ready = false;
+}
+
+async function resumeARSource() {
+    const source = getARSource();
+    if (!source) return false;
+    const video = source.domElement;
+    if (!video) return false;
+
+    if (hasLiveARStream()) {
+        if (video.paused) {
+            try { await video.play(); } catch (e) { console.warn('AR 视频播放恢复失败', e); }
+        }
+        source.ready = true;
+        return true;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        video.srcObject = stream;
+        await video.play().catch(e => console.warn('AR 视频播放失败', e));
+        source.ready = true;
+        return true;
+    } catch (error) {
+        console.warn('恢复摄像头失败:', error.name, error.message);
+        return false;
+    }
+}
+
 // 修改：startAR 函数 - 添加权限检测
 async function startAR() {
     if (isARStarted) return;
     console.log('启动AR体验');
-    
-    // 检查权限状态
-    const permissionStatus = await checkCameraPermission();
-    console.log('Permission status:', permissionStatus);
-    
-    if (permissionStatus === 'denied') {
-        console.log('Camera permission denied, showing error overlay');
-        showPermissionErrorOverlay();
-        return;
-    } else if (permissionStatus === 'no-camera') {
-        showNotification('❌ 未检测到摄像头设备', true);
-        return;
-    } else if (permissionStatus === 'unsupported') {
-        showNotification('❌ 浏览器不支持摄像头功能', true);
-        return;
-    } else if (permissionStatus === 'error') {
-        showNotification('⚠️ 摄像头访问出现错误，请重试', true);
-        return;
+
+    // 优先恢复或复用 AR.js 已有的摄像头流，避免重复请求设备
+    const resumed = await resumeARSource();
+    if (!resumed) {
+        // 恢复失败时再探测权限，给出准确的失败原因
+        const permissionStatus = await checkCameraPermission();
+        console.log('Permission status:', permissionStatus);
+
+        if (permissionStatus === 'denied') {
+            console.log('Camera permission denied, showing error overlay');
+            showPermissionErrorOverlay();
+            return;
+        } else if (permissionStatus === 'no-camera') {
+            showNotification('❌ 未检测到摄像头设备', true);
+            return;
+        } else if (permissionStatus === 'unsupported') {
+            showNotification('❌ 浏览器不支持摄像头功能', true);
+            return;
+        } else if (permissionStatus === 'error') {
+            showNotification('⚠️ 摄像头访问出现错误，请重试', true);
+            return;
+        }
+        // 权限正常但 AR.js 源尚未就绪（例如场景还在初始化），继续启动，由 AR.js 自行完成摄像头初始化
     }
-    
+
     // 在用户手势上下文中提前解锁合成音，提升移动端发声成功率
     await unlockSynthAudio();
 
@@ -2075,47 +2143,15 @@ function applyIOSVideoFix() {
     setTimeout(fixVideoElements, 500);
 }
 
-function handlePermissionDenied() {
-    console.log('检测到权限被拒绝');
-    const device = getDeviceInfo();
-    const deniedOverlay = document.createElement('div');
-    deniedOverlay.className = 'permission-denied-overlay';
-    deniedOverlay.innerHTML = `
-        <div class="start-title">📷 摄像头权限被拒绝</div>
-        <div class="start-subtitle">需要重新授权才能使用AR功能</div>
-        <div class="permission-guide">
-            <div class="guide-title">🔧 重新授权指南</div>
-            <div class="guide-text">请按照以下步骤重新授权摄像头权限</div>
-            ${device.isIOS ? `
-                <div class="reauth-steps">
-                    <div class="reauth-step"><div class="step-number">1</div><div class="step-content"><div class="step-text">点击地址栏左侧的🔒图标</div><div class="step-desc">或长按地址栏查看网站信息</div></div></div>
-                    <div class="reauth-step"><div class="step-number">2</div><div class="step-content"><div class="step-text">找到"摄像头"选项</div><div class="step-desc">将其设置为"允许"</div></div></div>
-                    <div class="reauth-step"><div class="step-number">3</div><div class="step-content"><div class="step-text">刷新页面重新开始</div><div class="step-desc">或点击下方"重新尝试"按钮</div></div></div>
-                </div>
-            ` : `
-                <div class="simple-steps">
-                    <div>• 点击地址栏左侧的摄像头图标</div>
-                    <div>• 选择"始终允许"或"允许"</div>
-                    <div>• 刷新页面重新开始</div>
-                </div>
-            `}
-        </div>
-        <div class="denied-buttons">
-            <button class="start-button retry-btn" onclick="retryPermission()">🔄 重新尝试</button>
-            <button class="start-button refresh-btn" onclick="refreshPage()">🔃 刷新页面</button>
-            <button class="start-button back-btn" onclick="backToStart()">⬅️ 返回开始</button>
-        </div>
-        <div style="font-size: 0.9em; opacity: 0.8; margin-top: 15px;">💡 如果问题持续存在，建议在Safari中打开</div>
-    `;
-    document.body.appendChild(deniedOverlay);
-}
-
 function retryPermission() {
-    const deniedUI = document.querySelector('.permission-denied-overlay');
-    if (deniedUI) deniedUI.remove();
     hidePermissionErrorOverlay();
     isARStarted = false;
-    startAR();
+    if (getARSource()) {
+        startAR();
+    } else {
+        // AR.js 会话尚未建立，只能整页重载重新初始化
+        refreshPage();
+    }
 }
 
 function refreshPage() { 
@@ -2123,14 +2159,22 @@ function refreshPage() {
 }
 
 function backToStart() {
-    const deniedUI = document.querySelector('.permission-denied-overlay');
-    if (deniedUI) deniedUI.remove();
     hidePermissionErrorOverlay();
     document.getElementById('ar-scene').classList.remove('active');
     const dockContainer = document.getElementById('dock-container');
     if (dockContainer) dockContainer.classList.remove('active');
     startOverlay.classList.remove('hidden');
     isARStarted = false;
+
+    // 返回启动页时释放摄像头，避免设备被持续占用
+    pauseARSource();
+
+    if (currentAudioManager && currentAudioManager.audio) {
+        currentAudioManager.audio.pause();
+        currentAudioManager.isPlaying = false;
+    }
+    const infoPanel = document.getElementById('info-panel');
+    if (infoPanel) infoPanel.classList.remove('active');
 }
 
 document.addEventListener('DOMContentLoaded', function() {
